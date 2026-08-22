@@ -3,14 +3,27 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { dolchPreK5 } from '@/decks/dolch-prek-5';
 import { Run } from '@/routes/Run';
+import { readDeckRecord } from '@/storage/deckRecord';
+import { deckKey } from '@/storage/keys';
+import { writeItem } from '@/storage/safeStorage';
 
 // The real registry, because the route resolves through it. Rung r1 of the
-// Pre-K ladder is the five words a, I, the, and, to.
+// Pre-K ladder is the five words a, I, the, and, to; r8 is the whole 40-word deck.
 const FIRST_RUN = '/deck/dolch-prek-5/rung/r1';
 // Rung r2 of the same ladder is those five words plus is, it, in, up, me.
 const SECOND_RUN = '/deck/dolch-prek-5/rung/r2';
+const TOP_RUN = '/deck/dolch-prek-5/rung/r8';
+
+// Completing a run writes, and the store outlives a single test — under Node 26
+// `globalThis.localStorage` reads back undefined, so safeStorage keeps one
+// module-level in-memory map for the whole file. Seeding the record makes each
+// test start from a known state rather than from what the last one left.
+beforeEach(() => {
+  writeItem(deckKey(dolchPreK5.id), JSON.stringify({ schemaVersion: 1, completedRungIds: [] }));
+});
 
 /** Renders the run route and hands back the router, for tests that navigate. */
 function renderRunWithRouter(path: string) {
@@ -23,6 +36,13 @@ function renderRunWithRouter(path: string) {
 
 function renderRun(path: string) {
   return renderRunWithRouter(path).user;
+}
+
+/** Marks every card of the current cycle "Got it", which clears the run. */
+async function clearRun(user: ReturnType<typeof userEvent.setup>, cards: number) {
+  for (let card = 0; card < cards; card += 1) {
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+  }
 }
 
 describe('Run', () => {
@@ -88,9 +108,8 @@ describe('Run', () => {
 
   it('reports success once every card has been cleared', async () => {
     const user = renderRun(FIRST_RUN);
-    for (let card = 0; card < 5; card += 1) {
-      await user.click(screen.getByRole('button', { name: 'Got it' }));
-    }
+    await clearRun(user, 5);
+
     expect(screen.getByText('Run complete')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Got it' })).not.toBeInTheDocument();
   });
@@ -107,6 +126,45 @@ describe('Run', () => {
     // The ten-word rung from its first card, not the five-word queue carried over.
     expect(screen.getByText('10 cards left in this round')).toBeInTheDocument();
     expect(screen.getByText('a')).toBeInTheDocument();
+  });
+
+  it('offers a repeat and the next rung on completion (FR-014)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await clearRun(user, 5);
+
+    expect(screen.getByRole('button', { name: 'Repeat this run' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Next run' })).toHaveAttribute(
+      'href',
+      '/deck/dolch-prek-5/rung/r2',
+    );
+  });
+
+  it('begins the same rung again when the run is repeated', async () => {
+    const user = renderRun(FIRST_RUN);
+    await clearRun(user, 5);
+    await user.click(screen.getByRole('button', { name: 'Repeat this run' }));
+
+    expect(screen.getByText('a')).toBeInTheDocument();
+    expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+  });
+
+  it('records the completed rung, and repeating it appends nothing (FR-017, FR-018)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await clearRun(user, 5);
+    expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual(['r1']);
+
+    await user.click(screen.getByRole('button', { name: 'Repeat this run' }));
+    await clearRun(user, 5);
+    expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual(['r1']);
+  });
+
+  it('shows mastery and offers no larger run on the top rung (US2 scenario 3)', async () => {
+    const user = renderRun(TOP_RUN);
+    await clearRun(user, 40);
+
+    expect(screen.getByText('Deck mastered')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Next run' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Repeat this run' })).toBeInTheDocument();
   });
 
   it('shows a plain message and a way home for a deck or rung that does not exist', () => {
