@@ -1,53 +1,55 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.3.2 → 1.4.0
-Bump rationale: MINOR. Principle VIII's "Stable" rule materially changed what it permits: a
-                Current runtime line whose LTS date is within six months now counts as LTS.
-                This adds permitted ground rather than clarifying existing wording, so it is
-                MINOR rather than PATCH.
+Version change: 1.4.0 → 1.5.0
+Bump rationale: MINOR. Principle VIII's license rule changed from a gate into a fast-path, and
+                OFL-1.1 was added to the pre-cleared set.
 
-Why: the rule read as a same-day status check, which inverts its own intent near a release
-     boundary. Concretely, on 2026-08-22 it mandated Node 24 ("Krypton") — Active LTS that day,
-     but entering maintenance 2026-10-20 — over Node 26, which becomes Active LTS 2026-10-28
-     and is supported through 2029-04-30. Complying literally meant adopting the line on its way
-     out of active support and re-pinning within nine weeks. Dates from nodejs/Release
-     schedule.json.
+Why: the allowlist was being read as "anything unlisted requires amending this document." That
+     made every ordinary dependency question into a governance event. Within a single day it had
+     produced one amendment for a Node version and was about to produce another for a font — at
+     which point the process is the obstacle, not the safeguard.
 
-     The rule's purpose is to avoid unstable and unsupported runtimes. Reading it by date rather
-     than by badge serves that purpose; reading it by badge defeats it twice a year.
+     The maintainer's correction, 2026-08-22: unlisted licenses should be asked about in
+     conversation, confirmed, and moved past. The list is there to skip the question when the
+     answer is obvious, not to require ceremony when it is not.
+
+     This is intended to be the last amendment of its kind. A rule that generates an amendment
+     per dependency was mis-specified, not under-enforced.
 
 Modified principles:
-  VIII. Free, Open, Reputable, Stable — "Stable" bullet now admits a Current line with a
-        published LTS date within six months, and prefers it over an LTS line entering
-        maintenance sooner. Nothing else in VIII changed: the license allowlist, the asset
-        rule, the reputable rule, the lockfile rule, and the pre-release prohibition are
-        untouched.
+  VIII. Free, Open, Reputable, Stable — allowlist reframed as pre-cleared licenses; unlisted
+        licenses are now explicitly a question rather than a block, resolved by asking and
+        recording the answer in the PR. OFL-1.1 added, since effectively every open font uses it
+        and it constrains only the font, never the code that renders it. Added the clarifying
+        line: "Stop and ask" means ask. It does not mean stop.
+
+        The reputable rule, the stable rule, the lockfile rule, the asset-review rule, and the
+        pre-release prohibition are unchanged.
 
 Added sections: none.
 Removed sections: none.
 
-Resolved TODOs:
-  - TODO(NODE_VERSION) → 26.7.0. Decided 2026-08-22. This amendment is what makes that pin
-    compliant; the conflict would also have expired on its own on 2026-10-28.
-  - TODO(TAILWIND_VERSION) → 4.x via the @tailwindcss/vite plugin, CSS-first config, no
-    tailwind.config.js. Confirmed against shadcn/ui's own Vite installation guide, which is
-    v4-native. Recorded in specs/001-deck-runs/research.md.
+Triggering case: shadcn/ui's default theme vendors the Geist font under OFL-1.1. Approved for use
+                 by the maintainer, and OFL-1.1 added to the pre-cleared set rather than recorded
+                 as a one-off exception.
 
-Deferred TODOs:
-  - TODO(DEP_LICENSES): still open. Cannot be discharged before `npm install` has ever run.
-    Belongs to the 000-scaffold feature, where `npm ls` can enumerate a real tree.
+Deferred TODOs: none remaining.
+  - TODO(DEP_LICENSES) is discharged. 000-scaffold produced the first real dependency tree; all
+    515 packages are enumerated by license in specs/000-scaffold/research.md section 6.
 
 Prior history:
+  1.4.0 — Principle VIII's "Stable" rule admits a Current runtime line whose LTS date is within
+          six months, judged by release dates rather than by today's badge.
   1.3.2 — Removed prohibition bullets from Principle VIII that the allowlist already covered.
   1.3.1 — Principle VIII's license rule corrected: banlist (BSL/SSPL/Elastic/Commons Clause)
-          replaced by a five-license allowlist. The banlist was aimed at managed-service
-          restrictions irrelevant to a bundled client app and omitted copyleft entirely.
+          replaced by an allowlist. The banlist was aimed at managed-service restrictions
+          irrelevant to a bundled client app and omitted copyleft entirely.
   1.3.0 — Added Principles VII (self-contained tooling) and VIII (dependency policy).
   1.2.1 — Condensed from 284 lines of prose to a scannable one-pager. No rule changes.
-  1.2.0 — Corrected Principle I. Cloudflare Pages does SPA fallback natively when the output
-          has no top-level 404.html, so the previously mandated `_redirects` catch-all was
-          unnecessary and unsafe (redirects outrank static assets). Now prohibited.
+  1.2.0 — Corrected Principle I. Cloudflare Pages does SPA fallback natively when the output has
+          no top-level 404.html, so the previously mandated `_redirects` catch-all was
+          unnecessary and unsafe. Now prohibited.
   1.1.0 — Added Principle VI. Pre-approved Tailwind, shadcn/ui, React Router in Principle V.
   1.0.0 — Initial ratification.
 -->
@@ -140,12 +142,14 @@ Everything else:
 
 ## VIII. Free, Open, Reputable, Stable
 
-- **License allowlist — MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC.** Anything outside these
-  five stops and gets asked about. It is an allowlist because the disallowed set cannot be
-  enumerated in advance; these five can. The list is short because everything here is bundled into
-  the JS shipped to every visitor.
-- **Assets are reviewed separately from packages.** Icons and fonts carry their own licenses that
-  are usually none of the five above, so reading `package.json` does not discharge this rule.
+- **Pre-cleared licenses — MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, OFL-1.1.** Use these
+  without asking. The list exists to skip the question, not to gate the answer.
+- **Anything outside the list is a question, not a block.** Ask, get an answer, record it in the
+  PR, move on. Using an unlisted license does **not** require amending this document. If one keeps
+  coming up and keeps being approved, add it to the list — that is bookkeeping, not governance.
+- **Assets are reviewed separately from packages.** Icons and fonts carry their own licenses, so
+  reading `package.json` does not discharge this rule. OFL-1.1 is pre-cleared because effectively
+  every open font uses it, and it constrains only the font — never the code that renders it.
 - **Reputable:** actively maintained, real adoption, a release within the last 12 months, and no
   deprecation notice. Abandonware and single-author packages with no usage do not qualify.
 - **Stable:** LTS where the project publishes an LTS line (Node), otherwise latest stable.
@@ -157,6 +161,7 @@ Everything else:
 - Exact versions come from the committed lockfile. Version ranges in `package.json` do not
   override this.
 - Adding a dependency means recording its license in the PR. An unclear license is a no.
+- "Stop and ask" means ask. It does not mean stop.
 - The pre-approved stack in Principle V is all OSI-permissive and satisfies this principle.
 
 ## Stack & Deployment
@@ -198,4 +203,4 @@ prerequisites: git + Node at the pinned version, nothing else.
 - A principle that is routinely waived gets enforced or amended. A rule that is always
   excepted makes the whole document untrustworthy.
 
-**Version**: 1.4.0 | **Ratified**: 2026-08-22 | **Last Amended**: 2026-08-22
+**Version**: 1.5.0 | **Ratified**: 2026-08-22 | **Last Amended**: 2026-08-22
