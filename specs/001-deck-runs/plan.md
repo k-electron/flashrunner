@@ -29,13 +29,16 @@ collected in [research.md § Scaffold requirements](./research.md#scaffold-requi
 
 ## Technical Context
 
-**Language/Version**: TypeScript with `strict: true`. Target ES2022.
+**Language/Version**: TypeScript **7.0.2** with `strict: true`. Target ES2022. Maintainer's
+decision, 2026-08-22. License **Apache-2.0** — on Principle VIII's allowlist, and the only
+non-MIT entry in the stack.
 
-Major version is **deferred to `000-scaffold`'s plan**, because it is a live fork: 7.0.2
-(2026-07-08) is npm's `latest`, while the framework's own starter template pins `~6.0.2`
-(6.0.3 is the current 6.x). Principle VIII's "latest stable" points at 7; the template pinning 6
-suggests the ecosystem may not have caught up. 001 requires only `strict` and uses no
-version-specific language feature, so it does not force the answer.
+7.0.2 is npm's `latest` (2026-07-08, the Go-native port); `create-vite`'s template still pins
+`~6.0.2`. The usual TypeScript-7 hazard in a React stack is `typescript-eslint`, which leans
+heavily on the TypeScript compiler API — **this project does not use it**, having taken `oxlint`
+(Rust, own parser) instead. That leaves `tsc` used only as the typecheck gate. Confirm it
+typechecks this project cleanly during `000-scaffold`; nothing in 001 depends on a
+version-specific language feature either way.
 
 **Runtime (tooling)**: Node **26.7.0**. Maintainer's decision, 2026-08-22.
 

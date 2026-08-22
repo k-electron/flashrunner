@@ -208,12 +208,19 @@ single route. Context for run state — unnecessary, since only the `Run` route 
 This is the concrete output for the separate scaffold feature. Collected here so `000` can be
 specified from evidence instead of guessed at.
 
-**Open question for `000`'s plan — TypeScript major version.** Checked 2026-08-22: npm's `latest`
-is **7.0.2** (2026-07-08, the Go-native port), while `create-vite`'s react-ts template pins
-**`~6.0.2`** (6.0.3 current). Principle VIII's "latest stable" points at 7; the official template
-pinning 6 is a signal that compiler-API consumers may not all be ready. Resolve it in `000` by
-checking whether the pinned toolchain actually runs on 7, not by picking the higher number. 001
-uses no version-specific feature either way.
+**TypeScript — 7.0.2.** Maintainer's decision, 2026-08-22. Checked the same day: 7.0.2
+(2026-07-08, the Go-native port) is npm's `latest`, while `create-vite`'s react-ts template still
+pins `~6.0.2` (6.0.3 current). Principle VIII's "latest stable" points at 7.
+
+License **Apache-2.0**, on the allowlist. It is the only non-MIT package in the pinned stack,
+which is worth knowing when `TODO(DEP_LICENSES)` gets filled in.
+
+**Why the template's caution does not transfer.** The standard TypeScript-7 hazard in a React
+codebase is `typescript-eslint`, which consumes the TypeScript compiler API directly and so tracks
+its internals. This project does not use it — the linter is `oxlint`, which is Rust with its own
+parser. That leaves `tsc` used only as the typecheck gate, which is the narrowest possible
+exposure. Still verify by running it in `000`: "narrow exposure" is a reason to expect success,
+not evidence of it.
 
 **Linter — `oxlint` 1.79.0** (MIT). Not a guess: `create-vite`'s react-ts template ships it as the
 `lint` script with `react/rules-of-hooks` and `react/only-export-components` configured, having
