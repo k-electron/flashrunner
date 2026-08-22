@@ -44,8 +44,8 @@ One file is added that [plan.md § Project Structure](./plan.md#project-structur
 
 **Purpose**: Confirm the ground is solid and vendor the two UI primitives the screens need.
 
-- [ ] T001 Verify the scaffold baseline is green before changing anything: run `npm ci && npm run lint && npm run typecheck && npm test && npm run build` at the repository root. Stop and fix if any step fails — a red baseline makes every later failure ambiguous.
-- [ ] T002 Vendor the shadcn/ui primitives with `npx shadcn@4.19.0 add button card`, producing `src/components/ui/button.tsx` and `src/components/ui/card.tsx`. Only these two. Vendored components are project source subject to every constitution rule (Principle V); anything no screen ends up rendering gets deleted in T040.
+- [X] T001 Verify the scaffold baseline is green before changing anything: run `npm ci && npm run lint && npm run typecheck && npm test && npm run build` at the repository root. Stop and fix if any step fails — a red baseline makes every later failure ambiguous.
+- [X] T002 Vendor the shadcn/ui primitives with `npx shadcn@4.19.0 add button card`, producing `src/components/ui/button.tsx` and `src/components/ui/card.tsx`. Only these two. Vendored components are project source subject to every constitution rule (Principle V); anything no screen ends up rendering gets deleted in T040.
 
 ---
 
