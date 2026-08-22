@@ -228,7 +228,7 @@ moved off ESLint. One binary rather than ESLint's five packages, which is also t
 under Principle V. 16.4M weekly downloads against ESLint's 158M and Biome's 13.6M — real adoption,
 not a novelty.
 
-**Pinned versions**: Node 26.7.0 · TypeScript 5.x `strict` · React 19.2.8 · react-router 8.3.0 ·
+**Pinned versions**: Node 26.7.0 · TypeScript 7.0.2 `strict` · React 19.2.8 · react-router 8.3.0 ·
 Vite 8.2.2 · @vitejs/plugin-react 6.1.0 · tailwindcss + @tailwindcss/vite 4.3.3 · shadcn CLI
 4.19.0 (via `npx`, vendored output) · Vitest 4.1.11 · @testing-library/react 16.3.2 · oxlint 1.79.0 ·
 `@types/node` (dev, required by `vite.config.ts`).
