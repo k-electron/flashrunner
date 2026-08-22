@@ -1,4 +1,5 @@
-import type { CardId, DeckConfig, DeckId, RungId } from '@/decks/types';
+import type { DeckConfig, DeckId, RungId } from '@/decks/types';
+import type { RunState } from '@/run/types';
 import { deckKey } from '@/storage/keys';
 import { CURRENT_SCHEMA_VERSION, runMigrations } from '@/storage/migrations';
 import { readItem, writeItem, type WriteResult } from '@/storage/safeStorage';
@@ -7,14 +8,7 @@ import { readItem, writeItem, type WriteResult } from '@/storage/safeStorage';
  * The unfinished run, as persisted. `status` is not stored because a persisted
  * run is always in progress, and `deckId` is not stored because it is the key.
  */
-export type PersistedRun = {
-  rungId: RungId;
-  cycleIndex: number;
-  queue: CardId[];
-  position: number;
-  failedThisCycle: CardId[];
-  passedThisRun: CardId[];
-};
+export type PersistedRun = Omit<RunState, 'status' | 'deckId'>;
 
 export type DeckRecord = {
   schemaVersion: number;
