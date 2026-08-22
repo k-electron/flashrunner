@@ -199,6 +199,25 @@ changed other than package caches.
 - **FR-035**: A dependency whose license falls outside the allowed set MUST stop the work and be
   raised, rather than being added and noted.
 
+**Styling foundation**
+
+- **FR-036**: The scaffold MUST establish the styling foundation and the component library's
+  initialization — the shared configuration both depend on — while vendoring no actual components.
+- **FR-037**: Adding a component from the library afterwards MUST require no configuration change,
+  only the command that adds it.
+- **FR-038**: The demonstration content MUST exercise the styling foundation enough to prove it is
+  wired correctly, rather than leaving it configured but unproven.
+
+**Repository**
+
+- **FR-039**: The repository MUST carry an MIT license, since it is public and currently reserves
+  all rights by default.
+- **FR-040**: Blocking a failing change from merging MUST be enforced by the hosting platform's own
+  controls, not by convention or reviewer memory.
+- **FR-041**: That enforcement MUST NOT require an approving review from a second person, because
+  a sole maintainer would have to bypass it on every merge, which converts the gate into a
+  formality.
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
@@ -224,6 +243,10 @@ changed other than package caches.
   leaves every gate passing.
 - **SC-014**: 100% of dependencies have a recorded license drawn from the allowed set.
 - **SC-015**: Continuous integration succeeds on infrastructure that has never built this project.
+- **SC-016**: Adding a component from the component library requires 0 configuration changes.
+- **SC-017**: The repository states terms under which its code may be reused.
+- **SC-018**: A pull request with a failing gate cannot be merged, enforced by the platform rather
+  than by the person clicking the button.
 
 ## Assumptions
 
@@ -242,6 +265,15 @@ changed other than package caches.
   industry practice" and the minimal-dependency principle at the same time, which is why no
   separate justification is offered. The specific tool is named in this feature's implementation
   plan, not here.
+- **The styling foundation and component-library initialization belong to this feature; components
+  do not.** Decided 2026-08-22. Initialization rewrites shared build and type configuration, so
+  doing it inside a product feature's pull request would mix scaffolding into product work. Actual
+  components arrive with the screens that render them.
+- **The repository is licensed MIT.** Decided 2026-08-22. It is the license the constitution's own
+  dependency allowlist leads with, so the project and its dependencies sit under consistent terms.
+- **Merge blocking is configured after this feature lands, not during it.** The hosting platform
+  can only require a check that has already run at least once, so the enforcement in FR-040 is
+  switched on once continuous integration has produced its first result.
 - **The maintainer is the only contributor today.** "A contributor" in this document means any
   future one, including the maintainer on a different machine. No access control, code ownership,
   or review-assignment automation is implied.
@@ -262,7 +294,8 @@ Named so their absence is a decision rather than an oversight:
 
 - Production hosting setup, preview deployments, and live verification — their own feature.
 - Any part of the flashcard application: decks, runs, ladders, progress, storage.
-- Component library setup beyond what the demonstration content needs.
+- Vendored components from the component library. Its initialization is in scope (FR-036); the
+  components themselves arrive with the screens that use them.
 - End-to-end or browser-automation testing. The gates are lint, typecheck, unit test, build.
 - Test coverage thresholds, performance budgets, and bundle-size limits.
 - Dependency update automation, security scanning, and license-checking automation.

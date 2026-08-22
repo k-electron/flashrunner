@@ -31,8 +31,20 @@
 
 ## Notes
 
-**Validation run 2026-08-22 — all items pass.** 35 functional requirements, 15 success criteria,
+**Validation run 2026-08-22 — all items pass.** 41 functional requirements, 18 success criteria,
 3 prioritized user stories, 11 edge cases.
+
+**Second clarification round, same day**, after the maintainer asked what else was outstanding.
+Three more decisions, all folded into the spec rather than left as markers:
+
+4. *Styling foundation* → in scope; vendored components are not. Initialization rewrites shared
+   build and type configuration, so it does not belong inside a product feature's pull request.
+   Added FR-036 … FR-038, SC-016.
+5. *Merge enforcement* → by platform controls, not convention, and without requiring a second
+   person's approval. Added FR-040, FR-041, SC-018. Verified first that the default branch is
+   currently unprotected, so FR-017 had no teeth.
+6. *Repository license* → MIT. Verified first that no license file existed, meaning a public
+   repository that reserved all rights. Added FR-039, SC-017.
 
 **Three clarifications resolved before drafting**, so no `[NEEDS CLARIFICATION]` markers were ever
 written into the spec:
