@@ -71,7 +71,8 @@ Queried by role and visible text only — no class names, no snapshots (Principl
   names ("Got it" / "Not yet"), and the remaining-in-cycle count (FR-013)
 - a deck with an unfinished run shows **Resume and Start over together** on the ladder (FR-031)
 - Start over is reachable from inside a run (FR-033)
-- rungs above the highest completed one render as visible but not startable (FR-015, US2 #4)
+- a rung renders as visible but not startable exactly when its immediate predecessor is not
+  completed — completing rung 1 must leave rung 2 startable and rung 3 locked (FR-015, US2 #4)
 
 ---
 

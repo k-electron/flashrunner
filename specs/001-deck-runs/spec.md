@@ -60,8 +60,8 @@ full deck and that completing it marks the deck mastered.
    **Then** all of A–E appear in it along with F–J.
 3. **Given** the learner is on the top rung, **When** it completes, **Then** the deck is marked
    mastered and no larger run is offered.
-4. **Given** a rung has never been completed, **When** the learner views the ladder, **Then** rungs
-   above the highest completed one are visible but not startable.
+4. **Given** rung 1 is completed and rung 2 is not, **When** the learner views the ladder, **Then**
+   rung 2 is startable and every rung above rung 2 is visible but not startable.
 5. **Given** a completed rung, **When** the learner chooses to repeat it, **Then** a fresh run of
    the same card set begins and prior mastery is not lost.
 
