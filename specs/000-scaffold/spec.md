@@ -252,12 +252,13 @@ changed other than package caches.
 
 ## Assumptions
 
-- **Production deployment is out of scope for this feature.** Connecting the repository to a
-  hosting provider, configuring the production build, and verifying a live deployment are
-  deliberately deferred to their own feature. Decided 2026-08-22. The consequence is accepted
-  explicitly: two risks stay unverified until then — whether direct addressing works on the real
-  host, and whether the host can supply the pinned runtime version. This feature reduces both to
-  configuration questions by making the build output correct in advance (FR-031, FR-032, FR-033).
+- **Production deployment was out of scope for this feature, and was then done by hand.** The
+  deferral was decided 2026-08-22 and accepted two unverified risks: whether direct addressing
+  works on the real host, and whether the host can supply the pinned runtime version. The
+  maintainer connected the host the same day and **both were verified live** — deep links resolve,
+  including for routes that do not exist yet, and the pinned runtime builds. FR-031 through FR-033
+  are what made it a configuration exercise rather than rework. No separate hosting feature is
+  needed for the initial setup.
 - **Demonstration content is two throwaway addresses, not the flashcard screens.** Enough to prove
   navigation and direct addressing work, recognizably disposable, and deleted by 001. Chosen so
   that the routing capability is proven without this feature pre-building 001's navigation design.

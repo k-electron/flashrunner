@@ -158,10 +158,29 @@ is MPL-2.0, and it binds only files we would have had to modify — which we hav
 
 ---
 
-## 7. Proving deep links without a host
+## 7. Deep links — verified in production 2026-08-22
 
-Hosting is deferred, so "does direct addressing work in production" cannot be answered here. What
-this feature can do is make the answer inevitable and check the part that is checkable:
+**Resolved.** Hosting was deferred out of this feature, but the maintainer connected Cloudflare
+Pages by hand on 2026-08-22 and the claim was verified directly against
+`https://flashrunner.pages.dev`:
+
+| Request | Result |
+|---|---|
+| `/` | 200, app shell + bundle |
+| `/ping` | 200, app shell + bundle |
+| `/deck/dolch-prek-5/rung/r3` | 200, app shell + bundle |
+
+The third is the meaningful one: that route does not exist yet — 001 has not been built — and Pages
+still served the shell. The fallback is path-agnostic rather than something special about `/ping`.
+
+Requesting `/404.html` also returns 200 with the app shell, which is the confirmation rather than a
+problem: no real `404.html` is present, so Pages stays in SPA mode. Had one existed, `/ping` would
+have returned 404.
+
+**Also resolved: Node 26.7.0 builds on Pages.** The open question was whether the build image could
+fetch a release seventeen days old. It can.
+
+The reasoning that made this work, retained because it is what future changes must not break:
 
 - emit no top-level `404.html` — its absence is what keeps the intended host in SPA mode
 - write no `_redirects` — redirects outrank static assets and can shadow the bundle

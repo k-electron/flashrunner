@@ -61,7 +61,12 @@ compatibility gap to work around.
 
 ## 3. Cloudflare Pages: deep links and the Node pin
 
-**Deep links** — previously verified while drafting the constitution and unchanged here: Pages
+**Deep links — now verified in production** (2026-08-22, `https://flashrunner.pages.dev`), not
+merely reasoned about. A request for `/deck/dolch-prek-5/rung/r3` — a route this feature has not
+built yet — returns the app shell with a 200. The routing design below is therefore known to work
+on the real host before any of it is implemented.
+
+The mechanism, unchanged: Pages
 serves `index.html` for unmatched routes automatically **as long as the build output contains no
 top-level `404.html`**. Adding one silently switches Pages out of SPA mode. A `/*` catch-all in
 `_redirects` is *not* the fix and is actively harmful, because redirects are evaluated ahead of
