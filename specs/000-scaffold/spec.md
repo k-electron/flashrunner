@@ -138,6 +138,8 @@ changed other than package caches.
 
 - **FR-010**: The project MUST provide four separately runnable gates: lint, typecheck, test, and
   build.
+- **FR-010a**: Code formatting MUST be checkable as part of the lint gate, so that formatting drift
+  fails continuous integration rather than accumulating silently.
 - **FR-011**: Each gate MUST be a single command.
 - **FR-012**: Every gate MUST pass on a fresh clone before any feature work begins.
 - **FR-013**: Type checking MUST run in the strictest mode the language offers.
@@ -279,8 +281,11 @@ changed other than package caches.
   or review-assignment automation is implied.
 - **A README is the documentation surface.** No documentation site, no architecture decision
   records, no contribution guide beyond what the README needs to carry.
-- **Formatting is settled by whatever tool lints,** so that the two cannot disagree. If they are
-  separate tools, one of them defers.
+- **Formatting and linting are separate tools.** Checked 2026-08-22: the linter chosen for this
+  project does not format, so the earlier assumption that one tool would cover both was wrong.
+  A dedicated formatter is used. Conflict risk is low rather than absent, because the linter's
+  rules are correctness-focused rather than stylistic; where the two ever disagree, the formatter
+  wins and the linter's stylistic rule is disabled.
 - **Continuous integration runs on the version control host's own free tier**, since the
   repository is public.
 - **No release process.** No versioning, changelog, tagging, or publishing. The application is

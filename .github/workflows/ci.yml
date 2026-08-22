@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same branch makes the in-flight run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    # Standard runners only. No paid or self-hosted infrastructure (Principle III).
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          # Read from .nvmrc rather than repeating the version. One fewer copy to drift.
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `ci`, not `install` — fails if package.json and the lockfile disagree.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Same command the deployment runs (Principle III).
+      - name: Build
+        run: npm run build
+
+      # Principle I: their absence is what keeps a static host in SPA mode.
+      - name: Assert build output shape
+        run: |
+          if [ -e dist/404.html ]; then
+            echo "::error::dist/404.html exists. It disables SPA fallback on the host."
+            exit 1
+          fi
+          if [ -e dist/_redirects ]; then
+            echo "::error::dist/_redirects exists. Redirects outrank static assets."
+            exit 1
+          fi
+          echo "Build output shape OK."
