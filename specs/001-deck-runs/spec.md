@@ -172,7 +172,7 @@ deck list shows the completed rung and offers the correct next one.
 - **FR-026**: Marking controls MUST be operable by an adult or a child. No size, placement, or
   wording choice may assume only one of them will use it.
 - **FR-027**: The two outcomes MUST be labeled on screen in encouraging, child-appropriate
-  language rather than the words "pass" and "fail". Proposed default: "Got it" and "Not yet".
+  language rather than the words "pass" and "fail". Decided 2026-08-22: "Got it" and "Not yet".
 
 **Resuming an unfinished run**
 
@@ -266,8 +266,8 @@ deck list shows the completed rung and offers the correct next one.
 - **Automated pass/fail marking is out of scope.** The adult tapping is how outcomes are produced
   for now. Detecting outcomes automatically per card type — for instance treating a revealed answer
   as a failure — is a known future direction and is deliberately not designed for here.
-- **Exact outcome wording is not settled.** "Got it" / "Not yet" is a placeholder default and
-  changing it is a label change, not a design change.
+- **Outcome wording is "Got it" / "Not yet".** Settled 2026-08-22. Changing it later is a label
+  change, not a design change.
 - **Built-in decks only.** Learners choose from decks that ship with the app. Creating or editing
   decks in the interface is out of scope; new decks arrive as configuration.
 - **Dolch word lists are public domain.** Published 1936 and in wide free use in education.
