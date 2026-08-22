@@ -1,55 +1,55 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.3.1 → 1.3.2
-Bump rationale: PATCH. Removed prohibition bullets from Principle VIII that the allowlist already
-                covers. Naming GPL/AGPL/LGPL, proprietary SDKs, and non-commercial asset licenses
-                as separate bans was redundant, and implied the ban list was exhaustive — which is
-                the exact failure mode the allowlist exists to avoid. Nothing permitted changed:
-                every one of those was already excluded by not appearing in the allowlist.
+Version change: 1.3.2 → 1.4.0
+Bump rationale: MINOR. Principle VIII's "Stable" rule materially changed what it permits: a
+                Current runtime line whose LTS date is within six months now counts as LTS.
+                This adds permitted ground rather than clarifying existing wording, so it is
+                MINOR rather than PATCH.
+
+Why: the rule read as a same-day status check, which inverts its own intent near a release
+     boundary. Concretely, on 2026-08-22 it mandated Node 24 ("Krypton") — Active LTS that day,
+     but entering maintenance 2026-10-20 — over Node 26, which becomes Active LTS 2026-10-28
+     and is supported through 2029-04-30. Complying literally meant adopting the line on its way
+     out of active support and re-pinning within nine weeks. Dates from nodejs/Release
+     schedule.json.
+
+     The rule's purpose is to avoid unstable and unsupported runtimes. Reading it by date rather
+     than by badge serves that purpose; reading it by badge defeats it twice a year.
+
+Modified principles:
+  VIII. Free, Open, Reputable, Stable — "Stable" bullet now admits a Current line with a
+        published LTS date within six months, and prefers it over an LTS line entering
+        maintenance sooner. Nothing else in VIII changed: the license allowlist, the asset
+        rule, the reputable rule, the lockfile rule, and the pre-release prohibition are
+        untouched.
+
+Added sections: none.
+Removed sections: none.
+
+Resolved TODOs:
+  - TODO(NODE_VERSION) → 26.7.0. Decided 2026-08-22. This amendment is what makes that pin
+    compliant; the conflict would also have expired on its own on 2026-10-28.
+  - TODO(TAILWIND_VERSION) → 4.x via the @tailwindcss/vite plugin, CSS-first config, no
+    tailwind.config.js. Confirmed against shadcn/ui's own Vite installation guide, which is
+    v4-native. Recorded in specs/001-deck-runs/research.md.
+
+Deferred TODOs:
+  - TODO(DEP_LICENSES): still open. Cannot be discharged before `npm install` has ever run.
+    Belongs to the 000-scaffold feature, where `npm ls` can enumerate a real tree.
 
 Prior history:
-  1.3.1 — Principle VIII's license rule was mis-aimed at v1.3.0 and was corrected.
-                The banned set (BSL, SSPL, Elastic, Commons Clause) restricts reselling software
-                as a managed service, applies almost exclusively to databases and infrastructure,
-                and was irrelevant to a bundled client-side app. Copyleft — the one license class
-                that genuinely reaches a shipped JS bundle — was absent. Replaced with a five-
-                license allowlist plus an explicit copyleft prohibition. The intent of the
-                principle is unchanged, so this is PATCH rather than MINOR.
-
-Corrected in this version:
-  VIII. Free, Open, Reputable, Stable — banlist replaced by allowlist (MIT, Apache-2.0,
-        BSD-2-Clause, BSD-3-Clause, ISC); GPL/AGPL/LGPL explicitly prohibited in shipped code;
-        icon and font assets called out as requiring separate license review.
-
-Prior history:
+  1.3.2 — Removed prohibition bullets from Principle VIII that the allowlist already covered.
+  1.3.1 — Principle VIII's license rule corrected: banlist (BSL/SSPL/Elastic/Commons Clause)
+          replaced by a five-license allowlist. The banlist was aimed at managed-service
+          restrictions irrelevant to a bundled client app and omitted copyleft entirely.
   1.3.0 — Added Principles VII (self-contained tooling) and VIII (dependency policy).
-
-Added principles:
-  VII. Self-Contained, No Host Pollution — all tooling lives in the repo; host prerequisites
-       are git + Node only; no global installs.
-  VIII. Free, Open, Reputable, Stable — OSI licenses only; maintained packages; LTS or latest
-        stable; no pre-release in runtime deps.
-
-Modified sections:
-  Workflow & Gates — dependency gate now also requires license/maintenance/channel; notes that
-  CI enforces Principle VII by construction (clean runners).
-  Stack & Deployment — states host prerequisites explicitly.
-
   1.2.1 — Condensed from 284 lines of prose to a scannable one-pager. No rule changes.
   1.2.0 — Corrected Principle I. Cloudflare Pages does SPA fallback natively when the output
           has no top-level 404.html, so the previously mandated `_redirects` catch-all was
           unnecessary and unsafe (redirects outrank static assets). Now prohibited.
   1.1.0 — Added Principle VI. Pre-approved Tailwind, shadcn/ui, React Router in Principle V.
   1.0.0 — Initial ratification.
-
-Deferred TODOs:
-  - TODO(DEP_LICENSES): exact license of each dependency is recorded at scaffold time, once
-    `npm ls` can enumerate the real tree. Not asserted here from memory.
-  - TODO(NODE_VERSION): pin value chosen at scaffold time; must match in all four places
-    listed under Principle III.
-  - TODO(TAILWIND_VERSION): v3 and v4 differ materially in setup. Confirm against current
-    docs at scaffold time.
 -->
 
 # FlashRunner Constitution
@@ -148,8 +148,12 @@ Everything else:
   are usually none of the five above, so reading `package.json` does not discharge this rule.
 - **Reputable:** actively maintained, real adoption, a release within the last 12 months, and no
   deprecation notice. Abandonware and single-author packages with no usage do not qualify.
-- **Stable:** LTS where the project publishes an LTS line (Node), otherwise latest stable. No
-  alpha, beta, RC, canary, `next`, or `0.0.x` packages in runtime dependencies.
+- **Stable:** LTS where the project publishes an LTS line (Node), otherwise latest stable.
+  A Current line with a **published LTS date within six months** counts as LTS for this rule, and
+  is preferred over an LTS line that enters maintenance before that date. Check the dates, not
+  today's label — the goal is the runtime with the longest support ahead of it, not the one
+  wearing the badge right now. No alpha, beta, RC, canary, `next`, or `0.0.x` packages in runtime
+  dependencies.
 - Exact versions come from the committed lockfile. Version ranges in `package.json` do not
   override this.
 - Adding a dependency means recording its license in the PR. An unclear license is a no.
@@ -194,4 +198,4 @@ prerequisites: git + Node at the pinned version, nothing else.
 - A principle that is routinely waived gets enforced or amended. A rule that is always
   excepted makes the whole document untrustworthy.
 
-**Version**: 1.3.2 | **Ratified**: 2026-08-22 | **Last Amended**: 2026-08-22
+**Version**: 1.4.0 | **Ratified**: 2026-08-22 | **Last Amended**: 2026-08-22
