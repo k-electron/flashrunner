@@ -208,9 +208,22 @@ single route. Context for run state — unnecessary, since only the `Run` route 
 This is the concrete output for the separate scaffold feature. Collected here so `000` can be
 specified from evidence instead of guessed at.
 
+**Open question for `000`'s plan — TypeScript major version.** Checked 2026-08-22: npm's `latest`
+is **7.0.2** (2026-07-08, the Go-native port), while `create-vite`'s react-ts template pins
+**`~6.0.2`** (6.0.3 current). Principle VIII's "latest stable" points at 7; the official template
+pinning 6 is a signal that compiler-API consumers may not all be ready. Resolve it in `000` by
+checking whether the pinned toolchain actually runs on 7, not by picking the higher number. 001
+uses no version-specific feature either way.
+
+**Linter — `oxlint` 1.79.0** (MIT). Not a guess: `create-vite`'s react-ts template ships it as the
+`lint` script with `react/rules-of-hooks` and `react/only-export-components` configured, having
+moved off ESLint. One binary rather than ESLint's five packages, which is also the better answer
+under Principle V. 16.4M weekly downloads against ESLint's 158M and Biome's 13.6M — real adoption,
+not a novelty.
+
 **Pinned versions**: Node 26.7.0 · TypeScript 5.x `strict` · React 19.2.8 · react-router 8.3.0 ·
 Vite 8.2.2 · @vitejs/plugin-react 6.1.0 · tailwindcss + @tailwindcss/vite 4.3.3 · shadcn CLI
-4.19.0 (via `npx`, vendored output) · Vitest 4.1.11 · @testing-library/react 16.3.2 ·
+4.19.0 (via `npx`, vendored output) · Vitest 4.1.11 · @testing-library/react 16.3.2 · oxlint 1.79.0 ·
 `@types/node` (dev, required by `vite.config.ts`).
 
 **Files the scaffold must produce**:

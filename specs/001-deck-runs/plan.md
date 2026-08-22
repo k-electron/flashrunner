@@ -29,7 +29,13 @@ collected in [research.md § Scaffold requirements](./research.md#scaffold-requi
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x, `strict: true`. Target ES2022.
+**Language/Version**: TypeScript with `strict: true`. Target ES2022.
+
+Major version is **deferred to `000-scaffold`'s plan**, because it is a live fork: 7.0.2
+(2026-07-08) is npm's `latest`, while the framework's own starter template pins `~6.0.2`
+(6.0.3 is the current 6.x). Principle VIII's "latest stable" points at 7; the template pinning 6
+suggests the ecosystem may not have caught up. 001 requires only `strict` and uses no
+version-specific language feature, so it does not force the answer.
 
 **Runtime (tooling)**: Node **26.7.0**. Maintainer's decision, 2026-08-22.
 
@@ -53,6 +59,7 @@ needs to change: every package in the table below already accepts Node 26.
 | `tailwindcss` + `@tailwindcss/vite` | 4.3.3 | styling |
 | `shadcn` CLI | 4.19.0 | vendors components into `src/components/ui/` |
 | `vitest` | 4.1.11 | test runner |
+| `oxlint` | 1.79.0 | lint — what the Vite react-ts template ships |
 | `@testing-library/react` | 16.3.2 | component tests |
 
 No dependency outside Principle V's pre-approved set. No new runtime dependency is introduced
