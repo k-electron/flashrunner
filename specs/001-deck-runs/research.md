@@ -179,9 +179,9 @@ Each rung is cumulative. The "adds" column is what is new at that rung.
 authored literally, this needs no special case anywhere in the engine — it is just what that
 rung's `cardIds` says.
 
-**Open for review**: the maintainer asked to review these orderings before they are committed.
-Nothing downstream depends on the specific sequence — reordering is a config edit, not a code
-change.
+**Reviewed and approved by the maintainer, 2026-08-22.** Both ladders are settled content.
+Nothing downstream depends on the specific sequence in any case — reordering is a config edit,
+not a code change.
 
 **Sources**: [ReadWriteThink Dolch Word List (PDF)](https://www.readwritethink.org/sites/default/files/resources/lesson_images/lesson301/dolchwordlist.pdf),
 [sightwords.com — Dolch Sight Words List](https://sightwords.com/sight-words/dolch/)
