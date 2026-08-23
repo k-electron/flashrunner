@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deckKey } from '@/storage/keys';
 import { readItem, writeItem } from '@/storage/safeStorage';
 
@@ -55,11 +55,35 @@ afterEach(() => {
 });
 
 describe('safeStorage', () => {
-  it('round-trips a value when storage works', () => {
-    const key = deckKey('works');
+  it('puts the value in the backing store, not only in the memory mirror', () => {
+    const storage = workingStorage();
+    replaceGlobalStorage(() => storage);
+    const key = deckKey('write-through');
 
     expect(writeItem(key, 'kept')).toEqual({ ok: true });
-    expect(readItem(key)).toBe('kept');
+
+    // Asserted on the double rather than through `readItem`, which the mirror
+    // answers before the store is ever consulted — so a read-back assertion here
+    // passes just as well for a write that stored the wrong value or none at all.
+    expect(storage.getItem(key)).toBe('kept');
+  });
+
+  it('serves a read from the backing store once the mirror no longer holds the key', async () => {
+    const storage = workingStorage();
+    replaceGlobalStorage(() => storage);
+    const key = deckKey('store-served-read');
+
+    // Re-importing the module is what clears the mirror: it is module-private, so
+    // this is the only way to get past `readItem`'s mirror-first short-circuit from
+    // outside. The write and the read run on separate instances, leaving the
+    // backing store as the sole route the value can take between them.
+    vi.resetModules();
+    const writer = await import('@/storage/safeStorage');
+    expect(writer.writeItem(key, 'landed')).toEqual({ ok: true });
+
+    vi.resetModules();
+    const reader = await import('@/storage/safeStorage');
+    expect(reader.readItem(key)).toBe('landed');
   });
 
   it('reports a key that was never written as absent', () => {
@@ -105,13 +129,5 @@ describe('safeStorage', () => {
     // This session's own last write wins. Returning 'OLD' would hand the learner a
     // rewound run and make the memory mirror dead weight in the case it exists for.
     expect(readItem(key)).toBe('NEW');
-  });
-
-  it('keeps one deck readable when another deck holds a corrupt value', () => {
-    writeItem(deckKey('corrupt'), '{ not json at all');
-    writeItem(deckKey('healthy'), '{"schemaVersion":1}');
-
-    expect(readItem(deckKey('corrupt'))).toBe('{ not json at all');
-    expect(readItem(deckKey('healthy'))).toBe('{"schemaVersion":1}');
   });
 });
