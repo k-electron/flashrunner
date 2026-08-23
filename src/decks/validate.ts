@@ -1,6 +1,6 @@
 import type { DeckConfig } from '@/decks/types';
 
-// Rules V1–V7 from specs/001-deck-runs/data-model.md § Validation rules.
+// Rules V1–V8 from specs/001-deck-runs/data-model.md § Validation rules.
 // These are checks only. Nothing here derives rung membership.
 
 /**
@@ -70,6 +70,14 @@ export function validateDeck(deck: DeckConfig): string[] {
       if (!cardIds.has(cardId)) {
         problems.push(`V7: top rung "${top.id}" lists card "${cardId}", which is not in the deck`);
       }
+    }
+  }
+
+  // V8 — every rung.cardIds is non-empty. An empty rung starts a run whose queue is
+  // empty while status is 'running', which invariant I5 forbids.
+  for (const rung of deck.rungs) {
+    if (rung.cardIds.length === 0) {
+      problems.push(`V8: rung "${rung.id}" has no cards`);
     }
   }
 
