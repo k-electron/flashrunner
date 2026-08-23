@@ -150,6 +150,26 @@ describe('Run', () => {
     );
   });
 
+  // The consequence the requirement is actually about, not just where the link
+  // points: a run walked away from mid-way is not a run that was finished, so
+  // nothing may join the list mastery and unlocking are derived from (FR-012).
+  it('records no completion when a run in progress is abandoned (FR-012)', async () => {
+    const user = renderJourney(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    // Mid-run, whatever this rung's length: cards are still being asked for, so
+    // the run being left really is unfinished and not one that quietly ended.
+    expect(screen.getByRole('button', { name: 'Got it' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Leave this run' }));
+
+    // Nothing joined the list mastery and unlocking read, and the ladder the
+    // learner lands on shows the rung unmarked rather than climbed.
+    expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual([]);
+    expect(screen.getByRole('link', { name: 'All decks' })).toBeInTheDocument();
+    expect(screen.queryByText('Completed')).not.toBeInTheDocument();
+  });
+
   it('reports success once every card has been cleared', async () => {
     const user = renderRun(FIRST_RUN);
     await clearRun(user, 5);
@@ -259,15 +279,23 @@ describe('Run', () => {
     expect(screen.getByRole('button', { name: 'Repeat this run' })).toBeInTheDocument();
   });
 
-  it('shows a plain message and a way home for a deck or rung that does not exist', () => {
+  // Home is the nearest screen that exists, because the deck itself does not.
+  it('shows a plain message and a way home for a deck that does not exist', () => {
     renderRun('/deck/no-such-deck/rung/r1');
     expect(screen.getByRole('heading', { name: 'Run not found' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back home' })).toHaveAttribute('href', '/');
   });
 
-  it('shows the same message for a rung the deck does not have', () => {
+  // Navigation is a tree, so the parent of a run is that deck's own ladder and
+  // not the deck list — and the deck here is real, only the rung is not (FR-034).
+  it("shows the same message for a rung the deck does not have, and offers that deck's ladder", () => {
     renderRun('/deck/dolch-prek-5/rung/r99');
     expect(screen.getByRole('heading', { name: 'Run not found' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to this deck' })).toHaveAttribute(
+      'href',
+      '/deck/dolch-prek-5',
+    );
+    expect(screen.queryByRole('link', { name: 'Back home' })).not.toBeInTheDocument();
   });
 });
 
