@@ -156,6 +156,15 @@ describe('readDeckRecord / writeDeckRecord', () => {
     expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
   });
 
+  it('drops a run whose cycleIndex is fractional, keeping completedRungIds', () => {
+    const deck = fixtureDeck();
+    seed(deck, { schemaVersion: 1, completedRungIds: ['r1'], run: { ...run, cycleIndex: 1.5 } });
+
+    // Non-negative, so the range check alone admits it. A cycle count only ever
+    // starts at 0 and goes up by one, so 1.5 is a value no run can have produced.
+    expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
+  });
+
   it('resets a deck whose stored value is not JSON, leaving other decks readable', () => {
     const corrupt = fixtureDeck();
     const healthy = fixtureDeck();
