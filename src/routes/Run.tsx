@@ -6,7 +6,7 @@
 // Run state is written after every transition and read back on entry, so the
 // run survives the tab closing and resumes on the exact card it stopped on
 // (FR-028, FR-029, SC-009).
-import { useReducer, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { CardFace } from '@/components/CardFace';
 import { CycleCounter } from '@/components/CycleCounter';
@@ -23,7 +23,7 @@ import { readDeckRecord, writeDeckRecord, type PersistedRun } from '@/storage/de
 type RunAction = { type: 'mark'; outcome: Outcome } | { type: 'restart'; deck: DeckConfig };
 
 /** Routes intent to the engine. It decides nothing itself. */
-function runReducer(state: RunState, action: RunAction): RunState {
+function transition(state: RunState, action: RunAction): RunState {
   return action.type === 'mark' ? mark(state, action.outcome) : restart(action.deck, state);
 }
 
@@ -138,7 +138,7 @@ function NotFound({
 }
 
 function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
-  const [state, dispatch] = useReducer(runReducer, rung, (entry) => resume(deck, entry));
+  const [state, setState] = useState<RunState>(() => resume(deck, rung));
   // The run as entered — resumed, or freshly started — is recorded as this
   // screen's state is set up, before a single card is marked, so an interruption
   // right here resumes on this card rather than at the top of the rung. The
@@ -162,16 +162,24 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
 
   /**
    * Applies an action to the engine and records the state it produces — one
-   * write per outcome, made by the event that caused it. The engine is pure, so
-   * working the next state out here and letting React work it out again cannot
-   * diverge.
+   * write per outcome, made by the event that caused it.
+   *
+   * The transition is worked out once and that one value is used twice, which is
+   * load-bearing rather than tidy: a transition that closes a cycle shuffles, so
+   * asking the engine the same question again draws different values and answers
+   * with a different order. Storing that second answer would leave the device
+   * holding a permutation the learner is not being shown, and nothing would say
+   * so — `readRun` checks the queue as a set, never as a sequence, so both
+   * orders come back looking valid (FR-011, FR-015, FR-016).
    *
    * The learner is told when a write finds no room, rather than being silently
    * lied to. The run itself carries on in memory either way.
    */
   function apply(action: RunAction): void {
-    dispatch(action);
-    setStorageFull(persist(deck, runReducer(state, action)));
+    // `nextState`, not `next`: `next` is already the next rung, just above.
+    const nextState = transition(state, action);
+    setState(nextState);
+    setStorageFull(persist(deck, nextState));
   }
 
   return (

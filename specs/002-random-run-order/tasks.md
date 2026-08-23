@@ -99,7 +99,7 @@ learner is served an order that is not the one on screen, with nothing thrown an
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Fix `src/routes/Run.tsx`: move `RunLoop` from `useReducer` to `useState<RunState>`, and have `apply` compute the transition exactly once, passing that single value to both the state update and `persist`. Remove the `runReducer` second call. Replace the comment claiming "the engine is pure, so … cannot diverge" with the reason the single computation is now load-bearing. T012 goes green
+- [X] T015 [US2] Fix `src/routes/Run.tsx`: move `RunLoop` from `useReducer` to `useState<RunState>`, and have `apply` compute the transition exactly once, passing that single value to both the state update and `persist`. Remove the `runReducer` second call. Replace the comment claiming "the engine is pure, so … cannot diverge" with the reason the single computation is now load-bearing. T012 goes green
 - [ ] T016 [US2] Make the fresh-run assertions in `src/routes/Run.test.tsx` deterministic: stub `Math.random` in a `beforeEach` with `seededRng` from `src/test/rng.ts`, then update the roughly fifteen tests that assert a specific first card of a freshly started run (`'a'`, `'I'`, `'the'`, `'to'` at lines ~95, 118, 131, 141, 192, 211, 349, 358, 375, 467, 471, 502) to the order that stub now produces. Tests that already seed `localStorage` with an explicit `queue` need no change — they control their own order and are the model to follow
 
 **Checkpoint**: Shuffling and resume are both correct and mutually consistent. This is the smallest shippable feature.
