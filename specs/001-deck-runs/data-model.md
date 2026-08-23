@@ -68,10 +68,12 @@ These are checks, never derivations:
 | V5 | No `rung.cardIds` contains a duplicate | FR-004 |
 | V6 | For every adjacent pair, `rungs[i].cardIds ⊇ rungs[i-1].cardIds` | FR-003 |
 | V7 | The last rung's `cardIds` equals the full set of `card.id` | FR-003, edge case: unreachable cards |
+| V8 | Every `rung.cardIds` is non-empty | FR-004, invariant I5 |
 
 V6 is containment as a **set**, not a prefix — a future deck could reorder within a rung and stay
 valid. V7 is set equality in both directions: the top rung may not omit a card, and (by V4) may
-not invent one.
+not invent one. V8 is what keeps I5 authorable: an empty rung starts a run whose `queue` is empty
+while `status` is `running`, which I5 forbids.
 
 These run as a unit test over the deck registry, so an invalid deck fails CI rather than
 reaching a learner.

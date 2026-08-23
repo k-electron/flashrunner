@@ -165,6 +165,20 @@ describe('validateDeck', () => {
     expect(problems[0]).toContain('"z"');
   });
 
+  it('V8: reports a rung that lists no cards', () => {
+    const problems = messagesFor(
+      'V8',
+      deck({
+        rungs: [
+          { id: 'r1', label: '0 words', cardIds: [] },
+          { id: 'r2', label: '3 words', cardIds: ['a', 'b', 'c'] },
+        ],
+      }),
+    );
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('"r1"');
+  });
+
   // SC-005 in executable form: a malformed built-in deck fails CI rather than
   // reaching a learner.
   it.each(decks)('reports no violations for the built-in deck $id', (config) => {
