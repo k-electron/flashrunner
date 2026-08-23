@@ -87,23 +87,54 @@ export function Run() {
   const rung = deck?.rungs.find((entry) => entry.id === rungId);
 
   // A revised config, a typo, or a stale bookmark — a plain message, never a
-  // crash and never a blank screen.
-  if (deck === undefined || rung === undefined) {
+  // crash and never a blank screen. Where the message leads follows the tree
+  // (FR-034): the deck genuinely does not exist, so home is the nearest screen
+  // that does — the same reasoning as src/routes/DeckLadder.tsx.
+  if (deck === undefined) {
     return (
-      <main className="flex min-h-svh flex-col items-center justify-center gap-4 p-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Run not found</h1>
-        <p className="text-muted-foreground text-sm">
-          There is no such deck or run. It may have been renamed since this link was made.
-        </p>
-        <Link className="text-primary text-sm underline underline-offset-4" to="/">
-          Back home
-        </Link>
-      </main>
+      <NotFound to="/" linkLabel="Back home">
+        There is no such deck. It may have been renamed since this link was made.
+      </NotFound>
+    );
+  }
+
+  // The deck is real and only the rung is not, so the parent of this URL is that
+  // deck's own ladder, not the deck list (FR-034).
+  if (rung === undefined) {
+    return (
+      <NotFound to={`/deck/${deck.id}`} linkLabel="Back to this deck">
+        This deck has no such run. It may have been renamed since this link was made.
+      </NotFound>
     );
   }
 
   // Keyed so moving to another rung starts a new run rather than inheriting this one.
   return <RunLoop key={`${deck.id}/${rung.id}`} deck={deck} rung={rung} />;
+}
+
+/**
+ * The one "Run not found" screen, told where to send the learner. Only the
+ * sentence and the way out differ between the two cases, so the heading and the
+ * layout are written once and cannot drift apart.
+ */
+function NotFound({
+  to,
+  linkLabel,
+  children,
+}: {
+  to: string;
+  linkLabel: string;
+  children: string;
+}) {
+  return (
+    <main className="flex min-h-svh flex-col items-center justify-center gap-4 p-8">
+      <h1 className="text-3xl font-semibold tracking-tight">Run not found</h1>
+      <p className="text-muted-foreground text-sm">{children}</p>
+      <Link className="text-primary text-sm underline underline-offset-4" to={to}>
+        {linkLabel}
+      </Link>
+    </main>
+  );
 }
 
 function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
