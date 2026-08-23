@@ -158,6 +158,54 @@ describe('Run', () => {
     expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual(['r1']);
   });
 
+  // The seed here is deliberately non-empty: with the file-level `beforeEach`
+  // record, appending the finished rung and overwriting the whole list are
+  // indistinguishable, so nothing would catch a completion that discards the
+  // ladder the learner already climbed.
+  it('keeps earlier rungs when a later one is completed (FR-018)', async () => {
+    writeItem(
+      deckKey(dolchPreK5.id),
+      JSON.stringify({ schemaVersion: 1, completedRungIds: ['r1'] }),
+    );
+    const user = renderRun(SECOND_RUN);
+    await clearRun(user, 10);
+
+    expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual(['r1', 'r2']);
+  });
+
+  // A finished run is not an unfinished one, so completing a rung must leave
+  // nothing behind to resume from (FR-029).
+  it('clears the stored run when the rung it belongs to is completed', async () => {
+    writeItem(
+      deckKey(dolchPreK5.id),
+      JSON.stringify({
+        schemaVersion: 1,
+        completedRungIds: [],
+        run: {
+          rungId: 'r1',
+          cycleIndex: 0,
+          queue: ['a', 'i', 'the', 'and', 'to'],
+          position: 2,
+          failedThisCycle: [],
+          passedThisRun: ['a', 'i'],
+        },
+      }),
+    );
+    // The seeded run is well-formed, so it survives the read that the completion
+    // write overlays — otherwise this would pass for the wrong reason.
+    expect(readDeckRecord(dolchPreK5).run).toBeDefined();
+
+    const user = renderRun(FIRST_RUN);
+    // Clear whatever the screen actually presents rather than a fixed count: this
+    // rung is five cards from a standing start, but once resume lands the seeded
+    // run is hydrated mid-cycle and only the remaining three are shown.
+    while (screen.queryByRole('button', { name: 'Got it' }) !== null) {
+      await user.click(screen.getByRole('button', { name: 'Got it' }));
+    }
+
+    expect(readDeckRecord(dolchPreK5).run).toBeUndefined();
+  });
+
   it('shows mastery and offers no larger run on the top rung (US2 scenario 3)', async () => {
     const user = renderRun(TOP_RUN);
     await clearRun(user, 40);
