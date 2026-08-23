@@ -51,10 +51,11 @@ compatibility gap to work around.
 
 - `@tailwindcss/vite` goes in `vite.config.ts` plugins, not in a PostCSS chain.
 - Theme customization is CSS-first (`@theme`), not a JS config object.
-- `tsconfig.json` needs `paths: { "@/*": ["./src/*"] }`, and `vite.config.ts` needs the matching
-  `resolve.alias` — shadcn's generated components import via `@/`. shadcn's guide also says to set
-  `baseUrl`, but TypeScript 7 removed that option (`TS5102`); `paths` entries resolve relative to
-  the `tsconfig.json` that declares them, so it is not needed and the shipped scaffold omits it.
+- `tsconfig.app.json` — the leaf config that covers `src` — needs `paths: { "@/*": ["./src/*"] }`,
+  and `vite.config.ts` needs the matching `resolve.alias`; shadcn's generated components import via
+  `@/`. shadcn's guide also says to set `baseUrl`, but TypeScript 7 removed that option (`TS5102`);
+  `paths` entries resolve relative to the tsconfig that declares them, so it is not needed and the
+  shipped scaffold omits it.
 - `@types/node` is a dev dependency, needed by `vite.config.ts` for `path.resolve`.
 
 **Sources**: [shadcn/ui — Vite installation](https://ui.shadcn.com/docs/installation/vite)
@@ -123,7 +124,7 @@ project root or a `NODE_VERSION` environment variable.
 > Principle III requires the version pinned in four places (`.nvmrc`, `engines`, CI workflow,
 > Pages env), and three of those four are the enforcing ones — `engines` is enforced by npm and
 > CI, `.nvmrc` is what Pages actually obeys. Declaring `engines` is still required, it just is
-> not what makes the deployment use Node 24.
+> not what makes the deployment use Node 26.
 
 **Sources**: [Cloudflare Pages build image](https://developers.cloudflare.com/pages/configuration/build-image/),
 [nodejs.org release index](https://nodejs.org/dist/index.json),
@@ -244,7 +245,9 @@ Vite 8.2.2 · @vitejs/plugin-react 6.1.0 · tailwindcss + @tailwindcss/vite 4.3.
 
 - `.nvmrc` = `26.7.0`, and `engines.node` matching it in `package.json`.
 - `vite.config.ts` with `@vitejs/plugin-react`, `@tailwindcss/vite`, and `resolve.alias` for `@/`.
-- `tsconfig.json` with `strict` and `paths` for `@/`. No `baseUrl` — removed in TypeScript 7.
+- `tsconfig.app.json` with `strict` and `paths` for `@/` — the root `tsconfig.json` is
+  solution-style (`files: []` plus project references), so both settings belong in the leaf config
+  that includes `src`. No `baseUrl` — removed in TypeScript 7.
 - `src/index.css` containing `@import "tailwindcss";`.
 - `components.json` from `npx shadcn@4.19.0 init`.
 - Vitest config using the `jsdom` environment plus an RTL setup file.
