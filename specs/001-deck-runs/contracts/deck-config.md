@@ -68,7 +68,7 @@ import { dolchK5 } from './dolch-k-5';
 export const decks = [dolchPreK5, dolchK5];
 ```
 
-The deck list renders `decks` in order. Validation (V1–V7) runs across `decks` as a unit test, so
+The deck list renders `decks` in order. Validation (V1–V8) runs across `decks` as a unit test, so
 a malformed deck fails CI rather than reaching a learner.
 
 ## Worked example

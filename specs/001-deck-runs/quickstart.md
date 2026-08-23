@@ -32,7 +32,7 @@ npm run build           # must emit dist/ with no top-level 404.html
 
 ### What the unit tests must cover
 
-**Deck validation** (`src/decks/validate.test.ts`) — V1–V7 from
+**Deck validation** (`src/decks/validate.test.ts`) — V1–V8 from
 [data-model.md](./data-model.md#validation-rules-fr-003-fr-004), each with a deliberately
 malformed fixture, plus a pass over the real registry so a bad built-in deck fails CI.
 
