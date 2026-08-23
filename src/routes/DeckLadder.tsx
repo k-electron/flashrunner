@@ -2,11 +2,12 @@
 // Progress is read from storage and every judgement about it — what is startable,
 // what is mastered — comes from src/decks/ladder.ts. This file derives nothing
 // itself, which is what keeps the FR-015 unlocking rule in exactly one place.
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { isMastered, isStartable } from '@/decks/ladder';
 import { deckById } from '@/decks/registry';
-import { readDeckRecord } from '@/storage/deckRecord';
+import type { DeckConfig, RungId } from '@/decks/types';
+import { readDeckRecord, writeDeckRecord } from '@/storage/deckRecord';
 
 export function DeckLadder() {
   const { deckId } = useParams();
@@ -27,7 +28,10 @@ export function DeckLadder() {
     );
   }
 
-  const { completedRungIds } = readDeckRecord(deck);
+  // One record per deck, so the run surfaced here is this deck's own and working
+  // on another deck cannot disturb it (FR-036). Nothing reconciles or guards
+  // against more than one — the situation does not arise (FR-037).
+  const { completedRungIds, run } = readDeckRecord(deck);
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-xl flex-col gap-8 p-6">
@@ -39,23 +43,28 @@ export function DeckLadder() {
 
       <ul className="flex flex-col gap-3">
         {deck.rungs.map((rung, index) => (
-          <li key={rung.id} className="flex items-center gap-3">
-            {isStartable(deck, completedRungIds, index) ? (
-              // Completed rungs land here too — they stay startable forever (FR-016).
-              <Button asChild className="h-12 flex-1 text-base" size="lg">
-                <Link to={`/deck/${deck.id}/rung/${rung.id}`}>{rung.label}</Link>
-              </Button>
-            ) : (
-              // Visible, so the whole ladder is legible from the start, but not
-              // startable until the rung below it has been completed (FR-015).
-              <Button className="h-12 flex-1 text-base" size="lg" variant="secondary" disabled>
-                {rung.label}
-              </Button>
-            )}
-            {/* Outside the control, so its accessible name stays the rung label. */}
-            {completedRungIds.includes(rung.id) && (
-              <span className="text-muted-foreground text-sm">Completed</span>
-            )}
+          <li key={rung.id} className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              {isStartable(deck, completedRungIds, index) ? (
+                // Completed rungs land here too — they stay startable forever (FR-016).
+                <Button asChild className="h-12 flex-1 text-base" size="lg">
+                  <Link to={`/deck/${deck.id}/rung/${rung.id}`}>{rung.label}</Link>
+                </Button>
+              ) : (
+                // Visible, so the whole ladder is legible from the start, but not
+                // startable until the rung below it has been completed (FR-015).
+                <Button className="h-12 flex-1 text-base" size="lg" variant="secondary" disabled>
+                  {rung.label}
+                </Button>
+              )}
+              {/* Outside the control, so its accessible name stays the rung label. */}
+              {completedRungIds.includes(rung.id) && (
+                <span className="text-muted-foreground text-sm">Completed</span>
+              )}
+            </div>
+            {/* On the rung it belongs to, so resuming is the obvious next tap
+                rather than something to hunt for (FR-035). */}
+            {run?.rungId === rung.id && <UnfinishedRun deck={deck} rungId={rung.id} />}
           </li>
         ))}
       </ul>
@@ -65,5 +74,41 @@ export function DeckLadder() {
         All decks
       </Link>
     </main>
+  );
+}
+
+/**
+ * The run left unfinished on this rung, offered both ways at once.
+ *
+ * Resume and Start over are rendered together, side by side, and neither is
+ * behind the other: a learner who has forgotten where they were must not have to
+ * resume in order to find the way to start over (FR-031).
+ */
+function UnfinishedRun({ deck, rungId }: { deck: DeckConfig; rungId: RungId }) {
+  const navigate = useNavigate();
+  const path = `/deck/${deck.id}/rung/${rungId}`;
+
+  /**
+   * Discards this unfinished run and nothing else (FR-032). `completedRungIds`
+   * is written back as it was read, so mastery and this rung's unlocked state
+   * are untouched, and every other deck has its own record entirely (SC-015).
+   * The fresh run itself is started by the run screen on entry.
+   */
+  function startOver(): void {
+    const record = readDeckRecord(deck);
+    writeDeckRecord(deck.id, { ...record, run: undefined });
+    void navigate(path);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="text-muted-foreground text-sm">Unfinished run</span>
+      <Button asChild className="h-12 text-base" size="lg">
+        <Link to={path}>Resume</Link>
+      </Button>
+      <Button className="h-12 text-base" size="lg" variant="secondary" onClick={startOver}>
+        Start over
+      </Button>
+    </div>
   );
 }
