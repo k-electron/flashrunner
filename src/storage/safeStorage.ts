@@ -60,7 +60,21 @@ export function writeItem(key: string, value: string): WriteResult {
   }
 }
 
-/** A full disk is a normal condition, not a bug — it is named and surfaced. */
+/**
+ * A full disk is a normal condition, not a bug — it is named and surfaced.
+ *
+ * Matching on `name` alone is deliberate, and was checked rather than assumed.
+ * HTML `setItem` step 4 throws a `QuotaExceededError`, and Gecko, WebKit and Blink
+ * all produce `name === 'QuotaExceededError'` with `code === 22`. WebIDL's 2025
+ * change making it a `DOMException`-derived interface keeps both, and now says to
+ * prefer `name` over `code`.
+ *
+ * The `NS_ERROR_DOM_QUOTA_REACHED` / 1014 variant this is often widened for was
+ * Firefox 63 and earlier; Gecko bug 1482194 fixed it in Firefox 64, released
+ * 2018-12-11 — well before any browser this project targets. Do not widen to
+ * `instanceof QuotaExceededError` either: that constructor is Blink 138+ only and
+ * would throw a ReferenceError in Firefox and Safari.
+ */
 function isQuotaExceeded(error: unknown): boolean {
   return (
     typeof error === 'object' &&
