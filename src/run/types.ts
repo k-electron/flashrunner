@@ -7,6 +7,14 @@ import type { CardId, DeckId, RungId } from '@/decks/types';
 /** Labelled "Got it" / "Not yet" on screen (FR-027). */
 export type Outcome = 'got-it' | 'not-yet';
 
+/**
+ * A source of randomness yielding a number in [0, 1). `Math.random` satisfies it.
+ *
+ * The engine takes one as a parameter rather than reaching for `Math.random`
+ * itself, so a test can assert what a given sequence produces (FR-005, SC-002).
+ */
+export type Rng = () => number;
+
 export type RunState = {
   deckId: DeckId;
   rungId: RungId;

@@ -29,8 +29,8 @@ feature: shuffling without stable resume is worse than no shuffling at all.
 
 **Purpose**: Establish a known-good baseline and the one shared test fixture
 
-- [ ] T001 Confirm the branch is green before changing anything: run `npm ci && npm run lint && npm run typecheck && npm test && npm run build` and record that all four gates pass, so any later red is attributable to this work
-- [ ] T002 [P] Add a deterministic PRNG test fixture in `src/test/rng.ts` exporting `seededRng(seed: number): Rng` (mulberry32 form — same seed always yields the same sequence). Document in the file header that it is test-only, is never imported by `src/run/`, `src/routes/`, or `src/storage/`, and stores nothing, so it does not conflict with FR-010
+- [X] T001 Confirm the branch is green before changing anything: run `npm ci && npm run lint && npm run typecheck && npm test && npm run build` and record that all four gates pass, so any later red is attributable to this work
+- [X] T002 [P] Add a deterministic PRNG test fixture in `src/test/rng.ts` exporting `seededRng(seed: number): Rng` (mulberry32 form — same seed always yields the same sequence). Document in the file header that it is test-only, is never imported by `src/run/`, `src/routes/`, or `src/storage/`, and stores nothing, so it does not conflict with FR-010
 
 ---
 
@@ -40,7 +40,7 @@ feature: shuffling without stable resume is worse than no shuffling at all.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add `export type Rng = () => number;` to `src/run/types.ts` beside `Outcome` and `RunState`, documented as yielding a value in `[0, 1)` and satisfied by `Math.random`
+- [X] T003 Add `export type Rng = () => number;` to `src/run/types.ts` beside `Outcome` and `RunState`, documented as yielding a value in `[0, 1)` and satisfied by `Math.random`
 - [ ] T004 Write `src/run/shuffle.test.ts` covering the full contract in [contracts/run-engine.md](./contracts/run-engine.md): output is a permutation of the input (same multiset, same length), the input array is never mutated, `[]` and single-element inputs return an equal array, an `Rng` returning exactly `1` never places `undefined` in the result, an `Rng` sequence producing the identity permutation returns the input order as-is without re-rolling, and SC-002 — over many seeds from `seededRng`, a 5×5 position-occupancy grid for a 5-element input has no empty cell. These fail: the module does not exist yet
 - [ ] T005 Implement `src/run/shuffle.ts` — `shuffle<T>(items: readonly T[], rng: Rng): T[]`, Fisher–Yates back-to-front over a copy, with the swap index clamped so `rng() === 1` cannot index past the end. `rng` is a required parameter; this module takes no default. T004 goes green
 
