@@ -1,7 +1,47 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.4.0 → 1.5.0
+Version change: 1.5.0 → 1.6.0
+Bump rationale: MINOR. Principle III's runtime-pin rule described a mechanism that does not
+                exist, and inverted the required action.
+
+Why: the rule read "pinned identically in .nvmrc, engines, CI workflow, and Pages env" — four
+     copies kept in sync by hand. Checking it (001-deck-runs T049, 2026-08-23) found there is no
+     fourth copy. The deploy platform's build image reads .nvmrc directly, and no version
+     variable is set. So the pin propagates by construction from a single source of truth.
+
+     This matters beyond wording. The old rule told you to SET a version in the host; the actual
+     requirement is the opposite — do NOT set one, because a host-side copy is precisely what can
+     drift out of step with the repo. Absence is the guarantee, and absence cannot fall out of
+     date. A rule that instructs the failure mode it exists to prevent is mis-specified.
+
+     Also drops the vendor name from the rule, per the maintainer's constraint that this repo stay
+     general purpose. The requirement is about the deploy platform, whichever one it is; naming
+     one in a normative rule made the rule unusable if the host ever changes. Cloudflare is still
+     named in Principle I and Stack & Deployment, which describe today's deployment as fact rather
+     than imposing a rule.
+
+Modified principles:
+  III. Green CI or It Does Not Merge — runtime-pin bullet rewritten: one source of truth
+       (`.nvmrc`), host derives from it, host-side version variables prohibited rather than
+       required. Every other bullet unchanged: triggers, the install→lint→typecheck→test→build
+       sequence, matching the deploy build command, red-blocks-merge, the lockfile rule, and the
+       ubuntu-latest-only rule all stand.
+
+Added sections: none.
+Removed sections: none.
+
+Triggering case: 001-deck-runs T049. Build system version 3, no NODE_VERSION variable in either
+                 environment, build log reports "Installing nodejs 26.7.0" — matching .nvmrc,
+                 engines.node, and the workflow's node-version-file.
+
+Deferred TODOs: none.
+
+Prior history:
+  1.5.0 → see below.
+
+SUPERSEDED REPORT (1.4.0 → 1.5.0)
+================================
 Bump rationale: MINOR. Principle VIII's license rule changed from a gate into a fast-path, and
                 OFL-1.1 was added to the pre-cleared set.
 
@@ -87,7 +127,9 @@ This governs how it is built. The maintainer defines what gets built.
 - Red blocks merge. Fix or revert; never merge intending to fix later.
 - Lockfile committed. Clean-checkout `npm ci` must succeed.
 - `ubuntu-latest` standard runners only. No paid or self-hosted runners.
-- Runtime version pinned identically in `.nvmrc`, `engines`, CI workflow, and Pages env.
+- Runtime version has ONE source of truth in the repo: `.nvmrc`. `engines` and CI follow it, and
+  the deploy platform MUST derive from it rather than declare its own. A host-side version
+  variable is a second copy that can drift — its absence is the guarantee, so do not add one.
 
 ## IV. Test Behavior, Not Implementation
 
@@ -203,4 +245,4 @@ prerequisites: git + Node at the pinned version, nothing else.
 - A principle that is routinely waived gets enforced or amended. A rule that is always
   excepted makes the whole document untrustworthy.
 
-**Version**: 1.5.0 | **Ratified**: 2026-08-22 | **Last Amended**: 2026-08-22
+**Version**: 1.6.0 | **Ratified**: 2026-08-22 | **Last Amended**: 2026-08-23
