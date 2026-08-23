@@ -224,7 +224,20 @@ has moved out from under it:
 
 - `rungId` is not a rung in the current config
 - any id in `queue`, `passedThisRun`, or `failedThisCycle` is not a card in the current config
+- `queue`, `passedThisRun`, and `failedThisCycle` together are not exactly that rung's `cardIds`,
+  as a set — the run was written against a membership this config no longer has, so resuming it
+  would present a card the rung has dropped, or complete the rung having never presented one it
+  has gained (FR-029)
 - `queue` is empty, or `position` is outside `[0, queue.length)`
+- a card still to be presented — `queue` from `position` on — is already in `passedThisRun`, which
+  resuming would re-present (FR-030, SC-009)
+
+The third rule is the three arrays *together*, never `queue` alone: by I2, from cycle 1 on the
+queue is only what the last cycle failed, and the rest of the rung is already in `passedThisRun`.
+The fifth is the tail from `position`, never the whole queue, for the mirror-image reason: within
+a cycle the queue does not change and only `position` advances, so every card marked so far this
+cycle sits in the queue *behind* the cursor while also being in `passedThisRun`. I1 is about the
+cards still to come, and so is this.
 
 `completedRungIds` and everything else in the record survive intact. This is the spec's
 "discarded rather than resumed into an inconsistent state" edge case, scoped as narrowly as it

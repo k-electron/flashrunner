@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { decks } from '@/decks/registry';
 import type { DeckConfig } from '@/decks/types';
-import { readDeckRecord, writeDeckRecord, type DeckRecord } from '@/storage/deckRecord';
+import { mark, start } from '@/run/reducer';
+import type { Outcome, RunState } from '@/run/types';
+import {
+  readDeckRecord,
+  writeDeckRecord,
+  type DeckRecord,
+  type PersistedRun,
+} from '@/storage/deckRecord';
 import { deckKey } from '@/storage/keys';
 import { readItem, writeItem } from '@/storage/safeStorage';
 
@@ -165,6 +173,126 @@ describe('readDeckRecord / writeDeckRecord', () => {
     expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
   });
 
+  // The deck still has card "c", so the every-card-in-the-deck check waves this
+  // through. Rung r1 does not list it, and a run for r1 that presents it is the
+  // spec's "revised deck configuration" edge case (FR-029).
+  it('drops a run holding a card its rung does not list, keeping completedRungIds', () => {
+    const deck = fixtureDeck();
+    seed(deck, {
+      schemaVersion: 1,
+      completedRungIds: ['r1'],
+      run: {
+        rungId: 'r1',
+        cycleIndex: 0,
+        queue: ['a', 'b', 'c'],
+        position: 1,
+        failedThisCycle: [],
+        passedThisRun: ['a'],
+      },
+    });
+
+    expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
+  });
+
+  // The other direction, and the costlier one: finishing this run would append r2
+  // to completedRungIds having never presented "c" (FR-029).
+  it('drops a run missing a card its rung now lists, keeping completedRungIds', () => {
+    const deck = fixtureDeck();
+    seed(deck, {
+      schemaVersion: 1,
+      completedRungIds: ['r1'],
+      run: {
+        rungId: 'r2',
+        cycleIndex: 0,
+        queue: ['a', 'b'],
+        position: 1,
+        failedThisCycle: [],
+        passedThisRun: ['a'],
+      },
+    });
+
+    expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
+  });
+
+  // The same gap on a later cycle, where the queue being a subset of the rung is
+  // normal and only the three arrays together give the game away: "c" is in neither,
+  // so this run was started before r2 gained it and completing it would mark r2 done
+  // without ever presenting it (FR-029).
+  it('drops a later cycle that never knew about a card its rung now lists', () => {
+    const deck = fixtureDeck();
+    seed(deck, {
+      schemaVersion: 1,
+      completedRungIds: ['r1'],
+      run: {
+        rungId: 'r2',
+        cycleIndex: 1,
+        queue: ['b'],
+        position: 0,
+        failedThisCycle: [],
+        passedThisRun: ['a'],
+      },
+    });
+
+    expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
+  });
+
+  // From cycle 1 onward the queue is deliberately only what the last cycle failed,
+  // so a `queue` -equals- `rung.cardIds` check would discard every resumable run
+  // past the first cycle. The rung is covered by the three arrays together.
+  it('keeps a later cycle whose queue is only the cards still failing', () => {
+    const deck = fixtureDeck();
+    const later = {
+      rungId: 'r2',
+      cycleIndex: 2,
+      queue: ['c'],
+      position: 0,
+      failedThisCycle: [],
+      passedThisRun: ['a', 'b'],
+    };
+    seed(deck, { schemaVersion: 1, completedRungIds: ['r1'], run: later });
+
+    expect(readDeckRecord(deck).run).toEqual(later);
+  });
+
+  // FR-030 / SC-009: "c" is still ahead of the cursor and has already been passed,
+  // so resuming this run would present it a second time.
+  it('drops a run whose cards still to come include one already passed', () => {
+    const deck = fixtureDeck();
+    seed(deck, {
+      schemaVersion: 1,
+      completedRungIds: ['r1'],
+      run: {
+        rungId: 'r2',
+        cycleIndex: 0,
+        queue: ['a', 'b', 'c'],
+        position: 1,
+        failedThisCycle: [],
+        passedThisRun: ['a', 'c'],
+      },
+    });
+
+    expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
+  });
+
+  // The overlap that is not a fault: within a cycle `mark` leaves the queue alone
+  // and only advances `position`, so every card marked so far this cycle is still
+  // in the queue *behind* the cursor and in passedThisRun at the same time. Only
+  // the tail from `position` on can re-present anything.
+  it('keeps a run whose already-marked cards sit behind the cursor', () => {
+    const deck = fixtureDeck();
+    const midCycle = {
+      rungId: 'r2',
+      cycleIndex: 0,
+      queue: ['a', 'b', 'c'],
+      position: 2,
+      failedThisCycle: ['b'],
+      passedThisRun: ['a'],
+    };
+    seed(deck, { schemaVersion: 1, completedRungIds: ['r1'], run: midCycle });
+
+    expect(readDeckRecord(deck).run).toEqual(midCycle);
+  });
+
   it('resets a deck whose stored value is not JSON, leaving other decks readable', () => {
     const corrupt = fixtureDeck();
     const healthy = fixtureDeck();
@@ -173,5 +301,64 @@ describe('readDeckRecord / writeDeckRecord', () => {
 
     expect(readDeckRecord(corrupt)).toEqual({ schemaVersion: 1, completedRungIds: [] });
     expect(readDeckRecord(healthy).completedRungIds).toEqual(['r1']);
+  });
+});
+
+/**
+ * The read path's rung-membership and no-re-presentation conditions are only as
+ * good as the states they let through: a condition that is too strict shows up
+ * not as a failing unit test but as a learner's run vanishing mid-ladder.
+ *
+ * So rather than assert the invariants on hand-written fixtures, this drives the
+ * real reducer through whole runs of every rung of both shipped decks and asserts
+ * that every state it produces still reads back — which is the property the app
+ * actually depends on.
+ */
+function toPersistedRun(state: RunState): PersistedRun {
+  const { rungId, cycleIndex, queue, position, failedThisCycle, passedThisRun } = state;
+  return { rungId, cycleIndex, queue, position, failedThisCycle, passedThisRun };
+}
+
+/** A shipped deck under a key of this test's own, so no test can see another's. */
+function asFixture(deck: DeckConfig): DeckConfig {
+  counter += 1;
+  return { ...deck, id: `${deck.id}-${counter}` };
+}
+
+describe('readDeckRecord — every state the reducer can reach', () => {
+  it('resumes every state of every rung of both shipped decks', () => {
+    let checked = 0;
+    let deepestCycle = 0;
+
+    for (const shipped of decks) {
+      for (const rung of shipped.rungs) {
+        // Three failure rhythms per rung: one that fails every other card, and two
+        // sparser ones, so runs of several cycles are reached rather than only the
+        // clean first-pass case.
+        for (const failEvery of [2, 3, 5]) {
+          const deck = asFixture(shipped);
+          let state = start(deck, rung.id);
+          let step = 0;
+
+          while (state.status === 'running') {
+            const run = toPersistedRun(state);
+            seed(deck, { schemaVersion: 1, completedRungIds: [], run });
+
+            expect(readDeckRecord(deck).run, `${shipped.id}/${rung.id} step ${step}`).toEqual(run);
+
+            deepestCycle = Math.max(deepestCycle, state.cycleIndex);
+            checked += 1;
+            const outcome: Outcome = step % failEvery === 0 ? 'not-yet' : 'got-it';
+            state = mark(state, outcome);
+            step += 1;
+          }
+        }
+      }
+    }
+
+    // Guards the walk itself: a reducer or deck change that made these runs finish
+    // in one cycle would leave the assertions above green while covering nothing.
+    expect(checked).toBeGreaterThan(1000);
+    expect(deepestCycle).toBeGreaterThan(1);
   });
 });

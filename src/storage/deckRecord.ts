@@ -89,6 +89,13 @@ function readStringArray(value: unknown): string[] | undefined {
   return value as string[];
 }
 
+/** Set equality over ids. Order and repetition carry no meaning here. */
+function sameSet(left: string[], right: string[]): boolean {
+  const a = new Set(left);
+  const b = new Set(right);
+  return a.size === b.size && [...a].every((entry) => b.has(entry));
+}
+
 /**
  * Drops the run — and only the run — when the deck config has moved out from under
  * it, or when the stored shape does not typecheck. `completedRungIds` survives.
@@ -111,12 +118,28 @@ function readRun(value: unknown, deck: DeckConfig): PersistedRun | undefined {
   if (queue === undefined || failedThisCycle === undefined || passedThisRun === undefined) {
     return undefined;
   }
-  if (!deck.rungs.some((rung) => rung.id === rungId)) {
+  const rung = deck.rungs.find((entry) => entry.id === rungId);
+  if (rung === undefined) {
     return undefined;
   }
   const cardIds = new Set(deck.cards.map((card) => card.id));
   const referenced = [...queue, ...failedThisCycle, ...passedThisRun];
   if (referenced.some((cardId) => !cardIds.has(cardId))) {
+    return undefined;
+  }
+  // The run's own cards must still be exactly this rung's membership. A card in the
+  // deck is not enough: a run for `r1` whose queue holds a card `r1` does not list
+  // would present it, and a run missing one of `r1`'s cards would complete `r1` —
+  // appending it to `completedRungIds` — without ever presenting that card. Both are
+  // the spec's "revised deck configuration" edge case (FR-029).
+  //
+  // Equality, not `queue` -equals- `rung.cardIds`: from cycle 1 onward `queue` is
+  // deliberately the failed *subset*. What every cycle does hold is that
+  // `queue` ∪ `failedThisCycle` ∪ `passedThisRun` covers the rung exactly — cycle 0
+  // starts with the whole rung in the queue, and each later cycle re-queues exactly
+  // what it failed while everything else has already passed. See the walk over both
+  // shipped decks in src/storage/deckRecord.test.ts.
+  if (!sameSet(referenced, rung.cardIds)) {
     return undefined;
   }
   // `position` indexes the queue and `cycleIndex` counts cycles, so both are
@@ -131,6 +154,16 @@ function readRun(value: unknown, deck: DeckConfig): PersistedRun | undefined {
     position < 0 ||
     position >= queue.length
   ) {
+    return undefined;
+  }
+  // FR-030 is unconditional: a resumed run must not re-present a card already passed.
+  // Only the cards from `position` on are still to be presented, so that tail — not
+  // the whole queue — is what must not overlap `passedThisRun`. Checking the whole
+  // queue would reject every legitimate mid-cycle resume, because `mark` leaves the
+  // queue alone within a cycle and only advances `position`: a card marked earlier
+  // this cycle sits in the queue *behind* the cursor and is in `passedThisRun` too.
+  const passed = new Set(passedThisRun);
+  if (queue.slice(position).some((cardId) => passed.has(cardId))) {
     return undefined;
   }
   return { rungId, cycleIndex, queue, position, failedThisCycle, passedThisRun };
