@@ -19,12 +19,13 @@ const FIRST_RUN = '/deck/dolch-prek-5/rung/r1';
 const SECOND_RUN = '/deck/dolch-prek-5/rung/r2';
 const TOP_RUN = '/deck/dolch-prek-5/rung/r8';
 const FIRST_RUNG_CARDS = ['a', 'i', 'the', 'and', 'to'];
+const SECOND_RUNG_CARDS = ['a', 'i', 'the', 'and', 'to', 'is', 'it', 'in', 'up', 'me'];
 
 // Halfway through r2: three words cleared, one still to come back.
 const SECOND_RUNG_RUN: PersistedRun = {
   rungId: 'r2',
   cycleIndex: 0,
-  queue: ['a', 'i', 'the', 'and', 'to', 'is', 'it', 'in', 'up', 'me'],
+  queue: SECOND_RUNG_CARDS,
   position: 4,
   failedThisCycle: ['i'],
   passedThisRun: ['a', 'the', 'and'],
@@ -50,9 +51,62 @@ function seed(record: StoredRecord = {}): void {
   writeItem(deckKey(dolchPreK5.id), recordJson(record));
 }
 
+/**
+ * The engine shuffles, so a freshly started run has no fixed first card and every
+ * test that named one was passing or failing by luck from run to run. One
+ * reproducible stream for the whole file removes that.
+ *
+ * The seed is arbitrary and nothing below is written against the order it happens
+ * to produce: the tests read the card the screen is showing and make their claim
+ * about that. The stub is here so a failure means a failure, not so any assertion
+ * can be pinned to a literal.
+ */
+const FILE_SEED = 20260213;
+
 beforeEach(() => {
   seed();
+  vi.spyOn(Math, 'random').mockImplementation(seededRng(FILE_SEED));
 });
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+/** A card's visible face, which is all the screen ever shows of it. */
+function frontOf(cardId: string): string {
+  const card = dolchPreK5.cards.find((entry) => entry.id === cardId);
+  if (card === undefined) {
+    throw new Error(`No card "${cardId}" in deck "${dolchPreK5.id}"`);
+  }
+  return card.front;
+}
+
+/**
+ * Which of `candidates` is on screen, read the way a learner reads it. Calling it
+ * is itself a check: it throws unless exactly one of them is being presented, which
+ * is what lets a test say "a card of this rung" without naming which.
+ */
+function shownCard(candidates: readonly string[]): string {
+  const shown = candidates.filter((id) => screen.queryAllByText(frontOf(id)).length > 0);
+  if (shown.length !== 1) {
+    throw new Error(`Expected one of ${candidates.join(', ')} on screen, found ${shown.length}`);
+  }
+  return shown[0];
+}
+
+/** The stored run, insisted upon: a test that asks for it has nothing to say without it. */
+function storedRun(): PersistedRun {
+  const { run } = readDeckRecord(dolchPreK5);
+  if (run === undefined) {
+    throw new Error(`No run is stored for deck "${dolchPreK5.id}"`);
+  }
+  return run;
+}
+
+/** Sorted, so a queue can be compared for membership without naming an order (FR-006). */
+function members(cardIds: readonly string[]): string[] {
+  return [...cardIds].sort();
+}
 
 /** Renders the run route and hands back the router, for tests that navigate. */
 function renderRunWithRouter(path: string) {
@@ -91,9 +145,11 @@ async function clearRun(user: ReturnType<typeof userEvent.setup>, cards: number)
 }
 
 describe('Run', () => {
-  it('shows the first card of the rung', () => {
+  // Which word leads the run is the shuffle's business (FR-001); that the run opens
+  // on a card of this rung and only one is not.
+  it('shows a card of the rung as soon as the run starts', () => {
     renderRun(FIRST_RUN);
-    expect(screen.getByText('a')).toBeInTheDocument();
+    expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
   });
 
   it('offers both outcomes by their accessible names', () => {
@@ -115,9 +171,13 @@ describe('Run', () => {
 
   it('advances to the next card when the current one is marked', async () => {
     const user = renderRun(FIRST_RUN);
+    // Which card was on top is whatever the shuffle dealt; what matters is that
+    // marking it moves the run on to a different one and retires it.
+    const first = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(screen.getByText('I')).toBeInTheDocument();
-    expect(screen.queryByText('a')).not.toBeInTheDocument();
+
+    expect(shownCard(FIRST_RUNG_CARDS)).not.toBe(first);
+    expect(screen.queryByText(frontOf(first))).not.toBeInTheDocument();
   });
 
   it('brings a failed card back in the next round', async () => {
@@ -125,22 +185,34 @@ describe('Run', () => {
     for (let card = 0; card < 4; card += 1) {
       await user.click(screen.getByRole('button', { name: 'Got it' }));
     }
-    // The last card of the round, "to", is the only one failed.
+    // Whichever word the shuffle left last is the only one failed, and it is that
+    // card by identity that has to come back — not a card in a known position.
+    const failed = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
 
     expect(screen.getByText('1 card left in this round')).toBeInTheDocument();
-    expect(screen.getByText('to')).toBeInTheDocument();
+    expect(shownCard(FIRST_RUNG_CARDS)).toBe(failed);
   });
 
-  it('returns to the first card of the first round when Start over is used', async () => {
+  it('returns to the start of a full first round when Start over is used', async () => {
     const user = renderRun(FIRST_RUN);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
     expect(screen.getByText('3 cards left in this round')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Start over' }));
-    expect(screen.getByText('a')).toBeInTheDocument();
+
+    // Cycle 0 again with nothing behind it, and a card of the rung on screen. Which
+    // word leads is not the claim: a restart shuffles anew (FR-017), so naming one
+    // would assert the seed rather than the reset.
     expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
+    expect(storedRun()).toMatchObject({
+      cycleIndex: 0,
+      position: 0,
+      failedThisCycle: [],
+      passedThisRun: [],
+    });
   });
 
   it('offers a way out of the run, back to the deck it belongs to', () => {
@@ -188,9 +260,10 @@ describe('Run', () => {
       await router.navigate(SECOND_RUN);
     });
 
-    // The ten-word rung from its first card, not the five-word queue carried over.
+    // The ten-word rung from a standing start, not the five-word queue carried
+    // over: ten left rather than four, and the card on screen is one of r2's.
     expect(screen.getByText('10 cards left in this round')).toBeInTheDocument();
-    expect(screen.getByText('a')).toBeInTheDocument();
+    expect(SECOND_RUNG_CARDS).toContain(shownCard(SECOND_RUNG_CARDS));
   });
 
   it('offers a repeat and the next rung on completion (FR-014)', async () => {
@@ -209,8 +282,11 @@ describe('Run', () => {
     await clearRun(user, 5);
     await user.click(screen.getByRole('button', { name: 'Repeat this run' }));
 
-    expect(screen.getByText('a')).toBeInTheDocument();
+    // The same five words, all of them to do again, in whatever order the repeat
+    // drew (FR-018).
     expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
+    expect(members(storedRun().queue)).toEqual(members(FIRST_RUNG_CARDS));
   });
 
   it('records the completed rung, and repeating it appends nothing (FR-017, FR-018)', async () => {
@@ -306,31 +382,40 @@ describe('Run — persistence and resume', () => {
   it('records the run on entry, before a single card has been marked', () => {
     renderRun(FIRST_RUN);
 
-    expect(readDeckRecord(dolchPreK5).run).toEqual({
+    const run = storedRun();
+    expect(run).toMatchObject({
       rungId: 'r1',
       cycleIndex: 0,
-      queue: FIRST_RUNG_CARDS,
       position: 0,
       failedThisCycle: [],
       passedThisRun: [],
     });
+    // The order is the shuffle's, so what is recorded is the rung's membership in
+    // some order — and it is that order's first card the learner is looking at,
+    // which is the whole point of recording it (FR-011, FR-015).
+    expect(members(run.queue)).toEqual(members(FIRST_RUNG_CARDS));
+    expect(screen.getByText(frontOf(run.queue[0]))).toBeInTheDocument();
   });
 
   it('records the position after every card is marked (FR-028, SC-009)', async () => {
     const user = renderRun(FIRST_RUN);
 
+    // Read off the screen rather than assumed from the config: the run is shuffled,
+    // so the only thing that says which card is being answered is the card shown.
+    const passed = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     expect(readDeckRecord(dolchPreK5).run).toMatchObject({
       position: 1,
-      passedThisRun: ['a'],
+      passedThisRun: [passed],
       failedThisCycle: [],
     });
 
+    const failed = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
     expect(readDeckRecord(dolchPreK5).run).toMatchObject({
       position: 2,
-      passedThisRun: ['a'],
-      failedThisCycle: ['i'],
+      passedThisRun: [passed],
+      failedThisCycle: [failed],
     });
   });
 
@@ -365,7 +450,7 @@ describe('Run — persistence and resume', () => {
       run: {
         rungId: 'r2',
         cycleIndex: 0,
-        queue: ['a', 'i', 'the', 'and', 'to', 'is', 'it', 'in', 'up', 'me'],
+        queue: SECOND_RUNG_CARDS,
         position: 6,
         failedThisCycle: [],
         passedThisRun: ['a', 'i', 'the', 'and', 'to', 'is'],
@@ -373,8 +458,11 @@ describe('Run — persistence and resume', () => {
     });
     renderRun(FIRST_RUN);
 
-    expect(screen.getByText('a')).toBeInTheDocument();
+    // All five of r1 to do, in r1's own fresh order — not the four left of the
+    // stored r2 run, and not resumed into it.
     expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
+    expect(members(storedRun().queue)).toEqual(members(FIRST_RUNG_CARDS));
   });
 
   it('clears the stored run on completion, leaving nothing to resume', async () => {
@@ -400,17 +488,21 @@ describe('Run — persistence and resume', () => {
     const user = renderRun(FIRST_RUN);
     await user.click(screen.getByRole('button', { name: 'Start over' }));
 
-    const record = readDeckRecord(dolchPreK5);
     // The rung stays completed, so it stays unlocked and mastery is unaffected.
-    expect(record.completedRungIds).toEqual(['r1']);
-    expect(record.run).toEqual({
+    expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual(['r1']);
+    // The half-finished run is gone and a whole one written over it: same five
+    // words, nothing marked, position 0. The order is the restart's own shuffle
+    // (FR-017), so it is the membership that is asserted, not the sequence.
+    const run = storedRun();
+    expect(run).toMatchObject({
       rungId: 'r1',
       cycleIndex: 0,
-      queue: FIRST_RUNG_CARDS,
       position: 0,
       failedThisCycle: [],
       passedThisRun: [],
     });
+    expect(members(run.queue)).toEqual(members(FIRST_RUNG_CARDS));
+    expect(screen.getByText(frontOf(run.queue[0]))).toBeInTheDocument();
   });
 });
 
@@ -463,13 +555,17 @@ describe('Run — a device with no room left', () => {
     // so there is already something the device will not be keeping.
     expect(screen.getByRole('status')).toHaveTextContent(/Progress is not being saved/);
 
-    // Told rather than silently lied to — and the run is still usable.
+    // Told rather than silently lied to — and the run is still usable: each mark
+    // moves it on to a card it has not shown yet, refused write or not.
+    const first = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(screen.getByText('I')).toBeInTheDocument();
+    const second = shownCard(FIRST_RUNG_CARDS);
+    expect(second).not.toBe(first);
     expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
-    expect(screen.getByText('the')).toBeInTheDocument();
+    expect([first, second]).not.toContain(shownCard(FIRST_RUNG_CARDS));
+    expect(screen.getByText('3 cards left in this round')).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent(/Progress is not being saved/);
   });
 
@@ -499,9 +595,10 @@ describe('Run — a device with no room left', () => {
     await user.click(screen.getByRole('button', { name: 'Start over' }));
 
     // The discarded run does not come back: the store still holds it, but this
-    // session reads its own write back and finds nothing to resume.
-    expect(screen.getByText('a')).toBeInTheDocument();
+    // session reads its own write back and finds nothing to resume. Ten left, not
+    // the six the abandoned run stopped on, and a card of r2 freshly drawn.
     expect(screen.getByText('10 cards left in this round')).toBeInTheDocument();
+    expect(SECOND_RUNG_CARDS).toContain(shownCard(SECOND_RUNG_CARDS));
 
     // And the learner is told, on the screen they are now looking at, that the
     // discard did not reach the device (constitution Principle II).
@@ -528,32 +625,16 @@ describe('Run — the order stored is the order presented (FR-011, FR-015, FR-01
    * A stub returning a constant would do the opposite — both shuffles would draw
    * the same values, land on the same order, and the bug would pass unseen.
    * Deterministic here means one reproducible sequence, not one repeated value.
+   *
+   * This overrides the file-level stub rather than duplicating it: the seed is this
+   * describe's own, chosen when the case was written, and re-stubbing here restarts
+   * the stream at that seed for every test in it. The file-level hook would give a
+   * stream that advances too, so the case does not depend on 2026 in particular —
+   * it is kept because the reasoning above is about this test and belongs with it.
    */
   beforeEach(() => {
     vi.spyOn(Math, 'random').mockImplementation(seededRng(2026));
   });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  /** A card's visible face, which is all the screen ever shows of it. */
-  function frontOf(cardId: string): string {
-    const card = dolchPreK5.cards.find((entry) => entry.id === cardId);
-    if (card === undefined) {
-      throw new Error(`No card "${cardId}" in deck "${dolchPreK5.id}"`);
-    }
-    return card.front;
-  }
-
-  /** Which of `candidates` is on screen, read the way a learner reads it. */
-  function shownCard(candidates: readonly string[]): string {
-    const shown = candidates.filter((id) => screen.queryAllByText(frontOf(id)).length > 0);
-    if (shown.length !== 1) {
-      throw new Error(`Expected one of ${candidates.join(', ')} on screen, found ${shown.length}`);
-    }
-    return shown[0];
-  }
 
   it('writes the order it is about to present, not a second shuffle of the same cards', async () => {
     const user = renderRun(FIRST_RUN);
