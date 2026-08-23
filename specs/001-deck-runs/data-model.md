@@ -204,6 +204,16 @@ startable(rungs, i) = i === 0 || completedRungIds.includes(rungs[i - 1].id)
 Completed rungs stay startable forever (FR-016), and repeating one appends nothing new, so
 progress cannot go backwards (FR-018).
 
+**Assumption: a deck's rung sequence is stable for as long as progress against it is retained.**
+FR-016 is unconditional, but this rule reads the *predecessor*, not the rung itself. If a
+published deck's rungs were ever reordered, or a rung inserted between two existing ones, a rung
+the record says is completed could render as not startable — its new predecessor was never
+completed. Under the rule above, `completedRungIds: ['r2']` leaves `r2` locked. Reaching that
+state requires exactly the config drift § Mastery is derived, not stored cites, and
+`plan.md § Key Design Decisions` already requires a changed ladder to ship under a new deck id,
+which keeps stored progress from being read against it. Should a ladder ever be revised in place
+instead, FR-016 would need an explicit exception here.
+
 ### Discarding a stale run
 
 On read, a `PersistedRun` is dropped — and only it, never the whole record — when the deck config
