@@ -23,15 +23,26 @@ function backingStore(): Storage | undefined {
   }
 }
 
+/**
+ * The mirror is consulted first, not last. It only ever holds this session's own
+ * writes, so it is never older than the backing store: after a write that landed
+ * the two agree, and after one that did not — a full store still holding the
+ * previous value — it holds the newer of the two. Reading the store first would
+ * hand back the value the learner just moved past.
+ */
 export function readItem(key: string): string | null {
+  const mirrored = memory.get(key);
+  if (mirrored !== undefined) {
+    return mirrored;
+  }
   const storage = backingStore();
   if (storage === undefined) {
-    return memory.get(key) ?? null;
+    return null;
   }
   try {
-    return storage.getItem(key) ?? memory.get(key) ?? null;
+    return storage.getItem(key);
   } catch {
-    return memory.get(key) ?? null;
+    return null;
   }
 }
 

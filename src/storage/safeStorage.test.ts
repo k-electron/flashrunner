@@ -26,6 +26,21 @@ function workingStorage(): Pick<Storage, 'getItem' | 'setItem'> {
   };
 }
 
+/**
+ * A full store, as a real one behaves: it refuses writes but reads back everything
+ * already in it. A double whose `getItem` always returns `null` would hide the case
+ * where the store still holds an older value than the one this session just wrote.
+ */
+function fullStorage(seeded: Record<string, string> = {}): Pick<Storage, 'getItem' | 'setItem'> {
+  const entries = new Map<string, string>(Object.entries(seeded));
+  return {
+    getItem: (key) => entries.get(key) ?? null,
+    setItem: () => {
+      throw new DOMException('full', 'QuotaExceededError');
+    },
+  };
+}
+
 beforeEach(() => {
   const storage = workingStorage();
   replaceGlobalStorage(() => storage);
@@ -70,17 +85,26 @@ describe('safeStorage', () => {
   });
 
   it('catches and surfaces QuotaExceededError instead of throwing at the caller', () => {
-    replaceGlobalStorage(() => ({
-      getItem: () => null,
-      setItem: () => {
-        throw new DOMException('full', 'QuotaExceededError');
-      },
-    }));
+    const storage = fullStorage();
+    replaceGlobalStorage(() => storage);
     const key = deckKey('full');
 
     expect(writeItem(key, 'not-saved')).toEqual({ ok: false, reason: 'quota-exceeded' });
     // The run continues in memory rather than the learner being silently lied to.
     expect(readItem(key)).toBe('not-saved');
+  });
+
+  it('reads back the newest value when a quota-failed write left it only in memory', () => {
+    const key = deckKey('full-with-stale-value');
+    // The store is full *and* already holds an older value under this key — the
+    // ordinary case, since a store only fills up after it has been written to.
+    const storage = fullStorage({ [key]: 'OLD' });
+    replaceGlobalStorage(() => storage);
+
+    expect(writeItem(key, 'NEW')).toEqual({ ok: false, reason: 'quota-exceeded' });
+    // This session's own last write wins. Returning 'OLD' would hand the learner a
+    // rewound run and make the memory mirror dead weight in the case it exists for.
+    expect(readItem(key)).toBe('NEW');
   });
 
   it('keeps one deck readable when another deck holds a corrupt value', () => {
