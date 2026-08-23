@@ -35,7 +35,7 @@ export function readDeckRecord(deck: DeckConfig): DeckRecord {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     // Unrecognized rung ids are kept — they may belong to a config this build has
     // not caught up to yet (FR-040, FR-041).
-    completedRungIds: readStringArray(migrated.completedRungIds) ?? [],
+    completedRungIds: readRungIds(migrated.completedRungIds),
     run: readRun(migrated.run, deck),
   };
 }
@@ -69,6 +69,23 @@ function parseRaw(raw: string | null): unknown {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Salvages, where `readStringArray` rejects. One non-string entry must not cost the
+ * learner every rung they earned: the read defaults to `[]` and the very next write
+ * persists that `[]` over the stored array, so rejecting the whole array here
+ * deletes the good entries from disk permanently. The contract's rule for a
+ * wrong-shaped value is to salvage the fields that typecheck (G2).
+ *
+ * Strictness stays inside `readRun`, where a queue that is only partly valid is
+ * genuinely not resumable and dropping the run is the correct answer.
+ */
+function readRungIds(value: unknown): RungId[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((entry): entry is RungId => typeof entry === 'string');
 }
 
 function readStringArray(value: unknown): string[] | undefined {
@@ -108,7 +125,18 @@ function readRun(value: unknown, deck: DeckConfig): PersistedRun | undefined {
   if (referenced.some((cardId) => !cardIds.has(cardId))) {
     return undefined;
   }
-  if (queue.length === 0 || position < 0 || position >= queue.length) {
+  // `position` indexes the queue and `cycleIndex` counts cycles, so both are
+  // integers. A range check alone admits 1.5, and `queue[1.5]` is `undefined` — a
+  // run that resumes into a `running` state with no current card.
+  if (!Number.isInteger(cycleIndex) || cycleIndex < 0) {
+    return undefined;
+  }
+  if (
+    queue.length === 0 ||
+    !Number.isInteger(position) ||
+    position < 0 ||
+    position >= queue.length
+  ) {
     return undefined;
   }
   return { rungId, cycleIndex, queue, position, failedThisCycle, passedThisRun };

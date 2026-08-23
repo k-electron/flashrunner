@@ -98,6 +98,19 @@ describe('readDeckRecord / writeDeckRecord', () => {
     expect(storedJson(deck).completedRungIds).toEqual(['r1', 'r99']);
   });
 
+  it('keeps the rung ids that typecheck when one entry does not, on read and on write', () => {
+    const deck = fixtureDeck();
+    seed(deck, { schemaVersion: 1, completedRungIds: ['r1', 5] });
+
+    const record = readDeckRecord(deck);
+    writeDeckRecord(deck.id, record);
+
+    // Rejecting the whole array would default it to [] and then persist that [],
+    // erasing an earned rung from disk over one bad entry.
+    expect(record.completedRungIds).toEqual(['r1']);
+    expect(storedJson(deck).completedRungIds).toEqual(['r1']);
+  });
+
   it('drops a run whose rung the config no longer has, keeping completedRungIds', () => {
     const deck = fixtureDeck();
     seed(deck, {
@@ -123,6 +136,22 @@ describe('readDeckRecord / writeDeckRecord', () => {
   it('drops a run whose position is outside its queue, keeping completedRungIds', () => {
     const deck = fixtureDeck();
     seed(deck, { schemaVersion: 1, completedRungIds: ['r1'], run: { ...run, position: 7 } });
+
+    expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
+  });
+
+  it('drops a run whose position is fractional, keeping completedRungIds', () => {
+    const deck = fixtureDeck();
+    seed(deck, { schemaVersion: 1, completedRungIds: ['r1'], run: { ...run, position: 1.5 } });
+
+    // In range but not an index: queue[1.5] is undefined, which would resume into a
+    // running state with no current card.
+    expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
+  });
+
+  it('drops a run whose cycleIndex is negative, keeping completedRungIds', () => {
+    const deck = fixtureDeck();
+    seed(deck, { schemaVersion: 1, completedRungIds: ['r1'], run: { ...run, cycleIndex: -3 } });
 
     expect(readDeckRecord(deck)).toEqual({ schemaVersion: 1, completedRungIds: ['r1'] });
   });
