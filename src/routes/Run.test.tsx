@@ -1,6 +1,6 @@
 // Queried by role and visible text only — no class names, no internals, no
 // snapshots (Principle IV). The mechanic itself is covered by src/run/reducer.test.ts.
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -9,13 +9,20 @@ import { Run } from '@/routes/Run';
 // The real registry, because the route resolves through it. Rung r1 of the
 // Pre-K ladder is the five words a, I, the, and, to.
 const FIRST_RUN = '/deck/dolch-prek-5/rung/r1';
+// Rung r2 of the same ladder is those five words plus is, it, in, up, me.
+const SECOND_RUN = '/deck/dolch-prek-5/rung/r2';
 
-function renderRun(path: string) {
+/** Renders the run route and hands back the router, for tests that navigate. */
+function renderRunWithRouter(path: string) {
   const router = createMemoryRouter([{ path: '/deck/:deckId/rung/:rungId', element: <Run /> }], {
     initialEntries: [path],
   });
   render(<RouterProvider router={router} />);
-  return userEvent.setup();
+  return { user: userEvent.setup(), router };
+}
+
+function renderRun(path: string) {
+  return renderRunWithRouter(path).user;
 }
 
 describe('Run', () => {
@@ -48,6 +55,18 @@ describe('Run', () => {
     expect(screen.queryByText('a')).not.toBeInTheDocument();
   });
 
+  it('brings a failed card back in the next round', async () => {
+    const user = renderRun(FIRST_RUN);
+    for (let card = 0; card < 4; card += 1) {
+      await user.click(screen.getByRole('button', { name: 'Got it' }));
+    }
+    // The last card of the round, "to", is the only one failed.
+    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+
+    expect(screen.getByText('1 card left in this round')).toBeInTheDocument();
+    expect(screen.getByText('to')).toBeInTheDocument();
+  });
+
   it('returns to the first card of the first round when Start over is used', async () => {
     const user = renderRun(FIRST_RUN);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
@@ -59,6 +78,14 @@ describe('Run', () => {
     expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
   });
 
+  it('offers a way out of the run, back to the deck it belongs to', () => {
+    renderRun(FIRST_RUN);
+    expect(screen.getByRole('link', { name: 'Leave this run' })).toHaveAttribute(
+      'href',
+      '/deck/dolch-prek-5',
+    );
+  });
+
   it('reports success once every card has been cleared', async () => {
     const user = renderRun(FIRST_RUN);
     for (let card = 0; card < 5; card += 1) {
@@ -66,6 +93,20 @@ describe('Run', () => {
     }
     expect(screen.getByText('Run complete')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Got it' })).not.toBeInTheDocument();
+  });
+
+  it('starts a new run when the route moves to another rung', async () => {
+    const { user, router } = renderRunWithRouter(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate(SECOND_RUN);
+    });
+
+    // The ten-word rung from its first card, not the five-word queue carried over.
+    expect(screen.getByText('10 cards left in this round')).toBeInTheDocument();
+    expect(screen.getByText('a')).toBeInTheDocument();
   });
 
   it('shows a plain message and a way home for a deck or rung that does not exist', () => {
