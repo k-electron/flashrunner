@@ -17,15 +17,16 @@ as a thin rendering layer over `useReducer`. Deck ladders are **explicit data** 
 literally lists its card ids; nothing is computed from a rung size at runtime. Persistence is
 one storage module writing per-deck records that preserve fields they do not recognize.
 
-## Prerequisite: project scaffold (not yet built)
+## Prerequisite: project scaffold
 
-This repo currently contains no application code — no `package.json`, no Vite scaffold, no CI
-workflow, no Cloudflare Pages project. That work is deliberately **out of scope for 001** and
-will be specified separately as `000-scaffold`, derived from what this plan requires.
+This plan was written when the repo contained no application code — no `package.json`, no Vite
+scaffold, no CI workflow, no Cloudflare Pages project. That work was deliberately **out of scope
+for 001** and was specified separately as `000-scaffold`, derived from what this plan requires;
+it has since landed on `main`.
 
-This plan therefore pins the stack (see Technical Context) but does not install it. Every task
-in 001 assumes the scaffold has landed. The exact scaffold requirements this plan generates are
-collected in [research.md § Scaffold requirements](./research.md#scaffold-requirements-handoff-to-000-scaffold).
+This plan therefore pins the stack (see Technical Context) but did not install it — `000-scaffold`
+did. Every task in 001 assumes the scaffold has landed. The exact scaffold requirements this plan
+generated are collected in [research.md § Scaffold requirements](./research.md#scaffold-requirements-handoff-to-000-scaffold).
 
 ## Technical Context
 
@@ -117,7 +118,7 @@ settings screen, no analytics, no service worker.
 
 ### 1. The run loop is a pure reducer, not a React hook
 
-`advance(state, outcome) -> state` lives in `src/run/reducer.ts` with no React import. This is
+`mark(state, outcome) -> state` lives in `src/run/reducer.ts` with no React import. This is
 what makes SC-003, SC-004, and SC-009 testable as plain function calls rather than as UI
 choreography, and it satisfies Principle IV's "every pure function transforming user data".
 React holds it via `useReducer`; the component decides nothing about the mechanic.
