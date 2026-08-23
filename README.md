@@ -6,9 +6,13 @@ miss come back until you clear them.
 Static single-page app. Everything lives in your browser — no account, no server, no data leaves
 the device.
 
-> **Status: scaffold.** The build, test, and CI pipeline are in place. The flashcard feature
-> itself is specified in [`specs/001-deck-runs/`](specs/001-deck-runs/) and not yet built. What
-> renders today is deliberately disposable placeholder content.
+> **Status: built.** Two decks ship with it, both Dolch sight words: Pre-K (40 words) and
+> Kindergarten (52 words). Each deck is a ladder of rungs — the first 5 words, then the first 10,
+> up to the whole list. Work a rung one card at a time, marking each **Got it** or **Not yet**;
+> the ones marked **Not yet** come back on the next cycle, and the rung is cleared once a cycle
+> ends with none left. Clearing a rung unlocks the one above it. Progress is saved on the device
+> after every card, so a run you leave resumes on the card it stopped on. Specified in
+> [`specs/001-deck-runs/`](specs/001-deck-runs/).
 
 ## Prerequisites
 
