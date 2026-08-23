@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { decks } from '@/decks/registry';
-import type { DeckConfig } from '@/decks/types';
+import type { CardId, DeckConfig, DeckId, RungId } from '@/decks/types';
 import { mark, start } from '@/run/reducer';
+import { shuffle } from '@/run/shuffle';
 import type { Outcome, RunState } from '@/run/types';
 import {
   readDeckRecord,
@@ -10,7 +11,9 @@ import {
   type PersistedRun,
 } from '@/storage/deckRecord';
 import { deckKey } from '@/storage/keys';
+import { migrations, runMigrations } from '@/storage/migrations';
 import { readItem, writeItem } from '@/storage/safeStorage';
+import { seededRng } from '@/test/rng';
 
 // Each test gets its own deck id, so no test can see another's stored record and
 // nothing has to be cleared between them.
@@ -360,5 +363,139 @@ describe('readDeckRecord — every state the reducer can reach', () => {
     // in one cycle would leave the assertions above green while covering nothing.
     expect(checked).toBeGreaterThan(1000);
     expect(deepestCycle).toBeGreaterThan(1);
+  });
+});
+
+/**
+ * Shuffling adds no field. The order lives in `queue`, which has held the run's
+ * card order since 001, so the whole of this feature's storage story is that
+ * `queue` now holds a permutation of what it used to hold. `readRun` validates the
+ * three arrays against the rung with `sameSet` — membership, never sequence — and a
+ * permutation preserves membership exactly, so every existing rule still holds
+ * (specs/002-random-run-order/data-model.md § The invariant that makes this free).
+ *
+ * These tests hold that property rather than restate it, which is what lets the
+ * storage layer ship unchanged.
+ */
+
+/**
+ * A real cycle-0 state part-way through: everything before the cursor has been
+ * marked, everything from it on has not. Built from whatever order `queue` arrives
+ * in, so the same construction serves a shuffled queue and a config-order one.
+ */
+function midCycleZero(rungId: RungId, queue: CardId[], position: number): PersistedRun {
+  const marked = queue.slice(0, position);
+  return {
+    rungId,
+    cycleIndex: 0,
+    queue,
+    position,
+    failedThisCycle: marked.filter((_, index) => index % 3 === 0),
+    passedThisRun: marked.filter((_, index) => index % 3 !== 0),
+  };
+}
+
+/**
+ * What the run route does on resume: a record stores neither `status` nor `deckId`,
+ * so both come from outside it. The throw is the point — a run the read path
+ * discarded comes back `undefined`, and resuming is then impossible.
+ */
+function resume(record: DeckRecord, deckId: DeckId): RunState {
+  if (record.run === undefined) {
+    throw new Error(`Deck "${deckId}" read back with no run to resume`);
+  }
+  return { ...record.run, deckId, status: 'running' };
+}
+
+describe('readDeckRecord / writeDeckRecord — a shuffled order is just data', () => {
+  it('round-trips a shuffled queue with its order intact (FR-011, FR-014)', () => {
+    const shipped = decks[0];
+    const rung = shipped.rungs[shipped.rungs.length - 1];
+    const orders = new Set<string>();
+
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const deck = asFixture(shipped);
+      const queue = shuffle(rung.cardIds, seededRng(seed));
+      const run = midCycleZero(rung.id, queue, 7);
+
+      writeDeckRecord(deck.id, { schemaVersion: 1, completedRungIds: [], run });
+
+      // The same cards in the same sequence, not merely the same cards. A queue that
+      // came back sorted, or re-derived from the config, would still satisfy the
+      // read path's set-equality check and would still be wrong: the learner would
+      // be served an order other than the one the run recorded.
+      expect(readDeckRecord(deck).run).toEqual(run);
+      orders.add(queue.join(','));
+    }
+
+    // Guards the assertions above: five identical permutations, or five that all
+    // happened to be config order, would leave them green against a read path that
+    // ignored order entirely.
+    expect(orders.size).toBe(5);
+    expect(orders.has(rung.cardIds.join(','))).toBe(false);
+  });
+
+  it('reads a pre-feature run back unchanged and resumes it (SC-007, FR-021)', () => {
+    const shipped = decks[0];
+    const rung = shipped.rungs[2];
+    const cleared = shipped.rungs[1].id;
+    const deck = asFixture(shipped);
+    const position = 4;
+    // Exactly what the shipped build left on disk: it queued `rung.cardIds` verbatim
+    // and the learner marked four cards "Got it" before stopping. Seeded as raw JSON
+    // rather than produced by `start`, because the claim is about data written by the
+    // *old* build — the current `start` no longer produces this order.
+    const preFeature: PersistedRun = {
+      rungId: rung.id,
+      cycleIndex: 0,
+      queue: [...rung.cardIds],
+      position,
+      failedThisCycle: [],
+      passedThisRun: rung.cardIds.slice(0, position),
+    };
+    seed(deck, { schemaVersion: 1, completedRungIds: [cleared], run: preFeature });
+
+    const record = readDeckRecord(deck);
+
+    // Not discarded — a dropped run reads as `run: undefined` — not reshuffled into
+    // this build's order, and not rewritten by a migration.
+    expect(record.run).toEqual(preFeature);
+    expect(record.completedRungIds).toEqual([cleared]);
+
+    let state = resume(record, deck.id);
+    const presented: CardId[] = [];
+    while (state.status === 'running') {
+      presented.push(state.queue[state.position]);
+      state = mark(state, 'got-it');
+    }
+
+    // Resumable, in the sense the learner cares about: the cards still to come
+    // arrive in the order the old build recorded, nothing already passed comes back,
+    // and the run finishes having presented the whole rung.
+    expect(presented).toEqual(rung.cardIds.slice(position));
+    expect(state.passedThisRun).toEqual(rung.cardIds);
+  });
+
+  it('writes schemaVersion 1, and migrating that record is a no-op (FR-020)', () => {
+    const shipped = decks[0];
+    const rung = shipped.rungs[shipped.rungs.length - 1];
+    const deck = asFixture(shipped);
+    const run = midCycleZero(rung.id, shuffle(rung.cardIds, seededRng(9)), 6);
+
+    writeDeckRecord(deck.id, {
+      schemaVersion: 1,
+      completedRungIds: [shipped.rungs[0].id],
+      run,
+    });
+    const raw = readItem(deckKey(deck.id)) ?? '';
+
+    // The shuffled order occupies `queue`, a field version 1 already had, so there is
+    // no shape change for a version bump to signal and nothing for a migration to
+    // rewrite (FR-020). Stated as behavior: the record a build with this feature
+    // writes carries the same version an older build understands, and the migration
+    // path returns it byte-identically rather than touching it.
+    expect(storedJson(deck).schemaVersion).toBe(1);
+    expect(Object.keys(migrations)).toEqual([]);
+    expect(JSON.stringify(runMigrations(storedJson(deck)))).toBe(raw);
   });
 });
