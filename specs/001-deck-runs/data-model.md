@@ -132,8 +132,8 @@ else:                                   # cycle exhausted
         failedThisCycle = []
 ```
 
-**`restart(state) → RunState`** ≡ `start(deck, state.rungId)`. Discards this run only; nothing
-outside it is touched (FR-032).
+**`restart(deck, state) → RunState`** ≡ `start(deck, state.rungId)`. Discards this run only;
+nothing outside it is touched (FR-032).
 
 There is no `abandon` transition. Abandoning is navigation, not a state change (FR-012) — the
 run stays exactly as persisted and no completion is recorded.
@@ -197,8 +197,11 @@ still claim mastery while displaying an unfinished ladder. Derivation is both si
 
 ### Rung unlocking (FR-015)
 
+Shipped as `isStartable` in `src/decks/ladder.ts`:
+
 ```
-startable(rungs, i) = i === 0 || completedRungIds.includes(rungs[i - 1].id)
+isStartable(deck, completedRungIds, index) =
+    index === 0 || completedRungIds.includes(deck.rungs[index - 1].id)
 ```
 
 Completed rungs stay startable forever (FR-016), and repeating one appends nothing new, so

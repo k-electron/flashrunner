@@ -17,15 +17,16 @@ as a thin rendering layer over `useReducer`. Deck ladders are **explicit data** 
 literally lists its card ids; nothing is computed from a rung size at runtime. Persistence is
 one storage module writing per-deck records that preserve fields they do not recognize.
 
-## Prerequisite: project scaffold (not yet built)
+## Prerequisite: project scaffold
 
-This repo currently contains no application code — no `package.json`, no Vite scaffold, no CI
-workflow, no Cloudflare Pages project. That work is deliberately **out of scope for 001** and
-will be specified separately as `000-scaffold`, derived from what this plan requires.
+This plan was written when the repo contained no application code — no `package.json`, no Vite
+scaffold, no CI workflow, no Cloudflare Pages project. That work was deliberately **out of scope
+for 001** and was specified separately as `000-scaffold`, derived from what this plan requires;
+it has since landed on `main`.
 
-This plan therefore pins the stack (see Technical Context) but does not install it. Every task
-in 001 assumes the scaffold has landed. The exact scaffold requirements this plan generates are
-collected in [research.md § Scaffold requirements](./research.md#scaffold-requirements-handoff-to-000-scaffold).
+This plan therefore pins the stack (see Technical Context) but did not install it — `000-scaffold`
+did. Every task in 001 assumes the scaffold has landed. The exact scaffold requirements this plan
+generated are collected in [research.md § Scaffold requirements](./research.md#scaffold-requirements-handoff-to-000-scaffold).
 
 ## Technical Context
 
@@ -89,18 +90,22 @@ per browser. Stored data is a few kilobytes.
 
 ## Constitution Check
 
-*Checked against constitution v1.4.0. Re-checked after Phase 1 design — result unchanged.*
+*Checked against constitution v1.5.0. Re-checked after Phase 1 design, and again at the Phase 6
+polish pass: Principle III moved from DEFERRED to PASS once CI existed, and Principle VIII's
+outstanding `TODO(DEP_LICENSES)` was discharged. Under v1.5.0 the license allowlist is a
+fast-path rather than a gate — an unlisted license is a question to ask and record in the PR,
+not a blocker.*
 
 | Principle | Status | How this design satisfies it |
 |---|---|---|
 | **I. Client-Only Static SPA** | PASS | No server, no SSR, no API. `react-router` 8.3.0 exports `createBrowserRouter` / `RouterProvider` / `BrowserRouter` — verified by unpacking the tarball, so library mode survives in v8. Build emits no top-level `404.html` and no `_redirects`. |
 | **II. localStorage Is the System of Record** | PASS | Single `src/storage/` module is the only place `localStorage` is touched. All keys `flashrunner:`-prefixed, all payloads carry `schemaVersion`. Absent / disabled / full / corrupt storage each degrade to a working app on defaults. `QuotaExceededError` handled explicitly. |
-| **III. Green CI or It Does Not Merge** | DEFERRED | CI does not exist yet; it is the core of `000-scaffold`. Node pin propagates to `.nvmrc`, `engines`, workflow, and Pages `NODE_VERSION`. Not a violation — a sequencing fact, recorded above as a prerequisite. |
+| **III. Green CI or It Does Not Merge** | PASS | CI shipped with `000-scaffold`. `.github/workflows/ci.yml` runs install-from-lockfile → lint → typecheck → test → build on `ubuntu-latest`, for PRs and for pushes to `main`, and asserts the build output shape. `Verify` and `Cloudflare Pages` are both required status checks on `main`, so red blocks merge. The Node pin propagates to `.nvmrc`, `engines`, the workflow's `node-version-file`, and Pages `NODE_VERSION`. |
 | **IV. Test Behavior, Not Implementation** | PASS | Run reducer, deck validator, and storage module are pure functions and are all required coverage. Component tests query by role and visible text. |
 | **V. Minimal Dependency Surface** | PASS | Zero new runtime dependencies. Run state uses `useReducer` — the run loop *is* a state machine, so a state library would add indirection over an exact fit. |
 | **VI. Build Only What Was Asked** | PASS | See "Explicitly not built" below. |
 | **VII. Self-Contained, No Host Pollution** | PASS | Everything in `package.json` → `./node_modules`. `shadcn` runs via `npx`, never installed globally. |
-| **VIII. Free, Open, Reputable, Stable** | PASS | Node 26.7.0 is Current today with a published LTS date of 2026-10-28 — inside the six-month window Principle VIII admits as of v1.4.0, and preferred over Node 24, which enters maintenance 2026-10-20. `react-router@8.3.0` verified MIT from its own `package.json`; remaining licenses land at scaffold time via `npm ls` (`TODO(DEP_LICENSES)`); every pinned library version is latest stable, no alpha/beta/RC/canary. |
+| **VIII. Free, Open, Reputable, Stable** | PASS | Node 26.7.0 is Current today with a published LTS date of 2026-10-28 — inside the six-month window Principle VIII admits as of v1.4.0, and preferred over Node 24, which enters maintenance 2026-10-20. `react-router@8.3.0` verified MIT from its own `package.json`. `TODO(DEP_LICENSES)` is discharged by [`specs/000-scaffold/research.md` §6](../000-scaffold/research.md): all 515 transitive packages enumerated, 500 of them across the six pre-cleared licenses, and the seven unlisted ones asked, assessed, and recorded — none copyleft over application code. Every pinned library version is latest stable, no alpha/beta/RC/canary. |
 
 ### Explicitly not built (Principle VI)
 
@@ -113,7 +118,7 @@ settings screen, no analytics, no service worker.
 
 ### 1. The run loop is a pure reducer, not a React hook
 
-`advance(state, outcome) -> state` lives in `src/run/reducer.ts` with no React import. This is
+`mark(state, outcome) -> state` lives in `src/run/reducer.ts` with no React import. This is
 what makes SC-003, SC-004, and SC-009 testable as plain function calls rather than as UI
 choreography, and it satisfies Principle IV's "every pure function transforming user data".
 React holds it via `useReducer`; the component decides nothing about the mechanic.
