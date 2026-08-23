@@ -108,13 +108,17 @@ function members(cardIds: readonly string[]): string[] {
   return [...cardIds].sort();
 }
 
-/** Renders the run route and hands back the router, for tests that navigate. */
+/**
+ * Renders the run route and hands back the router, for tests that navigate, and
+ * `unmount`, for tests that interrupt: unmounting and rendering again with the
+ * store left alone is what a closed and reopened tab is.
+ */
 function renderRunWithRouter(path: string) {
   const router = createMemoryRouter([{ path: '/deck/:deckId/rung/:rungId', element: <Run /> }], {
     initialEntries: [path],
   });
-  render(<RouterProvider router={router} />);
-  return { user: userEvent.setup(), router };
+  const { unmount } = render(<RouterProvider router={router} />);
+  return { user: userEvent.setup(), router, unmount };
 }
 
 function renderRun(path: string) {
@@ -661,5 +665,136 @@ describe('Run — the order stored is the order presented (FR-011, FR-015, FR-01
       storedQueue,
       `stored order [${storedQueue.join(', ')}] is not the order presented [${presented.join(', ')}]`,
     ).toEqual(presented);
+  });
+});
+
+// Resume is only worth anything if it is invisible. The two claims are the
+// learner's, not the code's: the run you come back to is the run you would have
+// had if you had never closed the tab (SC-005, FR-011, FR-012), and a card you
+// got right never comes back (SC-006, FR-014). Together they are data-model I10.
+describe('Run — an interrupted run resumes into the run it already was (SC-005, SC-006)', () => {
+  // Its own seed, so this case does not silently inherit whatever order the
+  // file-level stream happens to deal. See `playRun` for why it is re-installed
+  // per playthrough rather than once per test.
+  const RESUME_SEED = 20260501;
+
+  // r2 throughout: ten cards, so a cycle is long enough to be interrupted in the
+  // middle of and the boundary is not also the end of the run.
+  //
+  // A policy, not a script: fail these the first time they come up, pass
+  // everything else. It is a function of card identity and nothing else, so it
+  // smuggles in no order of its own, and it guarantees a second cycle — which is
+  // where the only mid-run shuffle lives.
+  const FAIL_ON_FIRST_SIGHT = ['i', 'the', 'up', 'me'];
+  // Fixed by the policy rather than by the seed: cycle 0 is the whole rung, and
+  // cycle 1 is exactly the four failed in it, all passed on sight.
+  const CYCLE_0_MARKS = SECOND_RUNG_CARDS.length;
+  const TOTAL_MARKS = CYCLE_0_MARKS + FAIL_ON_FIRST_SIGHT.length;
+  // Twice mid cycle 0, exactly on the cycle boundary, and mid cycle 1.
+  const INTERRUPTIONS = [3, 7, CYCLE_0_MARKS, CYCLE_0_MARKS + 2];
+
+  type Marked = { card: string; outcome: 'Got it' | 'Not yet' };
+
+  /**
+   * One playthrough of r2, interrupted after each mark counted in
+   * `interruptAfter`, returning every card presented and how it was answered.
+   *
+   * Why two of these are comparable at all — the thing that could quietly make
+   * this whole case meaningless. `Math.random` is one global stream, so if the
+   * interrupted playthrough drew a different number of values off it than the
+   * uninterrupted one, the two would present different orders for a reason that
+   * has nothing to do with resume. They do not:
+   *
+   *  - randomness is drawn only inside `shuffle`, and `shuffle` is reached only
+   *    from `start` (a fresh run) and from `mark` at a cycle boundary that has
+   *    failures — nothing else on this screen draws;
+   *  - a remount whose run is still in the store takes `resume`'s stored branch,
+   *    calls no reducer, and so costs the stream nothing;
+   *  - both playthroughs therefore draw one `start` shuffle at the first mount and
+   *    one shuffle per boundary, at the same points in the same run of marks.
+   *
+   * Re-installing `seededRng(RESUME_SEED)` here — over the file-level stub, which
+   * has already advanced by the time a second playthrough begins — puts every
+   * playthrough at position 0 of the same stream. That is the entire setup, and it
+   * assumes nothing about the code being right: if a remount ever did draw, by
+   * `resume` falling through to `start`, the sequences would diverge, and a
+   * diverged sequence is precisely the failure this case is looking for.
+   */
+  async function playRun(interruptAfter: readonly number[]): Promise<Marked[]> {
+    seed();
+    vi.spyOn(Math, 'random').mockImplementation(seededRng(RESUME_SEED));
+
+    let mounted = renderRunWithRouter(SECOND_RUN);
+    const marked: Marked[] = [];
+    const seen = new Set<string>();
+
+    while (screen.queryByRole('button', { name: 'Got it' }) !== null) {
+      // Read off the screen: the run is shuffled, so the card being answered is
+      // whichever one is being presented and never one a position implies.
+      const card = shownCard(SECOND_RUNG_CARDS);
+      const outcome: Marked['outcome'] =
+        FAIL_ON_FIRST_SIGHT.includes(card) && !seen.has(card) ? 'Not yet' : 'Got it';
+      seen.add(card);
+      marked.push({ card, outcome });
+      await mounted.user.click(screen.getByRole('button', { name: outcome }));
+
+      if (interruptAfter.includes(marked.length)) {
+        mounted.unmount();
+        mounted = renderRunWithRouter(SECOND_RUN);
+      }
+      // The policy shrinks every cycle, so a run that has not ended by here is a
+      // run that is not ending. Fail loudly rather than hanging the suite.
+      if (marked.length > TOTAL_MARKS * 4) {
+        throw new Error(`Run did not end after ${marked.length} marks`);
+      }
+    }
+    return marked;
+  }
+
+  /** The sequence of cards, which is the thing SC-005 is about. */
+  function sequence(marked: readonly Marked[]): string[] {
+    return marked.map((entry) => entry.card);
+  }
+
+  it('presents the sequence an uninterrupted playthrough presents (SC-005, FR-011, FR-012)', async () => {
+    const uninterrupted = await playRun([]);
+    // The reference is worth comparing against: it runs past a cycle boundary, so
+    // the interruptions below land on both sides of the one mid-run shuffle.
+    expect(uninterrupted).toHaveLength(TOTAL_MARKS);
+
+    // Each point on its own, then all four in a single playthrough.
+    for (const points of [...INTERRUPTIONS.map((at) => [at]), INTERRUPTIONS]) {
+      const resumed = await playRun(points);
+      expect(
+        sequence(resumed),
+        `interrupted after mark ${points.join(', ')}: [${sequence(resumed).join(', ')}] is not the uninterrupted [${sequence(uninterrupted).join(', ')}]`,
+      ).toEqual(sequence(uninterrupted));
+    }
+  });
+
+  it('never presents a card again once it has been marked Got it (SC-006, FR-014)', async () => {
+    const marked = await playRun(INTERRUPTIONS);
+
+    // Every presentation in the run, not a spot check: by the time each card comes
+    // up, it must not already have been cleared.
+    const passed = new Set<string>();
+    for (const [index, entry] of marked.entries()) {
+      expect(
+        passed.has(entry.card),
+        `"${entry.card}" was presented again at mark ${index + 1}, after being marked Got it`,
+      ).toBe(false);
+      if (entry.outcome === 'Got it') {
+        passed.add(entry.card);
+      }
+    }
+
+    // And not vacuously: cards really do come back in this run — four of them were
+    // failed and re-presented — every card of the rung was reached, and the run
+    // was interrupted four times along the way.
+    expect(
+      marked.filter((entry) => entry.outcome === 'Not yet').map((entry) => entry.card),
+    ).toEqual(expect.arrayContaining(FAIL_ON_FIRST_SIGHT));
+    expect(marked).toHaveLength(TOTAL_MARKS);
+    expect(members([...new Set(sequence(marked))])).toEqual(members(SECOND_RUNG_CARDS));
   });
 });
