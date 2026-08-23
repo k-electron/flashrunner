@@ -25,7 +25,7 @@ is usually a no-op rather than the `nvm use` step people forget. On any other ma
 
 ```bash
 npm test                # Vitest — unit + component
-npm run typecheck       # tsc --noEmit, strict
+npm run typecheck       # tsc -b --noEmit — strict, over both project references
 npm run lint
 npm run build           # must emit dist/ with no top-level 404.html
 ```
