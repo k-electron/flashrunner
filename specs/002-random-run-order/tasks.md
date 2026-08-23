@@ -59,17 +59,20 @@ order, and that the first card varies across runs. No rendering required.
 
 ### Tests for User Story 1
 
-> Write these first. T006 and T007 must fail against the current `src/run/reducer.ts`.
+> Write these first. **Correction, found while doing it**: T006 and T007 do *not* fail against
+> the unshuffled engine — a permutation assertion and an invariant are both satisfied by the
+> identity permutation. Only T008's distribution tests can tell a shuffling engine from a fixed
+> one, which is the right division of labour, but the original claim here was wrong.
 
-- [ ] T006 [US1] In `src/run/reducer.test.ts`, rewrite the two assertions that encode config order: the `start` case asserting `queue: FIVE_CARDS` (line ~38) and the cycle-1 case asserting `queue).toEqual(['c2', 'c4'])` described as "in fail order" (line ~77). Both become permutation assertions — compare sorted members, not sequence. Rewrite, do not delete: the membership claim in each is still exactly right and is what SC-004 rests on
-- [ ] T007 [US1] Add the ordering invariants to `src/run/reducer.test.ts` — **I7**: every cycle's `queue` is a permutation of the cards that cycle should contain (cycle 0 of `rung.cardIds`, cycle *n+1* of cycle *n*'s `failedThisCycle`). **I8**: `queue` does not change while a cycle is in progress; only `position` advances. **I9**: the same `seededRng` seed and the same rung produce an identical sequence of cards
-- [ ] T008 [US1] Add the distribution tests to `src/run/reducer.test.ts` — **SC-001**: 20 `start` calls across different seeds yield more than one distinct first card. **SC-003**: driving many runs to cycle 1 with a fixed fail set, the share of repeat cycles that match fail order is near `1/k!` rather than 1. **SC-010**: the answer sequence that clears a run under one seed does not clear a second run under a different seed
-- [ ] T009 [US1] Confirm 001's invariant tests I1–I6 in `src/run/reducer.test.ts` still pass unchanged, except I2, which T006 amends from "same members, same order" to "same members, permuted order". Any other I1–I6 failure is a regression, not an expected update
+- [X] T006 [US1] In `src/run/reducer.test.ts`, rewrite the two assertions that encode config order: the `start` case asserting `queue: FIVE_CARDS` (line ~38) and the cycle-1 case asserting `queue).toEqual(['c2', 'c4'])` described as "in fail order" (line ~77). Both become permutation assertions — compare sorted members, not sequence. Rewrite, do not delete: the membership claim in each is still exactly right and is what SC-004 rests on
+- [X] T007 [US1] Add the ordering invariants to `src/run/reducer.test.ts` — **I7**: every cycle's `queue` is a permutation of the cards that cycle should contain (cycle 0 of `rung.cardIds`, cycle *n+1* of cycle *n*'s `failedThisCycle`). **I8**: `queue` does not change while a cycle is in progress; only `position` advances. **I9**: the same `seededRng` seed and the same rung produce an identical sequence of cards
+- [X] T008 [US1] Add the distribution tests to `src/run/reducer.test.ts` — **SC-001**: 20 `start` calls across different seeds yield more than one distinct first card. **SC-003**: driving many runs to cycle 1 with a fixed fail set, the share of repeat cycles that match fail order is near `1/k!` rather than 1. **SC-010**: the answer sequence that clears a run under one seed does not clear a second run under a different seed
+- [X] T009 [US1] Confirm 001's invariant tests I1–I6 in `src/run/reducer.test.ts` still pass unchanged, except I2, which T006 amends from "same members, same order" to "same members, permuted order". Any other I1–I6 failure is a regression, not an expected update
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] In `src/run/reducer.ts`, add an `rng: Rng = Math.random` parameter to `start`, `mark`, and `restart`; set `queue = shuffle(rung.cardIds, rng)` in `start` and `queue = shuffle(failedThisCycle, rng)` at the cycle boundary in `mark`. Leave `failedThisCycle` in fail order — it is the accumulator, not the queue. `mark` must consume no randomness mid-cycle or on completion. `restart` keeps delegating to `start`, which is what makes FR-017 and FR-018 fall out for free
-- [ ] T011 [US1] Correct the now-false doc comments in `src/run/reducer.ts`: the `start` header says "in config order — no shuffle", and the cycle-boundary comment says the next cycle is the failed set "exactly, nothing else". Both describe behavior this task replaced
+- [X] T010 [US1] In `src/run/reducer.ts`, add an `rng: Rng = Math.random` parameter to `start`, `mark`, and `restart`; set `queue = shuffle(rung.cardIds, rng)` in `start` and `queue = shuffle(failedThisCycle, rng)` at the cycle boundary in `mark`. Leave `failedThisCycle` in fail order — it is the accumulator, not the queue. `mark` must consume no randomness mid-cycle or on completion. `restart` keeps delegating to `start`, which is what makes FR-017 and FR-018 fall out for free
+- [X] T011 [US1] Correct the now-false doc comments in `src/run/reducer.ts`: the `start` header says "in config order — no shuffle", and the cycle-boundary comment says the next cycle is the failed set "exactly, nothing else". Both describe behavior this task replaced
 
 **Checkpoint**: The engine shuffles every cycle, proven without rendering. US1 is independently testable and complete.
 
