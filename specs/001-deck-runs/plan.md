@@ -90,7 +90,7 @@ per browser. Stored data is a few kilobytes.
 
 ## Constitution Check
 
-*Checked against constitution v1.5.0. Re-checked after Phase 1 design, and again at the Phase 6
+*Checked against constitution v1.6.0 — re-checked at that amendment, which rewrote Principle III's runtime-pin rule after T049 found it described a mechanism that does not exist. Re-checked after Phase 1 design, and again at the Phase 6
 polish pass: Principle III moved from DEFERRED to PASS once CI existed, and Principle VIII's
 outstanding `TODO(DEP_LICENSES)` was discharged. Under v1.5.0 the license allowlist is a
 fast-path rather than a gate — an unlisted license is a question to ask and record in the PR,
