@@ -3,13 +3,14 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { dolchPreK5 } from '@/decks/dolch-prek-5';
 import { DeckLadder } from '@/routes/DeckLadder';
 import { Run } from '@/routes/Run';
 import { readDeckRecord, type PersistedRun } from '@/storage/deckRecord';
 import { deckKey } from '@/storage/keys';
 import { writeItem } from '@/storage/safeStorage';
+import { seededRng } from '@/test/rng';
 
 // The real registry, because the route resolves through it. Rung r1 of the
 // Pre-K ladder is the five words a, I, the, and, to; r8 is the whole 40-word deck.
@@ -505,5 +506,79 @@ describe('Run — a device with no room left', () => {
     // And the learner is told, on the screen they are now looking at, that the
     // discard did not reach the device (constitution Principle II).
     expect(screen.getByRole('status')).toHaveTextContent(/Progress is not being saved/);
+  });
+});
+
+// The one failure no existing check catches. `readRun` validates a queue against
+// the rung as a set, so two different permutations of the same cards both read
+// back clean: nothing throws, nothing is logged, and the learner is handed an
+// order that is not the one they were on. Only element-wise equality sees it.
+describe('Run — the order stored is the order presented (FR-011, FR-015, FR-016)', () => {
+  // Named cards, not positions: cycle 0 arrives shuffled, so which card comes
+  // when is not knowable in advance. Four failed leaves a cycle-1 queue with 24
+  // possible orders, so two independent shuffles agreeing by luck is remote.
+  const FAILED_CARDS = ['i', 'the', 'and', 'to'];
+
+  /**
+   * One global stream, drawn from by both computations of the same transition.
+   * That is precisely what makes the divergence observable: the reducer React
+   * runs and the reducer `apply` runs to decide what to persist take *successive*
+   * values off this stream, so they shuffle the same four cards differently.
+   *
+   * A stub returning a constant would do the opposite — both shuffles would draw
+   * the same values, land on the same order, and the bug would pass unseen.
+   * Deterministic here means one reproducible sequence, not one repeated value.
+   */
+  beforeEach(() => {
+    vi.spyOn(Math, 'random').mockImplementation(seededRng(2026));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** A card's visible face, which is all the screen ever shows of it. */
+  function frontOf(cardId: string): string {
+    const card = dolchPreK5.cards.find((entry) => entry.id === cardId);
+    if (card === undefined) {
+      throw new Error(`No card "${cardId}" in deck "${dolchPreK5.id}"`);
+    }
+    return card.front;
+  }
+
+  /** Which of `candidates` is on screen, read the way a learner reads it. */
+  function shownCard(candidates: readonly string[]): string {
+    const shown = candidates.filter((id) => screen.queryAllByText(frontOf(id)).length > 0);
+    if (shown.length !== 1) {
+      throw new Error(`Expected one of ${candidates.join(', ')} on screen, found ${shown.length}`);
+    }
+    return shown[0];
+  }
+
+  it('writes the order it is about to present, not a second shuffle of the same cards', async () => {
+    const user = renderRun(FIRST_RUN);
+
+    // Cycle 0, answered by card identity: everything but "a" comes back.
+    for (let card = 0; card < FIRST_RUNG_CARDS.length; card += 1) {
+      const outcome = FAILED_CARDS.includes(shownCard(FIRST_RUNG_CARDS)) ? 'Not yet' : 'Got it';
+      await user.click(screen.getByRole('button', { name: outcome }));
+    }
+
+    // The boundary is behind us — the only transition that draws randomness. This
+    // is the record a closed tab would resume from.
+    const storedQueue = readDeckRecord(dolchPreK5).run?.queue ?? [];
+    expect(storedQueue).toHaveLength(FAILED_CARDS.length);
+
+    // What the learner is actually shown, card by card, for the rest of the cycle.
+    const presented: string[] = [];
+    for (let card = 0; card < FAILED_CARDS.length; card += 1) {
+      presented.push(shownCard(FAILED_CARDS));
+      await user.click(screen.getByRole('button', { name: 'Got it' }));
+    }
+
+    expect(
+      storedQueue,
+      `stored order [${storedQueue.join(', ')}] is not the order presented [${presented.join(', ')}]`,
+    ).toEqual(presented);
   });
 });
