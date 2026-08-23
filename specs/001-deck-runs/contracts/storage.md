@@ -80,6 +80,39 @@ a migration plus a test starting from real prior-version data.
 
 ---
 
+## Limits of the growth rules
+
+Both of these follow from the format above rather than contradicting it. They are written down
+because neither is visible from G1–G4 alone.
+
+**G4 is top-level only.** `run` is overwritten whole on every write, never merged, so an
+unrecognised field nested *inside* `run` does not survive. A newer build's `run.startedAt` is gone
+the moment an older build marks a single card. Only unknown fields sitting alongside
+`schemaVersion` are carried across.
+
+A blanket nested merge would be a worse rule, not a safer one. A run is a unit: it is deleted on
+completion, and dropped whole when it references a rung or card the config no longer has. Merging
+into whatever `run` was stored would let a fresh run inherit the dropped run's keys — a stale
+`position` or `failedThisCycle` pointing into a queue that no longer exists, which is a worse
+outcome than a lost `startedAt`. A field that has to survive an older build therefore belongs at
+the top level, where G4 already covers it.
+
+**A record from a newer build gets stamped as older.** G3 and G4 address records written by
+*older* builds. Read a `schemaVersion: 7` record with a build whose current version is 1 and its
+unknown fields do survive (G4) — but the write stamps `schemaVersion: 1`, because a build knows
+only its own version and has no way to tell a downgrade from corruption. The record is now
+labelled older than it is, so the next open in the newer build re-runs every migration from 1 to 7
+over data that has already been through them.
+
+This is a known limitation of carrying a single version stamp, and it is accepted rather than
+solved: detecting it needs a second "written by" field plus a rule for what to do when it is
+ahead, which is machinery for a case a single-device localStorage app reaches only by rolling a
+deployment back. What it costs instead is a standing requirement on future work: **every migration
+MUST be idempotent** — applying it twice to the same record must leave the same result as applying
+it once — and the Principle II test that starts from real prior-version data must assert that.
+
+---
+
 ## Hostile storage
 
 Principle II: storage is never assumed to work. Every case below degrades to a working app on
@@ -101,5 +134,10 @@ baseline, so the registry ships empty — its purpose is that the first real bum
 home and an established test pattern, not to migrate anything today.
 
 Read path: parse → if `schemaVersion` < current, run each migration in order → validate → use.
+The loop walks the registry rather than counting up from the stored version, so a corrupt
+`schemaVersion` — `-Infinity`, or an absurd negative — costs one pass over the registry
+instead of hanging the boot path.
+
 Per Principle II, any future bump ships with a test that starts from a real record written by the
-previous version.
+previous version. That migration must also be idempotent, for the reason given under
+[Limits of the growth rules](#limits-of-the-growth-rules).
