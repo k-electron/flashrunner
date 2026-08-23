@@ -51,8 +51,10 @@ compatibility gap to work around.
 
 - `@tailwindcss/vite` goes in `vite.config.ts` plugins, not in a PostCSS chain.
 - Theme customization is CSS-first (`@theme`), not a JS config object.
-- `tsconfig.json` needs `baseUrl` + `paths: { "@/*": ["./src/*"] }`, and `vite.config.ts` needs
-  the matching `resolve.alias` — shadcn's generated components import via `@/`.
+- `tsconfig.json` needs `paths: { "@/*": ["./src/*"] }`, and `vite.config.ts` needs the matching
+  `resolve.alias` — shadcn's generated components import via `@/`. shadcn's guide also says to set
+  `baseUrl`, but TypeScript 7 removed that option (`TS5102`); `paths` entries resolve relative to
+  the `tsconfig.json` that declares them, so it is not needed and the shipped scaffold omits it.
 - `@types/node` is a dev dependency, needed by `vite.config.ts` for `path.resolve`.
 
 **Sources**: [shadcn/ui — Vite installation](https://ui.shadcn.com/docs/installation/vite)
@@ -242,7 +244,7 @@ Vite 8.2.2 · @vitejs/plugin-react 6.1.0 · tailwindcss + @tailwindcss/vite 4.3.
 
 - `.nvmrc` = `26.7.0`, and `engines.node` matching it in `package.json`.
 - `vite.config.ts` with `@vitejs/plugin-react`, `@tailwindcss/vite`, and `resolve.alias` for `@/`.
-- `tsconfig.json` with `strict`, `baseUrl`, and `paths` for `@/`.
+- `tsconfig.json` with `strict` and `paths` for `@/`. No `baseUrl` — removed in TypeScript 7.
 - `src/index.css` containing `@import "tailwindcss";`.
 - `components.json` from `npx shadcn@4.19.0 init`.
 - Vitest config using the `jsdom` environment plus an RTL setup file.

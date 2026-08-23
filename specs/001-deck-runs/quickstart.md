@@ -9,7 +9,7 @@ does not need a browser; the manual passes cover only what automation genuinely 
 
 ## Prerequisites
 
-The `000-scaffold` feature must have landed. Until then none of the commands below exist.
+The `000-scaffold` feature has landed, so every command below exists on `main`.
 
 ```bash
 node --version          # must report v26.7.0 — `nvm use` reads .nvmrc
@@ -92,7 +92,11 @@ on the PR's Cloudflare Pages preview URL, not locally.
 
 ### 2. Persistence across a real browser restart — SC-006, SC-011
 
-`jsdom` fakes `localStorage`; only a real browser proves the round trip.
+The automated suite never exercises a real `localStorage` at all. Under Node 26 the runtime's own
+`localStorage` getter shadows jsdom's and yields `undefined` unless the process was started with
+`--localstorage-file`, so `safeStorage` runs on its in-memory fallback map for the whole suite.
+That makes this pass matter more, not less: the test environment is further from a real browser
+than "jsdom fakes it" would suggest, and only a real browser proves the round trip.
 
 1. Complete rung 1 of Dolch Pre-K, start rung 2, mark two cards.
 2. Quit the browser entirely — not just the tab.
