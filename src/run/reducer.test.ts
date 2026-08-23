@@ -501,4 +501,16 @@ describe('restart', () => {
     restart(deck, midRun);
     expect(midRun).toEqual(before);
   });
+
+  it('shuffles anew when a cleared rung is run again (FR-018)', () => {
+    // A rung already completed is started again from the ladder, not restarted, so this
+    // is `start` twice rather than `start` then `restart`. Across the fixed seeds the
+    // opening card varies; a chance repeat is legitimate per the spec's edge cases, so
+    // the claim is that the order is redrawn, never that two runs must differ.
+    const cleared = applyAll(start(deck, 'r1'), pass(FIVE_CARDS.length));
+    expect(isComplete(cleared)).toBe(true);
+
+    const openings = new Set(SEEDS.map((seed) => start(deck, 'r1', seededRng(seed)).queue[0]));
+    expect(openings.size).toBeGreaterThan(1);
+  });
 });

@@ -401,6 +401,37 @@ describe('Run — persistence and resume', () => {
     expect(screen.getByText(frontOf(run.queue[0]))).toBeInTheDocument();
   });
 
+  it('resumes a restarted run into the restarted order, not the discarded one (FR-019)', async () => {
+    // The abandoned run's order is seeded explicitly so it is a known quantity, and
+    // the restart's order is whatever the shuffle produced. Closing the tab must bring
+    // back the second, not the first: the restart wrote over the run, and the recorded
+    // order is the only source of truth for what comes next (FR-009).
+    const discarded = [...FIRST_RUNG_CARDS];
+    seed({
+      completedRungIds: [],
+      run: {
+        rungId: 'r1',
+        cycleIndex: 0,
+        queue: discarded,
+        position: 2,
+        failedThisCycle: [],
+        passedThisRun: ['a', 'i'],
+      },
+    });
+
+    const { user, unmount } = renderRunWithRouter(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
+    const restarted = storedRun().queue;
+
+    unmount();
+    renderRun(FIRST_RUN);
+
+    expect(storedRun().queue).toEqual(restarted);
+    expect(screen.getByText(frontOf(restarted[0]))).toBeInTheDocument();
+    // Nothing is carried over from the run that was thrown away.
+    expect(storedRun().passedThisRun).toEqual([]);
+  });
+
   it('records the position after every card is marked (FR-028, SC-009)', async () => {
     const user = renderRun(FIRST_RUN);
 
