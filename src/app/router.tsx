@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 import { Home } from '@/routes/Home';
-import { Ping } from '@/routes/Ping';
+import { Run } from '@/routes/Run';
 
 /**
  * Library mode only. Framework mode server-renders by default, which
@@ -8,5 +8,5 @@ import { Ping } from '@/routes/Ping';
  */
 export const router = createBrowserRouter([
   { path: '/', element: <Home /> },
-  { path: '/ping', element: <Ping /> },
+  { path: '/deck/:deckId/rung/:rungId', element: <Run /> },
 ]);
