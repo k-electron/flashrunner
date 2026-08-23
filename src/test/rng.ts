@@ -1,10 +1,13 @@
 // A deterministic pseudo-random generator, for tests only.
 //
-// TEST-ONLY. Nothing under src/run/, src/routes/, or src/storage/ imports this
-// file, and nothing it produces is written to localStorage. It stores no state
-// outside the closure it returns, so it does not contradict FR-010, which
-// forbids persisting a seed or generator state in a learner's run record. The
-// import graph is the evidence, and the build checks it.
+// TEST-ONLY. No shipped code imports this file — only test files do — and nothing
+// it produces is written to localStorage. It stores no state outside the closure
+// it returns, so it does not contradict FR-010, which forbids persisting a seed or
+// generator state in a learner's run record.
+//
+// That boundary is a convention, not a checked property: nothing in oxlint, tsc, or
+// the build would stop a module under src/run/ from importing this. Said plainly
+// here rather than left to a reader who assumes a guard exists.
 //
 // It exists because SC-002 and SC-003 are distribution claims: they need many
 // trials with a reproducible outcome, or CI flakes.
