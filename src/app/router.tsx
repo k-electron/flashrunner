@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 import { DeckLadder } from '@/routes/DeckLadder';
-import { Home } from '@/routes/Home';
+import { DeckList } from '@/routes/DeckList';
 import { Run } from '@/routes/Run';
 
 /**
@@ -8,7 +8,7 @@ import { Run } from '@/routes/Run';
  * Principle I treats as a MAJOR amendment. See specs/000-scaffold/plan.md.
  */
 export const router = createBrowserRouter([
-  { path: '/', element: <Home /> },
+  { path: '/', element: <DeckList /> },
   { path: '/deck/:deckId', element: <DeckLadder /> },
   { path: '/deck/:deckId/rung/:rungId', element: <Run /> },
 ]);
