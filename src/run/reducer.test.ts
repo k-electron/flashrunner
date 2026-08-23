@@ -191,6 +191,17 @@ describe('mark — invariants', () => {
     expect(state).toEqual(before);
   });
 
+  it('does not alias the previous state’s failedThisCycle as the next cycle’s queue', () => {
+    // The last card of the cycle passes, so the failed list is carried over untouched —
+    // that is the path where the two arrays could end up being the same object.
+    const prev = applyAll(start(deck, 'r1'), ['not-yet', ...pass(3)]);
+    expect(prev.failedThisCycle).toEqual(['c1']);
+
+    const next = mark(prev, 'got-it');
+    expect(next.queue).toEqual(['c1']);
+    expect(next.queue).not.toBe(prev.failedThisCycle);
+  });
+
   it('changes nothing when a complete run is marked again', () => {
     const done = applyAll(start(deck, 'r1'), pass(5));
     expect(mark(done, 'not-yet')).toBe(done);
