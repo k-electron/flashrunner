@@ -6,7 +6,7 @@
 // Run state is written after every transition and read back on entry, so the
 // run survives the tab closing and resumes on the exact card it stopped on
 // (FR-028, FR-029, SC-009).
-import { useEffect, useReducer, useState } from 'react';
+import { useReducer, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { CardFace } from '@/components/CardFace';
 import { CycleCounter } from '@/components/CycleCounter';
@@ -108,9 +108,22 @@ export function Run() {
 
 function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
   const [state, dispatch] = useReducer(runReducer, rung, (entry) => resume(deck, entry));
-  // The run as it was entered, held fixed so the entry write below happens once.
-  const [enteredWith] = useState(state);
-  const [storageFull, setStorageFull] = useState(false);
+  // The run as entered — resumed, or freshly started — is recorded as this
+  // screen's state is set up, before a single card is marked, so an interruption
+  // right here resumes on this card rather than at the top of the rung. The
+  // initializer runs once per mount and `RunLoop` is keyed by rung, so this is
+  // the entry write and nothing else: every later write is made by the
+  // transition that caused it, in `apply` below.
+  //
+  // Its result seeds the one flag every write on this screen reports through, so
+  // a full device is said once and in one way. This is the write that says it
+  // after a Start over on the ladder, where the discarded run is still on the
+  // device waiting to come back on the next tab — so there is something to lose
+  // from the moment the run is entered, not only from the first mark.
+  //
+  // Recording the entered run twice records the same state under the same key,
+  // which is what makes doing it here rather than in an effect harmless.
+  const [storageFull, setStorageFull] = useState(() => persist(deck, state));
   const card = deck.cards.find((entry) => entry.id === currentCard(state));
   const complete = isComplete(state);
   // Undefined only at the top of the ladder — the whole deck (FR-014).
@@ -129,18 +142,6 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
     dispatch(action);
     setStorageFull(persist(deck, runReducer(state, action)));
   }
-
-  // The run as entered — resumed, or freshly started — is recorded before any
-  // card is marked, so an interruption right here resumes on this card rather
-  // than at the top of the rung. Both dependencies are fixed for this run's
-  // lifetime, so this is the entry write and nothing else: every later write is
-  // made by the transition that caused it, above.
-  //
-  // A device with no room is reported from the first mark onward rather than
-  // from here, which is the first moment there is any progress to lose.
-  useEffect(() => {
-    persist(deck, enteredWith);
-  }, [deck, enteredWith]);
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-xl flex-col items-center justify-center gap-8 p-6">
@@ -185,8 +186,10 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
       )}
 
       <div className="flex items-center gap-6">
-        {/* Restarting mid-run (FR-033). The fresh run is written over the old one
-            by the effect above, so nothing outside this run is touched (FR-032).
+        {/* Restarting mid-run (FR-033). `apply` writes the fresh run over the old
+            one, as it does for every other transition — the entry write above
+            happens once, as this screen's state is set up, so it is not what
+            records a restart. Nothing outside this run is touched (FR-032).
             Once the run is over "Repeat this run" is the same action, so it is
             not offered twice. */}
         {!complete && (

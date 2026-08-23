@@ -93,6 +93,14 @@ function UnfinishedRun({ deck, rungId }: { deck: DeckConfig; rungId: RungId }) {
    * is written back as it was read, so mastery and this rung's unlocked state
    * are untouched, and every other deck has its own record entirely (SC-015).
    * The fresh run itself is started by the run screen on entry.
+   *
+   * A device with no room is a normal condition and the learner is told about it
+   * (constitution Principle II) — but not from here. This navigation replaces the
+   * ladder in the same render, so a message put on this screen would never be
+   * painted. It is the run screen that says it: the entry write it makes lands in
+   * the same full store and reports it there, on the screen the learner is
+   * looking at. The discarded run is still gone for this session either way,
+   * because storage reads this session's own writes back from its mirror.
    */
   function startOver(): void {
     const record = readDeckRecord(deck);
