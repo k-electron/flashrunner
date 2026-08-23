@@ -57,7 +57,7 @@ export function mark(state: RunState, outcome: Outcome): RunState {
   return {
     ...state,
     cycleIndex: state.cycleIndex + 1,
-    queue: failedThisCycle,
+    queue: [...failedThisCycle],
     position: 0,
     failedThisCycle: [],
     passedThisRun,
