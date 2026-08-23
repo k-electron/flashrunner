@@ -159,6 +159,11 @@ run stays exactly as persisted and no completion is recorded.
 | I5 | While `running`: `queue` is non-empty and `0 ≤ position < queue.length` | — |
 | I6 | `passedThisRun` and `failedThisCycle` never contain duplicates | FR-009 |
 
+**I2 was amended by 002.** A repeat cycle is now shuffled, so the invariant reads *same members,
+permuted order* — see
+[specs/002-random-run-order/data-model.md](../002-random-run-order/data-model.md#invariants-added-to-the-engines-test-list).
+Everything else in this table still holds as written.
+
 I3 holds by construction: every card enters cycle 0's queue, and the only exit from the loop is
 passing. A cycle ends complete only when nothing was failed in it, so by induction every card has
 passed.

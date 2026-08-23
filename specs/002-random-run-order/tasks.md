@@ -120,8 +120,8 @@ guard it against a future change that stops delegating.
 
 ### Tests for User Story 3
 
-- [ ] T017 [US3] Add restart and repeat ordering tests to `src/run/reducer.test.ts`: `restart` under a different `Rng` yields a different order from the run it discarded (FR-017), and starting a completed rung again shuffles anew (FR-018). Assert that a new shuffle happened, never that two orders must differ — a chance match is legitimate per the spec's edge cases
-- [ ] T018 [P] [US3] Add the component-level cases to `src/routes/Run.test.tsx`: "Start over" mid-run produces a fresh order, and a restarted run that is then interrupted resumes into the restarted run's order, never the discarded one's (FR-019)
+- [X] T017 [US3] Add restart and repeat ordering tests to `src/run/reducer.test.ts`: `restart` under a different `Rng` yields a different order from the run it discarded (FR-017), and starting a completed rung again shuffles anew (FR-018). Assert that a new shuffle happened, never that two orders must differ — a chance match is legitimate per the spec's edge cases
+- [X] T018 [P] [US3] Add the component-level cases to `src/routes/Run.test.tsx`: "Start over" mid-run produces a fresh order, and a restarted run that is then interrupted resumes into the restarted run's order, never the discarded one's (FR-019)
 
 **Checkpoint**: All three user stories independently functional.
 
@@ -129,8 +129,8 @@ guard it against a future change that stops delegating.
 
 ## Phase 6: Polish & Validation
 
-- [ ] T019 [P] Add a one-line forward pointer in `specs/001-deck-runs/data-model.md` at the I2 row (line ~156), which states cycle *n+1*'s queue matches the previous `failedThisCycle` "same members, same order", noting that 002 amends it to "same members, permuted order". Cross-reference only — do not rewrite 001's record of itself
-- [ ] T020 Run the full gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four must pass
+- [X] T019 [P] Add a one-line forward pointer in `specs/001-deck-runs/data-model.md` at the I2 row (line ~156), which states cycle *n+1*'s queue matches the previous `failedThisCycle` "same members, same order", noting that 002 amends it to "same members, permuted order". Cross-reference only — do not rewrite 001's record of itself
+- [X] T020 Run the full gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four must pass
 - [ ] T021 Walk the browser checks in [quickstart.md § Browser walkthrough](./quickstart.md#browser-walkthrough): opening words move between runs, a repeat cycle does not arrive in fail order, a resume is invisible, the remaining count still counts down, and no new control appeared
 - [ ] T022 Run the upgrade check in [quickstart.md § Upgrade check](./quickstart.md#upgrade-check): start a run on `main`, switch to this branch, reload, and confirm the run resumes on the same card in its original order — not discarded, not reshuffled, not migrated
 - [ ] T023 On the PR's Cloudflare Pages preview, open a run deep link (`/deck/:deckId/rung/:rungId`) directly to confirm SPA fallback still resolves (constitution Principle I). A regression check — nothing here touches routing
