@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { dolchPreK5 } from '@/decks/dolch-prek-5';
+import { DeckLadder } from '@/routes/DeckLadder';
 import { Run } from '@/routes/Run';
 import { readDeckRecord, type PersistedRun } from '@/storage/deckRecord';
 import { deckKey } from '@/storage/keys';
@@ -18,6 +19,23 @@ const SECOND_RUN = '/deck/dolch-prek-5/rung/r2';
 const TOP_RUN = '/deck/dolch-prek-5/rung/r8';
 const FIRST_RUNG_CARDS = ['a', 'i', 'the', 'and', 'to'];
 
+// Halfway through r2: three words cleared, one still to come back.
+const SECOND_RUNG_RUN: PersistedRun = {
+  rungId: 'r2',
+  cycleIndex: 0,
+  queue: ['a', 'i', 'the', 'and', 'to', 'is', 'it', 'in', 'up', 'me'],
+  position: 4,
+  failedThisCycle: ['i'],
+  passedThisRun: ['a', 'the', 'and'],
+};
+
+type StoredRecord = { completedRungIds?: string[]; run?: PersistedRun };
+
+/** The stored form of a deck record: what a seed writes and what a store reads back. */
+function recordJson(record: StoredRecord): string {
+  return JSON.stringify({ schemaVersion: 1, completedRungIds: [], ...record });
+}
+
 /**
  * Seeds the deck's stored record, defaulting to a deck that has been started but
  * has nothing completed and nothing to resume.
@@ -27,11 +45,8 @@ const FIRST_RUNG_CARDS = ['a', 'i', 'the', 'and', 'to'];
  * module-level in-memory map for the whole file. Seeding makes each test start
  * from a known state rather than from what the last one left.
  */
-function seed(record: { completedRungIds?: string[]; run?: PersistedRun } = {}): void {
-  writeItem(
-    deckKey(dolchPreK5.id),
-    JSON.stringify({ schemaVersion: 1, completedRungIds: [], ...record }),
-  );
+function seed(record: StoredRecord = {}): void {
+  writeItem(deckKey(dolchPreK5.id), recordJson(record));
 }
 
 beforeEach(() => {
@@ -49,6 +64,22 @@ function renderRunWithRouter(path: string) {
 
 function renderRun(path: string) {
   return renderRunWithRouter(path).user;
+}
+
+/**
+ * The run route together with the ladder it leaves to, so what a learner finds
+ * after moving between the two is observable without stubbing either screen.
+ */
+function renderJourney(path: string) {
+  const router = createMemoryRouter(
+    [
+      { path: '/deck/:deckId', element: <DeckLadder /> },
+      { path: '/deck/:deckId/rung/:rungId', element: <Run /> },
+    ],
+    { initialEntries: [path] },
+  );
+  render(<RouterProvider router={router} />);
+  return userEvent.setup();
 }
 
 /** Marks every card of the current cycle "Got it", which clears the run. */
@@ -367,11 +398,27 @@ describe('Run — a device with no room left', () => {
     });
   });
 
-  function fillStorage(): void {
+  /**
+   * A full device, as a real one behaves: every write is refused, and everything
+   * already in the store reads back normally. This is what makes the tests below
+   * mean anything — a double whose `getItem` returns `null` lets safeStorage's
+   * memory mirror win every read, which no browser ever does and which hides the
+   * whole question of what a learner still has after a refused write.
+   *
+   * The same record is seeded into the mirror, because that is the state a
+   * session is already in by the time a write is first refused: it has read the
+   * store, so the two agree until the first write that does not land.
+   *
+   * The shape is src/storage/safeStorage.test.ts's `fullStorage`, kept the same
+   * on purpose so there is one idea of a full store and not two.
+   */
+  function fillStorage(record: StoredRecord = {}): void {
+    seed(record);
+    const entries = new Map([[deckKey(dolchPreK5.id), recordJson(record)]]);
     Object.defineProperty(globalThis, 'localStorage', {
       configurable: true,
       get: () => ({
-        getItem: () => null,
+        getItem: (key: string) => entries.get(key) ?? null,
         setItem: () => {
           throw new DOMException('full', 'QuotaExceededError');
         },
@@ -383,16 +430,52 @@ describe('Run — a device with no room left', () => {
     fillStorage();
     const user = renderRun(FIRST_RUN);
 
-    // Told at the first mark, which is the first moment there is progress to lose.
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(screen.getByText(/Progress is not being saved/)).toBeInTheDocument();
+    // Said from entry: the write that records the run has already been refused,
+    // so there is already something the device will not be keeping.
+    expect(screen.getByRole('status')).toHaveTextContent(/Progress is not being saved/);
 
     // Told rather than silently lied to — and the run is still usable.
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
     expect(screen.getByText('I')).toBeInTheDocument();
     expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
     expect(screen.getByText('the')).toBeInTheDocument();
-    expect(screen.getByText(/Progress is not being saved/)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/Progress is not being saved/);
+  });
+
+  // What the message promises is exactly this: the run keeps working, and only
+  // the tab closing loses it. A rung completed on a full device has to stay
+  // completed for the rest of the session, or the wording would be a lie.
+  it('keeps a rung completed on a full device visible on the ladder afterwards', async () => {
+    fillStorage();
+    const user = renderJourney(FIRST_RUN);
+    while (screen.queryByRole('button', { name: 'Got it' }) !== null) {
+      await user.click(screen.getByRole('button', { name: 'Got it' }));
+    }
+    expect(screen.getByText('Run complete')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Leave this run' }));
+
+    // The rung reads as completed, and the one above it has opened — the whole
+    // consequence of the completion, not just a label.
+    expect(screen.getAllByText('Completed')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: '10 words' })).toBeInTheDocument();
+  });
+
+  // Start over on the ladder writes too, and that write is refused just the same.
+  it('reaches a fresh run and says so when Start over is used on a full device', async () => {
+    fillStorage({ completedRungIds: ['r1'], run: SECOND_RUNG_RUN });
+    const user = renderJourney(`/deck/${dolchPreK5.id}`);
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
+
+    // The discarded run does not come back: the store still holds it, but this
+    // session reads its own write back and finds nothing to resume.
+    expect(screen.getByText('a')).toBeInTheDocument();
+    expect(screen.getByText('10 cards left in this round')).toBeInTheDocument();
+
+    // And the learner is told, on the screen they are now looking at, that the
+    // discard did not reach the device (constitution Principle II).
+    expect(screen.getByRole('status')).toHaveTextContent(/Progress is not being saved/);
   });
 });
