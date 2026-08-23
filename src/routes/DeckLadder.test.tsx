@@ -1,7 +1,7 @@
 // Queried by role and visible text only — no class names, no internals, no
 // snapshots (Principle IV). The unlocking rule itself is covered as plain
 // function calls in src/decks/ladder.test.ts.
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -188,6 +188,25 @@ describe('DeckLadder — an unfinished run', () => {
       `${DECK_PATH}/rung/r2`,
     );
     expect(screen.getByRole('button', { name: 'Start over' })).toBeEnabled();
+  });
+
+  // Counting the block and reading its href says nothing about *where* it sits:
+  // pinning it to the first rung regardless of which rung the run belongs to
+  // leaves both of those assertions green. FR-035 is about the rung it is on, so
+  // that is what this asserts — the rung is found by the label a learner reads.
+  it('puts Resume and Start over on the rung the run belongs to (FR-031, FR-035)', () => {
+    renderLadder(['r1'], { run: PRE_K_RUN });
+
+    // PRE_K_RUN is on r2, which the ladder labels "10 words".
+    const rung = screen
+      .getAllByRole('listitem')
+      .find((item) => within(item).queryByText('10 words') !== null);
+    expect(rung).toBeDefined();
+
+    const owner = within(rung as HTMLElement);
+    expect(owner.getByText('Unfinished run')).toBeInTheDocument();
+    expect(owner.getByRole('link', { name: 'Resume' })).toBeInTheDocument();
+    expect(owner.getByRole('button', { name: 'Start over' })).toBeInTheDocument();
   });
 
   it('goes to a fresh run of the same rung when Start over is used', async () => {
