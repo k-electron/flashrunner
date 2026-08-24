@@ -115,9 +115,19 @@ export function PronounceButton({ word }: { word: string }) {
           button is never dimmed, greyed or animated as a whole, so it cannot
           compete with the card for a learner's attention (FR-013a). Under
           `prefers-reduced-motion: reduce` the pulse does not run and the control
-          works exactly the same, which is what `motion-safe:` is doing here. */}
+          works exactly the same, which is what `motion-safe:` is doing here.
+
+          The duration is overridden because Tailwind's own `animate-pulse` is a
+          2s cycle and a one-syllable sight word is spoken in under half of that:
+          at the stock speed the opacity has fallen to roughly 0.9 by the time the
+          word ends, which reads as nothing happening at all. 500ms fits a whole
+          cycle inside the shortest word in either deck. */}
       <Volume2
-        className={speaking ? 'size-6 motion-safe:animate-pulse' : 'size-6'}
+        className={
+          speaking
+            ? 'size-6 motion-safe:animate-pulse motion-safe:[animation-duration:500ms]'
+            : 'size-6'
+        }
         aria-hidden="true"
       />
     </Button>

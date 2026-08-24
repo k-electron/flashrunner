@@ -232,10 +232,23 @@ separately because each closes a different requirement, not because they can be 
       something a test can settle. Then confirm marking, "Start over" and "Leave this run" each
       silence it immediately. (FR-007, FR-008, FR-009, FR-013a, SC-003, SC-005)
 
-      **Status**: NOT DONE. The count is covered by test — five presses record
-      exactly one utterance — but "is the pulse subtle enough" is a judgement no
-      assertion can make, and deliberately has no test (Principle IV bans reading
-      the class name). Needs the maintainer's eye.
+      **Status**: partly. Quickstart steps 3 and 4 pass — five fast presses speak
+      the word once, nothing plays afterwards, pressing again after it ends speaks
+      again, and marking, "Start over" and "Leave this run" each silence it.
+
+      The indicator failed and is fixed: Tailwind's `animate-pulse` is a **2s**
+      cycle and a one-syllable sight word is spoken in under half of that, so the
+      opacity had only fallen to roughly 0.9 by the time the word ended — visually
+      nothing. The duration is now overridden to 500ms, which fits a whole cycle
+      inside the shortest word in either deck. Note `duration-500` does **not**
+      work for this: it sets `transition-duration`, not `animation-duration`.
+      Verified in the built CSS that the override is emitted, comes after the
+      `animation` shorthand in the cascade, and stays inside the
+      `prefers-reduced-motion: no-preference` block.
+
+      What remains: the maintainer's eye on whether the pulse is now visible and
+      still subtle enough not to pull attention off the card. That judgement has no
+      test by design — Principle IV bans reading the class name.
 
 **Checkpoint**: the feature is behaviourally complete.
 
