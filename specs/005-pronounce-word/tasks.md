@@ -67,7 +67,7 @@ built without it.
 
 **⚠️ Blocks US1.** US2 and US3 do not depend on it directly, but both are built on top of US1.
 
-- [ ] T001 [P] Write failing tests for voice selection in `src/speech/voice.test.ts`, covering the
+- [X] T001 [P] Write failing tests for voice selection in `src/speech/voice.test.ts`, covering the
       outcomes rather than the mechanism: a list containing a female en-US voice returns that voice;
       a list of en-US voices with no name on the known-female list returns `undefined`; a list with a
       female-named voice in the wrong language returns `undefined`; an empty list returns `undefined`.
@@ -76,7 +76,7 @@ built without it.
       gap. Build voice fixtures as plain objects with `name` and `lang`; the real interface has only
       five readonly fields and none of them need faking beyond those two.
 
-- [ ] T002 Implement `pickVoice(voices)` in `src/speech/voice.ts` per
+- [X] T002 Implement `pickVoice(voices)` in `src/speech/voice.ts` per
       [contracts/pronunciation.md §3](./contracts/pronunciation.md#3-which-voice-speaks): return the
       first voice whose `lang` starts `en-US` **and** whose `name` is on a short known-female list;
       otherwise return `undefined`. Keep the list to the handful in
