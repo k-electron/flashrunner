@@ -128,6 +128,12 @@ the feature.
       `jsdom` and break the existing 166 tests. Phase 5 verifies it; this task is what makes the
       suite survive Phase 3. (FR-011)
 
+      **Status**: written in Phase 3 as planned, but the stated reason did not
+      survive contact. The cleanup effect calls `window.speechSynthesis?.cancel()`,
+      so it does not throw when the API is absent and the 166 stay green with the
+      guard removed — verified by removing it. The guard earns its place on FR-011
+      alone, and T016 is the only test that fails without it.
+
 - [X] T006 [US1] Compose it in `src/routes/Run.tsx`: wrap `PronounceButton` and the existing
       `OutcomeButtons` in a two-column grid (`grid grid-cols-2 gap-x-4 gap-y-2`, `w-full max-w-md`),
       with the button on `col-start-2` and `OutcomeButtons` spanning both columns beneath it. Render
@@ -224,14 +230,19 @@ separately because each closes a different requirement, not because they can be 
 **The code for this already exists** — T005 wrote it, because the test suite could not survive
 Phase 3 without it. This phase is the verification.
 
-- [ ] T015 [US3] Confirm the existing tests in `src/routes/Run.test.tsx`, `DeckLadder.test.tsx` and
+- [X] T015 [US3] Confirm the existing tests in `src/routes/Run.test.tsx`, `DeckLadder.test.tsx` and
       `DeckList.test.tsx` pass **with no edit of any kind**. `jsdom` has no Web Speech API, so those
       166 tests run down the no-speech path, and their staying green is the real evidence for FR-011
       and SC-006 — stronger than a test written to assert it. A test that needed changing means
       something outside this feature's scope moved; revert it rather than adapting it.
       (FR-011, FR-017, SC-006, SC-008)
 
-- [ ] T016 [US3] Add one explicit test in `src/routes/Run.test.tsx`, outside T008's stub, asserting
+      **Verified**: `git diff -U0 cbe5348 HEAD` removes **zero** lines from
+      `Run.test.tsx`; `DeckLadder.test.tsx` and `DeckList.test.tsx` are not in the
+      diff at all. Only two test files changed on the branch — `Run.test.tsx`
+      (appends only) and the new `src/speech/voice.test.ts`.
+
+- [X] T016 [US3] Add one explicit test in `src/routes/Run.test.tsx`, outside T008's stub, asserting
       the speaker button is **not rendered** when `speechSynthesis` is absent, while the card, both
       outcome buttons, "Start over" and "Leave this run" all are. This states FR-011 as an
       expectation rather than leaving it as an implicit property of the environment. (FR-011, SC-006)

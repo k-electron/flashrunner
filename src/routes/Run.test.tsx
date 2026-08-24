@@ -871,8 +871,8 @@ describe('Run — hearing the word (US1)', () => {
    *
    * `getVoices` answers with an empty list on purpose: `pickVoice` finds nothing
    * in it, so no voice is set and the browser's own en-US default speaks, which
-   * is the fallback the contract specifies (§ 3 rule 2) and the path any device
-   * without a known-female voice takes. Which voice is chosen is
+   * is the last resort the contract specifies (§ 3 rule 5) and the path a device
+   * with no voices loaded yet takes. Which voice is chosen is
    * src/speech/voice.test.ts's question, not this file's.
    */
   const speech = {
@@ -881,6 +881,13 @@ describe('Run — hearing the word (US1)', () => {
 
     /** How many times the device was told to stop talking. */
     cancelled: 0,
+
+    /**
+     * Whether this stubbed browser reports a cancel back through the utterance's
+     * `error` handler. Real ones are supposed to; the point of being able to turn
+     * it off is that the control must not depend on it.
+     */
+    reportsCancel: true,
 
     /** What the device was asked to say — the assertable outcome. */
     words(): string[] {
@@ -912,6 +919,7 @@ describe('Run — hearing the word (US1)', () => {
   beforeEach(() => {
     speech.spoken.length = 0;
     speech.cancelled = 0;
+    speech.reportsCancel = true;
     Object.defineProperty(window, 'speechSynthesis', {
       configurable: true,
       value: {
@@ -924,7 +932,9 @@ describe('Run — hearing the word (US1)', () => {
         // ever spoken, hence the missing handler being unremarkable.
         cancel: () => {
           speech.cancelled += 1;
-          speech.spoken.at(-1)?.onerror?.();
+          if (speech.reportsCancel) {
+            speech.spoken.at(-1)?.onerror?.();
+          }
         },
       },
     });
@@ -1056,5 +1066,43 @@ describe('Run — hearing the word (US1)', () => {
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
       expect(speech.words()).toEqual([frontOf(first), frontOf(second)]);
     });
+
+    it('comes back to idle on a browser that cancels without saying so', async () => {
+      // The test above passes on the strength of the stub firing `onerror` when
+      // it is cancelled, which is what a browser is supposed to do. This one
+      // takes that away. Reaching the next word must not depend on a promise
+      // another program keeps: a device that stops making sound without
+      // admitting it would leave the button dead for the rest of the run, and
+      // silently, which is the failure this whole feature is most exposed to.
+      speech.reportsCancel = false;
+      const user = renderRun(FIRST_RUN);
+      const first = shownCard(FIRST_RUNG_CARDS);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      await user.click(screen.getByRole('button', { name: 'Got it' }));
+      const second = shownCard(FIRST_RUNG_CARDS);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(speech.words()).toEqual([frontOf(first), frontOf(second)]);
+    });
+  });
+});
+
+describe('Run — where nothing can speak (US3)', () => {
+  // No stub, so `speechSynthesis` is absent exactly as it is for every other
+  // test in this file. That is jsdom's own state and the reason the rest of the
+  // suite never meets the control at all — this states it as an expectation
+  // rather than leaving it an unremarked property of the environment (FR-011).
+  it('drops the control and keeps every other one', () => {
+    renderRun(FIRST_RUN);
+
+    expect(screen.queryByRole('button', { name: 'Hear the word' })).not.toBeInTheDocument();
+
+    // The run is untouched: the word is readable and every way through it works.
+    expect(shownCard(FIRST_RUNG_CARDS)).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Got it' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Not yet' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start over' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Leave this run' })).toBeInTheDocument();
   });
 });
