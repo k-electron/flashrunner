@@ -102,7 +102,12 @@ smeared or artificially thickened, which is what synthesized bold looks like.
 
 ## Step 6 — Block the font entirely (FR-010, SC-003)
 
-DevTools → Network → right-click either `.woff2` request → **Block request URL** → reload.
+DevTools → Network → **Block request URL on both formats**, then reload. Blocking only the `.woff2`
+is not enough: every Fontsource face declares two sources —
+`src: url(...woff2) format('woff2'), url(...woff) format('woff')` — so the browser simply falls through
+to the `.woff` and a font still loads. Confirmed in UAT: blocking the `.woff2` alone loaded the `.woff`
+instead, which is correct behaviour and not what this step is testing. Block the domain pattern
+`*andika*`, or block all four latin files.
 
 **Expected**: the app renders in the fallback sans-serif and is **fully usable** — every screen
 readable, every control working, no blank screen, no layout collapse. The letterforms are wrong, which

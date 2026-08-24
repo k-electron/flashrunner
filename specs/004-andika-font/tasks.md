@@ -35,11 +35,14 @@ accordingly rather than dressed up.
 - **[Story]**: Which user story this task belongs to
 - Exact file paths are in every task
 
-**Checkbox states used here**: `[X]` done. `[ ]` not started. **`[~]` means the machine-checkable part
-of the task is done and recorded under it, but the part needing a human's eyes in a browser is not.**
-Seven tasks are `[~]` rather than `[X]`, and none of them is claimed as complete: this feature's whole
-point is a letterform, and no automated check can see one. What each one still needs is written in its
-own **Status** note.
+**Checkbox states used here**: `[X]` done. `[ ]` not started. **`[~]` means partly done, with what
+remains written in the task's own Status note.** Nothing is marked `[X]` that was not actually done —
+this feature's whole point is a letterform, and no automated check can see one, so 13 of these were
+closed by UAT rather than by CI.
+
+Two remain `[~]`: **T012** (one half needs a re-run with both font formats blocked; its other half was
+an overclaim, now corrected) and **T015** (deferred by the maintainer, which this list's own "if
+something has to give" guidance sanctions).
 
 ## Path Conventions
 
@@ -104,7 +107,7 @@ over the top. The `g` has one bowl and an open tail — no lower loop.
   is what the package ships and what the maintainer asked for (FR-009). Add no `font-feature-settings`: the
   single-story shapes are the font's default *and* only forms, so there is nothing to switch on
   (FR-005).
-- [~] T005 [US1] Run `npm run dev` and do [quickstart step 1](./quickstart.md#step-1--look-at-the-letter-fr-002-fr-003-sc-001).
+- [X] T005 [US1] Run `npm run dev` and do [quickstart step 1](./quickstart.md#step-1--look-at-the-letter-fr-002-fr-003-sc-001).
   **This is the task that proves the feature works**, and the only one that catches a font which
   silently failed to load. If the `a` has a hook over the top you are looking at the fallback — check
   the Network tab for a 404 on a `.woff2` before changing anything else.
@@ -144,7 +147,7 @@ in the other order breaks the build in between.
   manifests. Then confirm nothing still references it:
   `grep -ri "geist" src/ index.html package.json` must return **nothing** (FR-007, and Principle V's
   rule on unused dependencies).
-- [~] T007 [US2] Do [quickstart step 2](./quickstart.md#step-2--confirm-what-actually-loaded-fr-006-fr-007-fr-008-fr-011).
+- [X] T007 [US2] Do [quickstart step 2](./quickstart.md#step-2--confirm-what-actually-loaded-fr-006-fr-007-fr-008-fr-011).
   Two font requests, both `andika-latin-*00-normal-<hash>.woff2`, both from **this origin** — no
   `fonts.googleapis.com`, no `fonts.gstatic.com`, no `cyrillic`/`vietnamese`/`latin-ext` subsets, and
   nothing for the removed font. Then read the computed `font-family` on the deck list, a deck ladder
@@ -185,7 +188,7 @@ belongs in T004, not in a new task.
 
 ### Verification for User Story 3
 
-- [~] T009 [P] [US3] Do [quickstart step 3](./quickstart.md#step-3--nothing-overlaps-at-the-smallest-viewport-fr-015-fr-016-sc-004)
+- [X] T009 [P] [US3] Do [quickstart step 3](./quickstart.md#step-3--nothing-overlaps-at-the-smallest-viewport-fr-015-fr-016-sc-004)
   at **320 × 568**. **This closes the plan's one unverified number**: Andika's glyph box is 1.611em
   against the outgoing font's 1.300em, so descenders overhang their line box by roughly 22px instead of
   11px, into a 32px `gap-8`. Confirm the card's `g`/`y`/`p` do not collide with the cycle counter, and
@@ -201,12 +204,12 @@ belongs in T004, not in a new task.
   ink **11.11px** below the box, into a 32px `gap-8` — clearing by 20.9px. A collision is
   arithmetically impossible, not merely unlikely. **Left open**: whether anything scrolls, and how it
   looks.
-- [~] T010 [P] [US3] Do [quickstart step 4](./quickstart.md#step-4--the-longest-words-fr-014-sc-005):
+- [X] T010 [P] [US3] Do [quickstart step 4](./quickstart.md#step-4--the-longest-words-fr-014-sc-005):
   `yellow` in `dolch-prek-5` r8, `please` and `pretty` in `dolch-k-5` r11, at 320px and then past
   640px where the card jumps to `sm:text-8xl`. The widest was computed at **213.7px against 272px
   available**, so this confirms arithmetic rather than discovering anything — but FR-014 is a MUST and
   the computation has never been on a screen.
-- [~] T011 [P] [US3] Do [quickstart step 5](./quickstart.md#step-5--emphasis-still-reads-as-emphasis-fr-012-fr-013-sc-006).
+- [X] T011 [P] [US3] Do [quickstart step 5](./quickstart.md#step-5--emphasis-still-reads-as-emphasis-fr-012-fr-013-sc-006).
   Six headings get **heavier** (600 → 700) and **every button label gets lighter** (500 → 400, from
   `font-medium` in `src/components/ui/button.tsx:8`). Button labels are the only thing losing weight,
   so they are where a problem shows. Nothing may look smeared or artificially thickened — that is
@@ -214,9 +217,20 @@ belongs in T004, not in a new task.
 - [~] T012 [P] [US3] Do [quickstart step 6](./quickstart.md#step-6--block-the-font-entirely-fr-010-sc-003):
   block the `.woff2` requests and reload. Every screen readable, every control working, no blank
   screen, no layout collapse. Wrong letterforms are the accepted degradation; unusable is not.
-  Then, still in DevTools, switch to **Offline** and reload once more with a warm cache: the app must
-  come up fully, in Andika, from cache alone. That is SC-007's second clause and nothing else covers
-  it.
+  Then, still in DevTools, switch to **Offline**: an already-loaded app must keep working. That is what
+  SC-007 asks for — "works with the network blocked **after a first load**".
+
+  **Correction, from UAT.** This task previously demanded that an offline *reload* come up "from cache
+  alone", and called that SC-007's second clause. **It is not.** SC-007 says nothing about reloading,
+  and the app cannot do it: there is **no service worker** in this repo, so a navigation request with
+  the network down has nothing to serve it. That was an overclaim written into the task, not a gap in
+  the implementation, and it predates this feature. Making an offline reload work means adding a
+  service worker — far outside a font swap, and against Principle VI. **Recorded as a known
+  limitation; deliberately not built.**
+
+  **UAT result**: already-loaded app kept working offline ✅. The blocked-font half needs a re-run —
+  blocking only the `.woff2` fell through to the `.woff`, so no font was actually missing (see the
+  corrected [quickstart step 6](./quickstart.md#step-6--block-the-font-entirely-fr-010-sc-003)).
 - [X] T013 [US3] Run `git diff --stat` and confirm exactly **three** source and manifest files changed:
   `src/index.css`, `package.json` and `package-lock.json` — plus this `tasks.md`, since the bookkeeping
   rides in the work commit. **A fourth is a scope failure** (Principle VI): no component file, no
@@ -266,7 +280,10 @@ belongs in T004, not in a new task.
   *previous* build — old asset hash, old font, no error. Check the CSS asset hash against the local
   build before trusting a preview, or the wrong typeface gets blamed on the code.
 
-  **Left open**: opening it on a real phone, which is the whole point of this task.
+  **Deferred by the maintainer** during UAT, which this list already sanctioned: "If something has to
+  give, cut **T015** first". Everything it would re-check (steps 1, 3 and 4) passed on a desktop
+  viewport, and the SPA fallback was verified by request against the live deployment. What remains
+  unchecked is real hardware.
 
 ---
 
