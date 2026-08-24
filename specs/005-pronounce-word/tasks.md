@@ -103,27 +103,27 @@ English female voice.
 repeats — that is US2's job — but a learner stuck on a word can hear it, which is the whole point of
 the feature.
 
-- [ ] T003 [US1] Create `src/components/PronounceButton.tsx` taking a single `word: string` prop.
+- [X] T003 [US1] Create `src/components/PronounceButton.tsx` taking a single `word: string` prop.
       Render a `Button` from `@/components/ui/button` containing a speaker icon from `lucide-react`
       (`Volume2`) marked `aria-hidden`, with a fixed accessible name naming the *action* — "Hear the
       word" — not the word itself, which is already on screen as the card. Size it `h-12` so it is
       visibly shorter than the `h-24` outcome buttons and cannot be mistaken for one (FR-014).
       (FR-001, FR-013, contract §2)
 
-- [ ] T004 [US1] Add the click handler to `src/components/PronounceButton.tsx`: construct a
+- [X] T004 [US1] Add the click handler to `src/components/PronounceButton.tsx`: construct a
       `SpeechSynthesisUtterance` for `word`, set `lang = 'en-US'`, set `voice` to
       `pickVoice(window.speechSynthesis.getVoices())` **only when it returns a voice**, then call
       `speak`. Call `getVoices()` inside the handler — never at mount, where Chrome returns `[]`
       before voices load. Nothing else happens: no outcome, no advance, no write.
       (FR-003, FR-004, FR-005, FR-006, T002)
 
-- [ ] T005 [US1] Add the availability guard to `src/components/PronounceButton.tsx`: return `null`
+- [X] T005 [US1] Add the availability guard to `src/components/PronounceButton.tsx`: return `null`
       when `speechSynthesis` is not on `window`. **This belongs to US3 by requirement (FR-011) but
       must be written now** — the cleanup effect T009 adds would otherwise throw on unmount in
       `jsdom` and break the existing 166 tests. Phase 5 verifies it; this task is what makes the
       suite survive Phase 3. (FR-011)
 
-- [ ] T006 [US1] Compose it in `src/routes/Run.tsx`: wrap `PronounceButton` and the existing
+- [X] T006 [US1] Compose it in `src/routes/Run.tsx`: wrap `PronounceButton` and the existing
       `OutcomeButtons` in a two-column grid (`grid grid-cols-2 gap-x-4 gap-y-2`, `w-full max-w-md`),
       with the button on `col-start-2` and `OutcomeButtons` spanning both columns beneath it. Render
       it only in the branch where a card is showing, so the run-complete screen never has one
@@ -138,7 +138,7 @@ the feature.
       [research Decision 6](./research.md#decision-6-a-two-column-grid-puts-the-button-above-not-yet-without-touching-the-outcome-buttons)
       computed rather than measured. (SC-007, quickstart step 6, T006)
 
-- [ ] T008 [US1] Add a reusable `speechSynthesis` stub to `src/routes/Run.test.tsx` — installed in
+- [X] T008 [US1] Add a reusable `speechSynthesis` stub to `src/routes/Run.test.tsx` — installed in
       `beforeEach`, removed in `afterEach` — recording every utterance it is handed and exposing a
       way to fire `end` and `error` on the current one. It must be removable, because the existing
       tests in that file depend on the API being **absent**. Then test US1's outcomes: the button is

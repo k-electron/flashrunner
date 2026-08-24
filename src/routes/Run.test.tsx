@@ -838,3 +838,139 @@ describe('Run — an interrupted run resumes into the run it already was (SC-005
     expect(members([...new Set(sequence(marked))])).toEqual(members(SECOND_RUNG_CARDS));
   });
 });
+
+// jsdom has no Web Speech API, so every test above this line runs down the path
+// FR-011 describes and never meets a pronounce button at all. This block installs
+// one for its own duration and takes it away again — the rest of the file depends
+// on the API being absent, and a leaked stub would quietly turn those tests into
+// something else.
+//
+// What is asserted here is what the device was asked to say. Whether `speak` was
+// called is not a claim about anything a learner can hear, and whether sound
+// leaves the device is the one thing no test can see (research § Decision 7).
+describe('Run — hearing the word (US1)', () => {
+  /**
+   * A stand-in for `SpeechSynthesisUtterance`: the text it was made with, and the
+   * two handlers that mean speech has stopped. Nothing else of the real interface
+   * is touched, and the properties the control sets on it — `lang`, `voice` — are
+   * deliberately not read back. A stub that echoes whatever it was handed can
+   * only restate the diff (research § Decision 7).
+   */
+  class StubUtterance {
+    readonly text: string;
+    onend: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+
+    constructor(text: string) {
+      this.text = text;
+    }
+  }
+
+  /**
+   * The stubbed API, and the only window onto what would have been said.
+   *
+   * `getVoices` answers with an empty list on purpose: `pickVoice` finds nothing
+   * in it, so no voice is set and the browser's own en-US default speaks, which
+   * is the fallback the contract specifies (§ 3 rule 2) and the path any device
+   * without a known-female voice takes. Which voice is chosen is
+   * src/speech/voice.test.ts's question, not this file's.
+   */
+  const speech = {
+    /** Every utterance handed over, in the order it was handed over. */
+    spoken: [] as StubUtterance[],
+
+    /** What the device was asked to say — the assertable outcome. */
+    words(): string[] {
+      return speech.spoken.map((utterance) => utterance.text);
+    },
+
+    /**
+     * The utterance still speaking finishes, or fails. Both are the end of
+     * speech, and both are here because a cancel comes back through the error
+     * path (`canceled` / `interrupted`) rather than through `end`.
+     */
+    end(): void {
+      speech.stop('onend');
+    },
+    error(): void {
+      speech.stop('onerror');
+    },
+    stop(handler: 'onend' | 'onerror'): void {
+      const utterance = speech.spoken.at(-1);
+      if (utterance === undefined) {
+        throw new Error('Nothing has been spoken, so nothing can stop speaking');
+      }
+      act(() => {
+        utterance[handler]?.();
+      });
+    },
+  };
+
+  beforeEach(() => {
+    speech.spoken.length = 0;
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        getVoices: () => [],
+        speak: (utterance: StubUtterance) => speech.spoken.push(utterance),
+      },
+    });
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+      configurable: true,
+      value: StubUtterance,
+    });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(window, 'speechSynthesis');
+    Reflect.deleteProperty(window, 'SpeechSynthesisUtterance');
+  });
+
+  it('offers a way to hear the word while a card is showing, and none once the run is over', async () => {
+    const user = renderRun(FIRST_RUN);
+    expect(screen.getByRole('button', { name: 'Hear the word' })).toBeInTheDocument();
+
+    await clearRun(user, 5);
+
+    // There is no word on the completed screen, so there is nothing to hear
+    // (FR-010).
+    expect(screen.getByText('Run complete')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hear the word' })).not.toBeInTheDocument();
+  });
+
+  it('says the word on the card currently on screen, never the one before it (FR-005)', async () => {
+    const user = renderRun(FIRST_RUN);
+    // Read off the screen rather than named: the run is shuffled, so the only
+    // thing that says which word should be spoken is the card being presented.
+    const first = shownCard(FIRST_RUNG_CARDS);
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+    expect(speech.words()).toEqual([frontOf(first)]);
+
+    speech.end();
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    // The card has moved on, and so has what is said.
+    const second = shownCard(FIRST_RUNG_CARDS);
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+    expect(speech.words()).toEqual([frontOf(first), frontOf(second)]);
+  });
+
+  it('changes nothing about the run: no outcome, no advance, nothing stored (FR-006, FR-016)', async () => {
+    const user = renderRun(FIRST_RUN);
+    const card = shownCard(FIRST_RUNG_CARDS);
+    const before = readDeckRecord(dolchPreK5);
+
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+    speech.end();
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+    // Both presses reached the device, so what follows is a claim about a button
+    // that did something rather than about one that did nothing at all.
+    expect(speech.words()).toEqual([frontOf(card), frontOf(card)]);
+    // The same card, the same round, and the device holding exactly what it held
+    // before the button was ever pressed.
+    expect(shownCard(FIRST_RUNG_CARDS)).toBe(card);
+    expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(readDeckRecord(dolchPreK5)).toEqual(before);
+  });
+});
