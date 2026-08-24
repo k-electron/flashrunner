@@ -23,14 +23,13 @@ export function PronounceButton({ word }: { word: string }) {
 
   function speak(): void {
     const utterance = new SpeechSynthesisUtterance(word);
-    // Set whether or not a voice is chosen below, and the entire fallback when
-    // one is not: an unset `voice` with an American English `lang` is what makes
-    // the browser reach for its own en-US default, which is never one of the
-    // novelty voices an arbitrary pick can land on (contract § 3 rule 2).
+    // Set whether or not a voice is chosen below, and the whole of the last
+    // resort when none is: an unset `voice` with an American English `lang`
+    // leaves the browser to use what it has (contract § 3 rule 5).
     utterance.lang = 'en-US';
     // Asked for at press time, never at mount, where Chrome answers with an empty
     // list until voices have loaded (research.md § Decision 3). An empty list
-    // needs no handling of its own — it matches no name, which is the fallback.
+    // needs no handling of its own — it falls out of the cascade as `undefined`.
     const voice = pickVoice(window.speechSynthesis.getVoices());
     if (voice !== undefined) {
       utterance.voice = voice;

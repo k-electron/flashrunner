@@ -1,41 +1,48 @@
-// Choosing which voice says the word. One pure function over a voice list — no
-// React, no browser access, and no call to `getVoices()` here; the caller asks
-// for the list at press time (research.md § Decision 3).
+// Choosing which voice says the word. One pure function over a voice list --
+// no React, no browser access; the caller asks for the list at press time so it
+// is always the live one (research.md § Decision 3).
 // See specs/005-pronounce-word/contracts/pronunciation.md § 3.
 
 /**
- * Names that ship as American English female voices. `SpeechSynthesisVoice` has
- * no gender field, so "female" can only ever be a name match.
+ * Substrings that mark a voice as female on some platform. `SpeechSynthesisVoice`
+ * has no gender field, so "female" can only ever be a name match, and matching on
+ * a substring rather than the whole name is what makes it survive the decoration
+ * platforms add: macOS ships `Flo (English (US))`, Windows `Microsoft Zira
+ * Desktop - English (United States)`.
  *
  * `Samantha` is the only entry verified present on a real machine (macOS
- * `say -v '?'`); the other four are the commonly cited Chrome and Windows names
- * and are unverified here. Being wrong about one is cheap — it matches nothing
- * and falls through to the browser's own default.
+ * `say -v '?'`). Being wrong about the rest is cheap -- an entry that matches
+ * nothing just falls through to the next rule.
  */
-const KNOWN_FEMALE_NAMES = [
-  'Samantha',
-  'Google US English',
-  'Microsoft Zira',
-  'Microsoft Aria',
-  'Microsoft Jenny',
-];
+const FEMALE_HINTS = ['samantha', 'zira', 'aria', 'jenny', 'google us english', 'female'];
+
+/** `en_US`, `en-us` and `en-US` are the same language written three ways. */
+function tag(voice: SpeechSynthesisVoice): string {
+  return voice.lang.toLowerCase().replace('_', '-');
+}
 
 /**
- * The first American English voice with a known-female name, or `undefined`
- * when the list holds none.
+ * The best available voice for an American English word, or `undefined` when the
+ * device has no English voice at all -- in which case the caller leaves
+ * `utterance.voice` unset and the browser uses whatever it has.
+ *
+ * Four rules, first match wins: a female-sounding American voice; the device's
+ * own American default; any American voice; any English voice.
  */
 export function pickVoice(
   voices: readonly SpeechSynthesisVoice[],
 ): SpeechSynthesisVoice | undefined {
-  // There is deliberately no "otherwise any en-US voice" branch here, and its
-  // absence is the design rather than a missing case. Over a third of macOS's
-  // en_US voices are novelty voices — Bells sings, Zarvox is a robot, Whisper
-  // whispers — so an arbitrary pick can read `yellow` to a five-year-old in a
-  // singing bell. Returning `undefined` tells the caller to leave
-  // `utterance.voice` unset, which makes the browser use its own en-US default;
-  // that is never a novelty voice.
-  return voices.find(
-    (candidate) =>
-      candidate.lang.startsWith('en-US') && KNOWN_FEMALE_NAMES.includes(candidate.name),
+  const american = voices.filter((voice) => tag(voice).startsWith('en-us'));
+  return (
+    american.find((voice) =>
+      FEMALE_HINTS.some((hint) => voice.name.toLowerCase().includes(hint)),
+    ) ??
+    // Before any American voice, because the browser's own default is never one
+    // of the novelty voices -- Bells sings, Zarvox is a robot, Whisper whispers
+    // -- that half of macOS's en_US list is made of. One `??`, and the singing
+    // bell only comes up on a device whose default is itself missing.
+    american.find((voice) => voice.default) ??
+    american[0] ??
+    voices.find((voice) => tag(voice).startsWith('en'))
   );
 }

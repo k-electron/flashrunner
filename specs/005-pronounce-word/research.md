@@ -24,10 +24,10 @@ bytes of bundle, works offline, and already knows how to say English words.
 - **A cloud text-to-speech API** — violates Principle I and FR-015, costs money, needs a key the
   app has nowhere to keep, and breaks with no network.
 
-## Decision 2: there is no gender field, so "female" is a name match with a safe fallback
+## Decision 2: there is no gender field, so "female" is a name match with a cascade beneath it
 
-**Decision**: prefer a voice whose name is on a short known-female list; otherwise **set no voice
-at all** and let the browser pick its own American English default.
+**Decision**: prefer an American English voice whose name contains a known female hint; otherwise
+fall through the device's own American default, then any American voice, then any English voice.
 
 **The API has no gender.** Read out of the DOM typings rather than recalled —
 `node_modules/@typescript/typescript-darwin-arm64/lib/lib.dom.d.ts:35847`:
@@ -45,33 +45,39 @@ interface SpeechSynthesisVoice {
 Five properties. No gender, no age, no description. Every implementation of "use a female voice" on
 the web is therefore a name match, and this one is no exception.
 
-**Why the fallback is "let the browser choose" rather than "any American English voice".** The
-maintainer chose *any en-US voice* over *device default*, and the intent behind that — stay
-American, never go silent — is what this implements. But picking an arbitrary en-US voice off the
-list is not safe. Real data, from `say -v '?'` on the development machine:
+**Match on a substring, not the whole name.** Platforms decorate voice names, and whole-name equality
+misses every decorated one. Verified on the development machine — 8 of the 28 `en_US` voices
+`say -v '?'` lists carry a parenthetical suffix:
+
+> Eddy (English (US)), Flo (English (US)), Grandma (English (US)), Grandpa (English (US)),
+> Reed (English (US)), Rocko (English (US)), Sandy (English (US)), Shelley (English (US))
+
+`Samantha` is plain only because it is single-locale today; if Apple makes it multilingual the way it
+did Flo, whole-name matching stops finding the one entry that is verified to exist. Windows is
+reported to write `Microsoft Zira Desktop - English (United States)` — **not verified here**, since
+this is a macOS machine with no browser automation in the repo — but the pattern is the same one.
+Language tags get the same treatment for the same reason: `en_US`, `en-us` and `en-US` are one
+language written three ways.
+
+**The hint list**: `samantha`, `zira`, `aria`, `jenny`, `google us english`, `female`, compared
+lower-case. `Samantha` is the only entry verified present on a real machine. A wrong entry is cheap:
+it matches nothing and the next rule answers.
+
+**Why the device default sits above "any American voice".** Real data, from `say -v '?'`:
 
 > Albert, **Bad News**, **Bahh**, **Bells**, **Boing**, **Bubbles**, **Cellos**, **Wobble**, Eddy,
 > Flo, Fred, **Good News**, Grandma, Grandpa, **Jester**, Junior, Kathy, **Organ**, **Superstar**,
 > Ralph, Reed, Rocko, Samantha, Sandy, Shelley, **Trinoids**, **Whisper**, **Zarvox**
 
-Over a third of macOS's `en_US` voices are novelty voices. "Bells" sings. "Zarvox" is a robot.
-"Whisper" whispers. An arbitrary pick can hand a five-year-old learning the word *yellow* a singing
-bell. Leaving `utterance.voice` unset and setting `utterance.lang = 'en-US'` makes the browser use
-its own American English default, which is never a novelty voice. Same intent, one failure mode
-removed, and **less code** than sorting a candidate list.
+Fourteen of twenty-eight are novelty voices. "Bells" sings, "Zarvox" is a robot, "Whisper" whispers —
+an arbitrary pick can hand a five-year-old learning the word *yellow* a singing bell. The browser's
+own default never is one, so trying it first costs one `??` and removes the common case. The
+arbitrary pick remains as the rule beneath it, and can still land on a novelty voice on a device with
+no default marked. **That is accepted rather than solved**: an odd voice is a smaller failure than no
+voice, which is the maintainer's call and the reason the cascade has four rungs instead of two.
 
-**The name list, and what is actually verified**:
-
-| Name | Platform | Status |
-|---|---|---|
-| `Samantha` | macOS, iOS | **Verified present** on the development machine via `say -v '?'` |
-| `Google US English` | Chrome | Commonly cited, **not verified here** |
-| `Microsoft Zira` / `Aria` / `Jenny` | Windows | Commonly cited, **not verified here** |
-
-The unverified entries are cheap to be wrong about: a name that matches nothing simply falls through
-to the browser's own en-US default, which is a working voice. A wrong entry costs a fallthrough,
-never a broken feature. [quickstart.md](./quickstart.md) checks what actually speaks on real devices,
-which is the only way to know.
+[quickstart.md](./quickstart.md) checks what actually speaks on real devices, which is the only way
+to know.
 
 **Alternative considered**: shipping a voice with the app so the sound is identical everywhere.
 Rejected — that is a speech engine in the bundle, which is a different and much larger project.

@@ -1,39 +1,66 @@
-// The four outcomes of contract § 3, one of which is `undefined`. That is not a
-// gap in coverage: `undefined` is the instruction to leave `utterance.voice`
-// unset, so it is asserted as deliberately as a returned voice is.
+// One test per rung of the fallback cascade in contract § 3, plus the real-world
+// name shapes that make substring matching necessary. Every test asserts which
+// voice comes back, never how it was found.
 import { describe, expect, it } from 'vitest';
 import { pickVoice } from '@/speech/voice';
 
-// `SpeechSynthesisVoice` has five readonly fields and `pickVoice` reads two of
-// them. The cast lives here, once, rather than three invented values per fixture.
-function voice(name: string, lang: string): SpeechSynthesisVoice {
-  return { name, lang } as SpeechSynthesisVoice;
+// `SpeechSynthesisVoice` has five readonly fields and `pickVoice` reads three of
+// them. The cast lives here, once, rather than two invented values per fixture.
+function voice(name: string, lang: string, isDefault = false): SpeechSynthesisVoice {
+  return { name, lang, default: isDefault } as SpeechSynthesisVoice;
 }
 
 describe('pickVoice', () => {
-  it('returns the known-female American voice, passing over other American ones', () => {
-    // Ordered so that taking the first en-US voice would return Zarvox — the
-    // exact novelty-voice outcome the name match exists to avoid.
-    const chosen = voice('Samantha', 'en-US');
+  it('prefers a female-sounding American voice over the American default', () => {
+    // Ordered so that taking the first American voice, or the default one, both
+    // return Zarvox -- the robot this rule exists to skip.
+    const samantha = voice('Samantha', 'en-US');
 
-    expect(pickVoice([voice('Zarvox', 'en-US'), chosen, voice('Fred', 'en-US')])).toBe(chosen);
+    expect(pickVoice([voice('Zarvox', 'en-US', true), samantha, voice('Fred', 'en-US')])).toBe(
+      samantha,
+    );
   });
 
-  it('returns undefined when every American voice is an unknown name', () => {
-    // The browser then speaks in its own en-US default, which is never a
-    // novelty voice — better than picking Bells off this list.
-    expect(pickVoice([voice('Zarvox', 'en-US'), voice('Bells', 'en-US')])).toBeUndefined();
+  it('matches a female name the platform has decorated with its locale', () => {
+    // macOS writes `Flo (English (US))` and Windows `Microsoft Zira Desktop -
+    // English (United States)`. Whole-name equality would miss both.
+    const zira = voice('Microsoft Zira Desktop - English (United States)', 'en-US');
+
+    expect(pickVoice([voice('Microsoft David Desktop', 'en-US'), zira])).toBe(zira);
   });
 
-  it('returns undefined for a known-female name in the wrong language', () => {
-    // A name match alone is not enough. Samantha also ships as en-GB, and this
-    // deck teaches American sight words.
-    expect(pickVoice([voice('Samantha', 'en-GB'), voice('Samantha', 'en-AU')])).toBeUndefined();
+  it('reads en_US and en-us as American', () => {
+    // Platforms disagree on the separator and the casing; the learner does not.
+    const flo = voice('Flo (English (US))', 'en_us');
+
+    expect(pickVoice([voice('Daniel', 'en-GB'), flo])).toBe(flo);
   });
 
-  it('returns undefined for an empty list', () => {
-    // Chrome hands back `[]` before its voices have loaded. Same answer, so the
-    // caller needs no separate path for it.
+  it("falls back to the device's own American default when no name sounds female", () => {
+    // The default is never a novelty voice, so it is tried before the list order.
+    const alex = voice('Alex', 'en-US', true);
+
+    expect(pickVoice([voice('Bells', 'en-US'), alex, voice('Zarvox', 'en-US')])).toBe(alex);
+  });
+
+  it('falls back to any American voice when none is marked default', () => {
+    const first = voice('Fred', 'en-US');
+
+    expect(pickVoice([first, voice('Ralph', 'en-US')])).toBe(first);
+  });
+
+  it('falls back to another English accent when the device has no American voice', () => {
+    // A British "yellow" is further from the deck than an American one, and much
+    // closer than silence.
+    const daniel = voice('Daniel', 'en-GB');
+
+    expect(pickVoice([voice('Amelie', 'fr-CA'), daniel])).toBe(daniel);
+  });
+
+  it('returns undefined when no voice speaks English, and for an empty list', () => {
+    // The caller then leaves `utterance.voice` unset and the browser uses what it
+    // has. Chrome also answers `[]` until its voices have loaded -- same path.
+    expect(pickVoice([voice('Amelie', 'fr-CA')])).toBeUndefined();
     expect(pickVoice([])).toBeUndefined();
   });
 });

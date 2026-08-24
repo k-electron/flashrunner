@@ -36,12 +36,22 @@ Applied in order. The first match wins.
 
 | # | Rule | Result |
 |---|---|---|
-| 1 | A voice with `lang` starting `en-US` **and** a name on the known-female list | Use that voice |
-| 2 | Otherwise | **Set no voice.** Set `lang = 'en-US'` and let the browser choose |
+| 1 | An American English voice whose name contains a known female hint | Use that voice |
+| 2 | The device's own American English default | Use that voice |
+| 3 | Any American English voice | Use that voice |
+| 4 | Any English voice, whatever the accent | Use that voice |
+| 5 | Otherwise | **Set no voice.** `lang = 'en-US'` is set regardless, so the browser uses what it has |
 
-Rule 2 is deliberately not "any en-US voice" — see
-[research Decision 2](../research.md#decision-2-there-is-no-gender-field-so-female-is-a-name-match-with-a-safe-fallback)
-for the novelty-voice problem that rules out.
+Language tags are compared case-insensitively with `_` read as `-`, because platforms write the same
+language as `en-US`, `en_US` and `en-us`. Names are matched on a **substring**, not the whole string,
+because platforms decorate them: macOS ships `Flo (English (US))`, Windows
+`Microsoft Zira Desktop - English (United States)`. See
+[research Decision 2](../research.md#decision-2-there-is-no-gender-field-so-female-is-a-name-match-with-a-safe-fallback).
+
+Rule 2 sits above rule 3 for one reason: the device's default is never a novelty voice, and half of
+macOS's `en_US` list is — Bells sings, Zarvox is a robot, Whisper whispers. Rule 3 can still land on
+one, on a device whose default is itself missing. That is accepted: an odd voice is a smaller failure
+than no voice.
 
 **Never**: silent, hidden, or an error, because no preferred voice was found (FR-004).
 

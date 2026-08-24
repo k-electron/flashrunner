@@ -114,11 +114,10 @@ run screen renders and every other control works.
   relative to each other, and appearance.
 - **FR-003**: The spoken word MUST be rendered in American English.
 - **FR-004**: The spoken word MUST use a female American English voice where the device has one.
-  Where it does not, the system MUST fall back to **the device's own American English default**
-  rather than to an arbitrary voice from its list, and MUST NOT go silent or hide the control —
-  hearing the word matters more than the voice being female. The distinction is not pedantic: many
-  devices list novelty voices (ones that sing, whisper, or sound robotic) alongside real ones, and
-  an arbitrary pick can land on one. See
+  Where it does not, the system MUST fall back in order — the device's own American English default,
+  then any American English voice, then any English voice — and MUST NOT go silent or hide the
+  control. Hearing the word matters more than the voice being female, and more than the accent being
+  American. See
   [research Decision 2](./research.md#decision-2-there-is-no-gender-field-so-female-is-a-name-match-with-a-safe-fallback).
 - **FR-005**: The control MUST speak the word that is on the card at the moment it is pressed, and
   never a word from an earlier card.
@@ -158,8 +157,8 @@ run screen renders and every other control works.
   with no adult intervention and no prior setup.
 - **SC-002**: The spoken word is recognisably American English, and is spoken in a female voice on
   every device that has one. A device with no female American English voice speaks it in whatever
-  American English voice it does have, which is a pass rather than a failure (FR-004) — but never in
-  a novelty voice.
+  American English voice it does have, and a device with no American voice at all uses another
+  English accent; both are a pass rather than a failure (FR-004).
 - **SC-003**: Pressing the control five times in rapid succession results in the word being spoken
   exactly once.
 - **SC-004**: Speech begins within roughly one second of the press, so the connection between

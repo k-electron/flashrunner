@@ -77,16 +77,21 @@ built without it.
       five readonly fields and none of them need faking beyond those two.
 
 - [X] T002 Implement `pickVoice(voices)` in `src/speech/voice.ts` per
-      [contracts/pronunciation.md §3](./contracts/pronunciation.md#3-which-voice-speaks): return the
-      first voice whose `lang` starts `en-US` **and** whose `name` is on a short known-female list;
-      otherwise return `undefined`. Keep the list to the handful in
-      [research Decision 2](./research.md#decision-2-there-is-no-gender-field-so-female-is-a-name-match-with-a-safe-fallback)
-      — `Samantha` is the only one verified present on a real machine, and a wrong entry costs a
-      fallthrough to the browser's own en-US default rather than a broken feature. **Do not** add a
-      "return any en-US voice" branch: over a third of macOS's en_US voices are novelty voices, and
-      the fallback exists specifically to avoid reading `yellow` to a five-year-old in a singing bell.
-      Comment that reason at the fallback, because it looks like a missing case otherwise.
+      [contracts/pronunciation.md §3](./contracts/pronunciation.md#3-which-voice-speaks): four rules,
+      first match wins — an American English voice whose name contains a known female hint, the
+      device's own American default, any American voice, any English voice — and `undefined` when the
+      device speaks no English at all. Compare language tags case-insensitively with `_` read as `-`,
+      and match names on a **substring**, because platforms decorate both:
+      [research Decision 2](./research.md#decision-2-there-is-no-gender-field-so-female-is-a-name-match-with-a-cascade-beneath-it)
+      records the eight `(English (US))` suffixes verified on the development machine. The device
+      default sits above "any American voice" deliberately — half of macOS's en_US voices are novelty
+      voices and the default is never one; comment that, because it looks like a redundant rule
+      otherwise. The arbitrary pick beneath it can still land on a novelty voice, which is accepted.
       (FR-003, FR-004, T001)
+
+      **Status**: revised 2026-08-24 on maintainer direction, after the first pass matched whole
+      names and stopped at the device default. The earlier version could not have matched any
+      decorated name, including `Samantha (English (US))`.
 
 **Checkpoint**: `npm test` green, voice selection covered, nothing rendered yet.
 
