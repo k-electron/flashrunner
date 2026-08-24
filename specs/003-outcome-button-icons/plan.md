@@ -198,9 +198,12 @@ than assumed:
   applied anywhere in the app; the maintainer confirmed it is not planned. So the green is one value
   with no second variant to invent, and the `.dark` token block stays dormant and untouched.
 
-One number in this plan is **unverified** and carries a measurement step in
+One number in this plan was **unverified** and carried a measurement step in
 [quickstart.md](./quickstart.md) rather than being presented as fact: the vertical budget above, derived
-from Tailwind's spacing scale rather than measured in a browser.
+from Tailwind's spacing scale rather than measured in a browser. **Measured 2026-08-24 — it holds.** At
+320 x 568 nothing scrolls and no label clips. The buttons measure 94px in the computed box rather than
+96px, because `box-sizing` is `border-box` and the base `Button` class carries a 1px transparent
+border, so `getComputedStyle().height` reports the content box; the tap target is 96px either way.
 
 The contrast figures are no longer in that category. They were computed from Tailwind v3 palette hexes
 while this project runs Tailwind 4.3.3, which is why the earlier `green-700` plan carried a measurement
