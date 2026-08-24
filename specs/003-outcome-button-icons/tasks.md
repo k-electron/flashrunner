@@ -144,16 +144,16 @@ fix belongs in T005 or T007, not in a new task.
 
 ### Verification for User Story 3
 
-- [ ] T009 [P] [US3] Measure both button heights in devtools. Each MUST be **≥ 64px** — today's
+- [X] T009 [P] [US3] Measure both button heights in devtools. Each MUST be **≥ 64px** — today's
   `h-16` — per FR-019. Smaller is a regression even if it looks fine.
-- [ ] T010 [P] [US3] In the devtools device toolbar at **320 × 568**, confirm the heading, card face,
+- [X] T010 [P] [US3] In the devtools device toolbar at **320 × 568**, confirm the heading, card face,
   cycle counter, both buttons, "Start over" and "Leave this run" are all visible with **no vertical
   scrolling**, and that neither label clips or wraps into its icon (FR-020, SC-005). The plan's ~420px
   budget is spacing-scale arithmetic, not a measurement — this task is the measurement.
-- [ ] T011 [P] [US3] Run the full suite and confirm **no behavioural test needed editing**. Nothing
+- [X] T011 [P] [US3] Run the full suite and confirm **no behavioural test needed editing**. Nothing
   here touches `src/run/`, `src/storage/` or `src/routes/Run.tsx`; if an engine or storage test fails,
   something outside the spec was changed. Revert it rather than adapting the test.
-- [ ] T012 [US3] Run `git diff --stat` and confirm exactly **four** source and manifest files
+- [X] T012 [US3] Run `git diff --stat` and confirm exactly **four** source and manifest files
   changed: `src/components/OutcomeButtons.tsx`, `src/routes/Run.test.tsx`, `package.json` and
   `package-lock.json` — plus this `tasks.md`, since the bookkeeping rides in the work commit. A sixth — especially `src/components/ui/button.tsx` or `src/index.css` — means
   the declined work in [plan.md](./plan.md#adjacent-work-named-and-declined) got built anyway
@@ -165,19 +165,19 @@ fix belongs in T005 or T007, not in a new task.
 
 ## Phase 6: Polish & Gate
 
-- [ ] T013 Size the icons in the browser against the labels in `src/components/OutcomeButtons.tsx`
+- [X] T013 Size the icons in the browser against the labels in `src/components/OutcomeButtons.tsx`
   until the icon clearly dominates (FR-002, FR-003). Both icons are a `circle r="10"` in the same
   24-unit box, so they match each other by construction — this is a single size decision, not the
   optical calibration a hand-drawn pair would have needed.
-- [ ] T014 Browser zoom to 200% and confirm the wording stays inside its button with the icon still
+- [X] T014 Browser zoom to 200% and confirm the wording stays inside its button with the icon still
   visible.
-- [ ] T015 Screen reader spot check with VoiceOver (`Cmd-F5`): tab to each button and confirm each is
+- [ ] T015 **Waived by the maintainer, 2026-08-24 — not performed.** Screen reader spot check with VoiceOver (`Cmd-F5`): tab to each button and confirm each is
   announced **once**, as "Got it, button" and "Not yet, button" — not "circle check", not "Got it
   circle check" (SC-004).
-- [ ] T016 Run the gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four
+- [X] T016 Run the gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four
   must pass — the same sequence CI runs (Principle III). Watch the build output: the two named imports
   should pull two icon modules, not the whole set.
-- [ ] T017 Walk [quickstart.md](./quickstart.md) end to end, then check the Pages preview on a real
+- [X] T017 Walk [quickstart.md](./quickstart.md) end to end, then check the Pages preview on a real
   phone. The preview is where the small-viewport claim gets its honest test.
 
 ---
@@ -243,6 +243,13 @@ requirement CI cannot enforce, and the other three are the measurements and the 
 - `[P]` means a different file with no dependency on incomplete work.
 - Commit after US1, after US2, and after polish. Three commits, not seventeen.
 - The behavioural suite is not to be edited. If it needs editing, the change went out of scope.
-- One number in the plan is unverified — the vertical budget, owned by T010. The contrast figures no
-  longer need checking: `green-800` clears 4.5:1 by enough that the Tailwind v3/v4 palette difference
-  cannot close the gap.
+- **Measured 2026-08-24, closing out the plan's one unverified number.** The 320 x 568 viewport shows
+  no vertical scrolling and no clipped labels, and the icon dominates its label at 200% and 400% zoom.
+- **Button height reads 94px, not the 96px the spacing scale implies, and that is correct.** `h-24` is
+  `calc(.25rem * 24)` = 96px, `box-sizing` is `border-box` from Tailwind's preflight, and the base
+  `Button` class carries `border border-transparent` at 1px a side — so the border box is 96px while
+  `getComputedStyle().height` reports the 94px content box. The tap target is 96px. Either number
+  clears FR-019's 64px.
+- T015 is the one task not performed: VoiceOver was waived rather than run. The icons carry
+  `aria-hidden` and no `<title>`, and the ~20 `name:`-based assertions would fail if either leaked
+  into an accessible name — so FR-015 has automated cover even though SC-004 was never heard aloud.
