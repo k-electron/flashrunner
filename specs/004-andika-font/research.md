@@ -50,8 +50,10 @@ range is checked first (nothing there) and then descending → 400.
 
 That is the whole visible side effect of the feature. FR-012 keeps emphasis visible and FR-013 forbids
 faking it; both hold, because every requested weight lands on a real declared face. **No
-`font-synthesis: none`** is added — synthesis only happens when no real face matches, and nothing
-renders italic.
+`font-synthesis: none`** is added — a face always matches; synthesis kicks in when the face the
+matching algorithm *lands on* is not bold or italic enough to satisfy the request. Here it always is:
+`font-semibold` resolves to the real 700 face rather than being faked up from 400, and nothing renders
+italic. So the property would guard a class nobody has written.
 
 **Alternative considered**: rewriting the six `font-semibold` occurrences to `font-bold` so the
 stylesheet says what renders. Rejected — six edits, identical pixels.

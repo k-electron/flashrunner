@@ -35,6 +35,12 @@ accordingly rather than dressed up.
 - **[Story]**: Which user story this task belongs to
 - Exact file paths are in every task
 
+**Checkbox states used here**: `[X]` done. `[ ]` not started. **`[~]` means the machine-checkable part
+of the task is done and recorded under it, but the part needing a human's eyes in a browser is not.**
+Seven tasks are `[~]` rather than `[X]`, and none of them is claimed as complete: this feature's whole
+point is a letterform, and no automated check can see one. What each one still needs is written in its
+own **Status** note.
+
 ## Path Conventions
 
 Single project. Source at `src/`, tests colocated beside the code they cover (there is no `tests/`
@@ -154,7 +160,7 @@ in the other order breaks the build in between.
   (`src/index.css:11`), applied once (`@apply font-sans` on `html`, line 129), `--font-heading`
   resolves through it, and no component declares a family — there is no screen that *could* differ.
   **Left open**: nobody has read the computed `font-family` in a browser.
-- [ ] T008 [US2] Write the dependency record into the PR description, which the constitution requires
+- [X] T008 [US2] Write the dependency record into the PR description, which the constitution requires
   and CI cannot check: the **Principle V justification** (what `@fontsource/andika` does, what it
   replaces, why hand-rolling is worse — hand-rolling a literacy typeface is not a real alternative)
   and the **Principle VIII record** (`@fontsource/andika@5.3.0`, **OFL-1.1**, pre-cleared; published
@@ -179,29 +185,39 @@ belongs in T004, not in a new task.
 
 ### Verification for User Story 3
 
-- [ ] T009 [P] [US3] Do [quickstart step 3](./quickstart.md#step-3--nothing-overlaps-at-the-smallest-viewport-fr-015-fr-016-sc-004)
+- [~] T009 [P] [US3] Do [quickstart step 3](./quickstart.md#step-3--nothing-overlaps-at-the-smallest-viewport-fr-015-fr-016-sc-004)
   at **320 × 568**. **This closes the plan's one unverified number**: Andika's glyph box is 1.611em
   against the outgoing font's 1.300em, so descenders overhang their line box by roughly 22px instead of
   11px, into a 32px `gap-8`. Confirm the card's `g`/`y`/`p` do not collide with the cycle counter, and
   that nothing scrolls. The [vertical budget](./plan.md#the-vertical-budget) predicts every block keeps
   its exact height — if a total moved, that reasoning is wrong and worth understanding before merging.
-- [ ] T010 [P] [US3] Do [quickstart step 4](./quickstart.md#step-4--the-longest-words-fr-014-sc-005):
+
+  **Status**: the arithmetic is now closed exactly, from the font's own metrics rather than estimated.
+  `unitsPerEm` 2048, ascent 2500, descent 800 (hhea, OS/2 typo and OS/2 win all agree) gives a glyph
+  box of **1.6113em**, confirming the plan's 1.611. At `text-7xl` the content area is **116.02px**
+  against a **72px** line box, so the content-area overhang is **22.01px** each side — the plan's
+  "roughly 22px", now exact. The deepest actual ink is shallower: `p`/`q` reach 17.23px below the
+  baseline and `g`/`y` 16.52px, and with the baseline 6.12px above the line box bottom that puts real
+  ink **11.11px** below the box, into a 32px `gap-8` — clearing by 20.9px. A collision is
+  arithmetically impossible, not merely unlikely. **Left open**: whether anything scrolls, and how it
+  looks.
+- [~] T010 [P] [US3] Do [quickstart step 4](./quickstart.md#step-4--the-longest-words-fr-014-sc-005):
   `yellow` in `dolch-prek-5` r8, `please` and `pretty` in `dolch-k-5` r11, at 320px and then past
   640px where the card jumps to `sm:text-8xl`. The widest was computed at **213.7px against 272px
   available**, so this confirms arithmetic rather than discovering anything — but FR-014 is a MUST and
   the computation has never been on a screen.
-- [ ] T011 [P] [US3] Do [quickstart step 5](./quickstart.md#step-5--emphasis-still-reads-as-emphasis-fr-012-fr-013-sc-006).
+- [~] T011 [P] [US3] Do [quickstart step 5](./quickstart.md#step-5--emphasis-still-reads-as-emphasis-fr-012-fr-013-sc-006).
   Six headings get **heavier** (600 → 700) and **every button label gets lighter** (500 → 400, from
   `font-medium` in `src/components/ui/button.tsx:8`). Button labels are the only thing losing weight,
   so they are where a problem shows. Nothing may look smeared or artificially thickened — that is
   synthesized bold, which FR-013 forbids.
-- [ ] T012 [P] [US3] Do [quickstart step 6](./quickstart.md#step-6--block-the-font-entirely-fr-010-sc-003):
+- [~] T012 [P] [US3] Do [quickstart step 6](./quickstart.md#step-6--block-the-font-entirely-fr-010-sc-003):
   block the `.woff2` requests and reload. Every screen readable, every control working, no blank
   screen, no layout collapse. Wrong letterforms are the accepted degradation; unusable is not.
   Then, still in DevTools, switch to **Offline** and reload once more with a warm cache: the app must
   come up fully, in Andika, from cache alone. That is SC-007's second clause and nothing else covers
   it.
-- [ ] T013 [US3] Run `git diff --stat` and confirm exactly **three** source and manifest files changed:
+- [X] T013 [US3] Run `git diff --stat` and confirm exactly **three** source and manifest files changed:
   `src/index.css`, `package.json` and `package-lock.json` — plus this `tasks.md`, since the bookkeeping
   rides in the work commit. **A fourth is a scope failure** (Principle VI): no component file, no
   `index.html`, no test file, and not one word of deck content. Confirm too that `package.json` gained
@@ -216,7 +232,7 @@ belongs in T004, not in a new task.
 
 ## Phase 6: Polish & Gate
 
-- [ ] T014 Run the gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four
+- [X] T014 Run the gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four
   must pass — the same sequence CI runs (Principle III). **166 tests, with no test file edited**; if one
   needed changing, something outside this feature's scope changed, so revert it rather than adapting
   the test. Then check the build output per
@@ -224,7 +240,15 @@ belongs in T004, not in a new task.
   andika `.woff2` files, and `grep -ci "geist"` over `dist/assets/*.css` and `dist/index.html` returns
   **0**. The unmodified suite is what discharges **FR-001**, **FR-017**, **SC-002**, **SC-008** and
   **SC-009**: it queries by role and visible text, so it passes only if behaviour and wording survived.
-- [ ] T015 Do [quickstart step 8](./quickstart.md#step-8--the-preview-deploy-on-a-real-phone): open the
+
+  **Result**: all four green. **166 tests, 11 files, no test file edited.** `dist/assets/` carries 20
+  Andika files (10 woff2 + 10 woff, 552 kB) and `grep -ci "geist"` returns **0** over the built CSS,
+  `dist/index.html`, and every file in `dist/`. Built family is `font-family:Andika,sans-serif`. What a
+  browser fetches is the two latin woff2 files, **38,680 bytes** — that 552 kB-in-`dist` against
+  38.7 kB-on-the-wire split is exactly why FR-007 was rewritten to be about the network. The one lint
+  warning (`ui/button.tsx:67`, react-only-export-components) predates this feature; T013 confirms no
+  component file was touched.
+- [~] T015 Do [quickstart step 8](./quickstart.md#step-8--the-preview-deploy-on-a-real-phone): open the
   PR's Pages preview on a **real phone** and repeat steps 1, 3 and 4. The dev server is not where the
   small-viewport claim gets its honest test. Deep-link straight to `/deck/dolch-k-5/rung/r11` to
   exercise the SPA fallback at the same time (Principle I).

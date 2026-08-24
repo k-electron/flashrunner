@@ -75,9 +75,10 @@ on every face means only the `latin` subset is fetched for English decks.
 ### Adjacent work, named and declined
 
 1. **`font-synthesis: none`.** FR-013 forbids faked bold and italic, so it looks owed. It is a no-op:
-   synthesis happens only when no real face matches, and every weight the app requests resolves to one
-   of the two imported faces. Nothing renders italic. Declined as a guard against a class nobody has
-   written.
+   a face always matches, and synthesis kicks in only when the face the matching algorithm *lands on*
+   is not bold or italic enough for the request. Every weight the app asks for resolves to one of the
+   two real imported faces — `font-semibold` to the actual 700, not a thickened 400 — and nothing
+   renders italic. Declined as a guard against a class nobody has written.
 2. **Enlarging the card to offset Andika's smaller x-height** (0.508em against 0.534em, so lowercase
    reads about 5% shorter at the same size). Declined as a redesign rather than layout preservation —
    the spec's closing assumption draws exactly that line. The 5% was measured, seen, and left alone.
