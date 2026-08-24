@@ -44,9 +44,13 @@ describe('pickVoice', () => {
   });
 
   it('falls back to any American voice when none is marked default', () => {
-    const first = voice('Fred', 'en-US');
+    // The British voice comes first on purpose. With only American voices in the
+    // list this test would pass against an implementation that had lost the
+    // "any American voice" rule entirely, since the rule beneath it — any English
+    // voice — would return the same one. Here the two rules disagree.
+    const fred = voice('Fred', 'en-US');
 
-    expect(pickVoice([first, voice('Ralph', 'en-US')])).toBe(first);
+    expect(pickVoice([voice('Daniel', 'en-GB'), fred])).toBe(fred);
   });
 
   it('falls back to another English accent when the device has no American voice', () => {

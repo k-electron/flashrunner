@@ -100,13 +100,22 @@ path, which is why it needs no handling of its own.
 Rejected as a subscription, an effect and a piece of state bought to fix a case that already
 resolves correctly on its own.
 
-## Decision 4: one boolean of React state is the whole mechanic
+## Decision 4: one piece of React state, and "speaking" is derived from it
 
-**Decision**: `const [speaking, setSpeaking] = useState(false)`. Set true on speak, false on the
-utterance's `end` and `error`. The guard is `if (speaking) return;`.
+**Decision**: `const [spokenWord, setSpokenWord] = useState<string | null>(null)`, with
+`const speaking = spokenWord === word` worked out at render. Set to the word on speak, back to
+`null` on the utterance's `end` and `error`. The guard is `if (speaking) return;`.
 
 That guard **is** "don't queue up pronunciations" (FR-007). There is no queue to manage because
 nothing is ever enqueued.
+
+**Revised 2026-08-24, during implementation.** The first pass stored a bare `speaking` boolean, which
+is the obvious shape and the wrong one. Returning to idle after a cancel then depended entirely on
+the browser firing `error` on the cancelled utterance — a promise another program keeps, not ours.
+A device that stops making sound without reporting it left the button latched and dead for the rest
+of the run, silently, which is the one failure mode this feature cannot afford. Storing the word
+instead makes a word change land on idle by comparison: **nothing can latch a value that is only
+ever compared.** Same single piece of state, and one fewer thing to remember to reset.
 
 **Not `speechSynthesis.speaking`**, for two reasons. It is a browser global, so React cannot
 re-render the animation when it changes — and the animation is a requirement (FR-013a). And it is
@@ -117,16 +126,19 @@ known to be unreliable across Safari versions, where it can stay `true` after sp
 same path a failure does and the button is pressable again either way.
 
 **Ceiling, named rather than engineered around**: if a browser fires *neither* `end` nor `error`,
-the button stays unpressable — but only for the card it is on, because moving to the next card
-cancels and remounts it (Decision 5). A watchdog timer for a case no known browser produces is
-exactly the speculative work Principle VI rules out.
+the button stays unpressable — but only for the card it is on, because the next card is a different
+word and `spokenWord === word` is then false. Note this is why it is scoped: the component is **not**
+remounted on a card change. It has no `key` and a stable position in `src/routes/Run.tsx`, so it
+re-renders with a new prop. Under the old boolean that distinction was the bug; under a derived
+value it is simply correct. A watchdog timer for a case no known browser produces is exactly the
+speculative work Principle VI rules out.
 
 ## Decision 5: one cleanup effect covers every "stop talking" case
 
 **Decision**:
 
 ```ts
-useEffect(() => () => window.speechSynthesis.cancel(), [word]);
+useEffect(() => () => window.speechSynthesis?.cancel(), [word]);
 ```
 
 Three lines, four requirements. The cleanup runs when the word changes and when the component goes
@@ -139,10 +151,17 @@ away, and those two events are every case the spec lists:
 | The learner leaves the run | FR-009 | The component unmounts |
 | The run completes | FR-010 | The component unmounts |
 
-**A caveat worth knowing**: the effect keys on the *word*, so two consecutive cards showing the same
-string would not re-trigger it. That cannot happen here — a rung's cards are distinct sight words —
-and keying on the card id instead would mean handing this component an id it otherwise has no use
-for. Named, not defended against.
+**A caveat worth knowing**: the effect keys on the *word*, so the same card presented twice running
+does not re-trigger it. **That does happen**, in two ordinary ways: fail only the last card of a
+cycle and `src/run/reducer.ts` makes the next queue that single card, presenting it again straight
+away; and a "Start over" reshuffle can land on the card already showing. Neither needs the speech to
+stop — the word on screen is still the word being said, `spokenWord === word` still holds, and the
+utterance ends on its own. Two *different* cards cannot collide, because a rung's cards are distinct
+sight words. Keying on the card id instead would mean handing this component an id it otherwise has
+no use for.
+
+The call is `?.` because the hook runs ahead of the availability guard, so it still fires on a device
+with no Web Speech API — which is the path `jsdom` takes on every unmount in the suite.
 
 ## Decision 6: a two-column grid puts the button above "Not yet" without touching the outcome buttons
 

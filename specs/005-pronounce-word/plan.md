@@ -13,7 +13,7 @@ to a child who presses things repeatedly.
 
 Technical approach: **one new component, one new pure function, a five-line change to the run
 screen. No dependency, no storage, no network.** `window.speechSynthesis` is a platform feature that
-is already there; the whole feature is a `useState` boolean, a click handler, and a cleanup effect.
+is already there; the whole feature is one `useState`, a click handler, and a cleanup effect.
 
 The only real decision was what "female voice" means, because **the API has no gender field** — five
 properties, none of them gender ([research Decision 2](./research.md#decision-2-there-is-no-gender-field-so-female-is-a-name-match-with-a-safe-fallback)).
@@ -74,7 +74,7 @@ construction: there is no request to make.
    function because it is the part worth testing.
 2. **A watchdog timer** resetting the button if `end` never fires. No known browser does this, and
    moving to the next card already resets it. Named as a ceiling in
-   [research Decision 4](./research.md#decision-4-one-boolean-of-react-state-is-the-whole-mechanic)
+   [research Decision 4](./research.md#decision-4-one-piece-of-react-state-and-speaking-is-derived-from-it)
    rather than engineered around.
 3. **Speaking the word automatically when a card appears.** Not asked for, and it would talk over an
    adult reading with the child. FR-016 and the spec's assumptions both close this off.
@@ -168,7 +168,7 @@ Re-evaluated after Phase 1. **No verdict changed.** Three things the design work
 than assumed:
 
 - **The feature's real risk is silence, and it is not the risk it looked like going in.** The
-  obvious worry was the no-queue rule being fiddly. It is one boolean. What replaces it is a failure
+  obvious worry was the no-queue rule being fiddly. It is one comparison. What replaces it is a failure
   mode with no symptom — a button that speaks nothing passes lint, typecheck, all 166 tests, the
   build, and every new test written for it, because neither CI nor `jsdom` can hear. Quickstart's
   first instruction is to turn the volume up.

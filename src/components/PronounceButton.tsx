@@ -38,8 +38,13 @@ export function PronounceButton({ word }: { word: string }) {
   // all this does is stop the sound.
   //
   // It keys on the word rather than the card id because the word is all this
-  // component is given. Two consecutive cards showing the same string would not
-  // re-trigger it — which cannot happen, since a rung's cards are distinct words.
+  // component is given, so the same card presented twice running does not
+  // re-trigger it. That does happen — fail only the last card of a cycle and
+  // src/run/reducer.ts makes the next queue that one card, and a "Start over"
+  // can reshuffle onto the card already showing. Nothing needs to stop in either
+  // case: the word on screen is still the word being said, `spokenWord === word`
+  // still holds, and it ends on its own. A rung's cards are distinct words, so
+  // two *different* cards can never collide here.
   //
   // The optional call is not defensiveness: the hook has to run before the
   // availability guard below, so on a device with no Web Speech API this cleanup
