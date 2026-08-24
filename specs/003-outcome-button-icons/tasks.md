@@ -43,9 +43,9 @@ directory in this repo). Paths below are from the repository root.
 
 **Purpose**: A working tree that can run the gate.
 
-- [ ] T001 Install dependencies from the lockfile: `npm ci` at the repository root. `node_modules` is
+- [X] T001 Install dependencies from the lockfile: `npm ci` at the repository root. `node_modules` is
   absent in this tree, so nothing runs until this does.
-- [ ] T002 Record the baseline: run `npm test` and confirm the suite is green **before** any edit, so
+- [X] T002 Record the baseline: run `npm test` and confirm the suite is green **before** any edit, so
   a later failure is attributable to this change and not inherited.
 
 ---
@@ -71,25 +71,25 @@ which is which. Pressing each still records its outcome and advances the run.
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Add the dependency: `npm install lucide-react` (not `npm ci` — this has to write the
+- [X] T003 [US1] Add the dependency: `npm install lucide-react` (not `npm ci` — this has to write the
   manifests). Confirm it resolves to **1.33.0** or later and that the licence is **ISC**, then commit
   both `package.json` and `package-lock.json` — Principle III requires a clean-checkout `npm ci` to
   succeed. This package was removed from the repo during 001 as unused
   ([#63](https://github.com/k-electron/flashrunner/issues/63)); this feature is its first real use.
-- [ ] T004 [US1] In `src/components/OutcomeButtons.tsx`, import the two icons:
+- [X] T004 [US1] In `src/components/OutcomeButtons.tsx`, import the two icons:
   `import { CircleCheck, CircleQuestionMark } from 'lucide-react'`. `CircleCheck` is the canonical
   name — `CheckCircle` still exists but is a legacy alias for a **different** icon
   (`circle-check-big`). Render `CircleCheck` in "Got it" and `CircleQuestionMark` in "Not yet". Each
   **MUST** carry an explicit `size-*` class — `src/components/ui/button.tsx:8` ends with
   `[&_svg:not([class*='size-'])]:size-4`, so an unsized icon is silently forced to 16px and FR-002
   fails with no error. Start at `size-12`. Mark each `aria-hidden` (FR-008).
-- [ ] T005 [US1] In the same file, restructure both `Button` children into a stacked layout: add
+- [X] T005 [US1] In the same file, restructure both `Button` children into a stacked layout: add
   `flex-col` and a small gap to each button's `className`, raise the height from `h-16` to `h-24`, and
   drop `text-xl` in favour of a label size smaller than the icon (`text-base`). The label MUST remain
   a **plain text child** — no `aria-label`, no `<title>` — so each accessible name stays exactly
   "Got it" / "Not yet" (FR-014, FR-015). `flex-col` is safe alongside the base class's `inline-flex`:
   `tailwind-merge` groups display and flex-direction separately.
-- [ ] T006 [P] [US1] In `src/routes/Run.test.tsx`, add one assertion that each label renders as
+- [X] T006 [P] [US1] In `src/routes/Run.test.tsx`, add one assertion that each label renders as
   **visible text** inside its button (`getByText('Got it')`, `getByText('Not yet')`). The existing
   `getByRole('button', { name: ... })` queries pass whether the name comes from visible text or from
   an `aria-label`, so they alone would not catch an icon-only button with a hidden label. Different
@@ -113,13 +113,13 @@ doing it in this order is strictly less work.
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] In `src/components/OutcomeButtons.tsx`, add `bg-green-800 text-white
+- [X] T007 [US2] In `src/components/OutcomeButtons.tsx`, add `bg-green-800 text-white
   hover:bg-green-900` to the "Got it" button's `className`. **All three classes are required**: the
   `default` variant sets `hover:bg-primary/80` as its own class, and leaving it in place turns the
   button near-black on hover. Add nothing to the "Not yet" button (FR-010). No contrast measurement is
   owed — `green-800` is 7.13:1 against white against a required 4.5:1, and that margin absorbs the
   Tailwind v3/v4 palette difference.
-- [ ] T008 [US2] Write the dependency record into the PR description, which the constitution requires
+- [X] T008 [US2] Write the dependency record into the PR description, which the constitution requires
   and CI cannot check: the **Principle V justification** (what `lucide-react` does, what it replaces,
   why hand-rolling is worse) and the **Principle VIII record** (`lucide-react@1.33.0`, ISC — on the
   pre-cleared list, actively maintained, wide adoption, stable channel). Both are already drafted in
@@ -153,9 +153,9 @@ fix belongs in T005 or T007, not in a new task.
 - [ ] T011 [P] [US3] Run the full suite and confirm **no behavioural test needed editing**. Nothing
   here touches `src/run/`, `src/storage/` or `src/routes/Run.tsx`; if an engine or storage test fails,
   something outside the spec was changed. Revert it rather than adapting the test.
-- [ ] T012 [US3] Run `git diff --stat` and confirm exactly **four** files changed:
-  `src/components/OutcomeButtons.tsx`, `src/routes/Run.test.tsx`, `package.json` and
-  `package-lock.json`. A fifth — especially `src/components/ui/button.tsx` or `src/index.css` — means
+- [ ] T012 [US3] Run `git diff --stat` and confirm exactly **four** source and manifest files
+  changed: `src/components/OutcomeButtons.tsx`, `src/routes/Run.test.tsx`, `package.json` and
+  `package-lock.json` — plus this `tasks.md`, since the bookkeeping rides in the work commit. A sixth — especially `src/components/ui/button.tsx` or `src/index.css` — means
   the declined work in [plan.md](./plan.md#adjacent-work-named-and-declined) got built anyway
   (Principle VI). Confirm too that `package.json` gained **only** `lucide-react`.
 

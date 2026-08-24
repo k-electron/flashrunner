@@ -162,6 +162,15 @@ describe('Run', () => {
     expect(screen.getByRole('button', { name: 'Not yet' })).toBeInTheDocument();
   });
 
+  // The queries above pass whether the name comes from visible text or from an
+  // aria-label, so on their own they would not catch an icon-only button carrying
+  // a hidden label — which is what FR-014 forbids.
+  it('keeps each outcome wording as visible text (FR-014)', () => {
+    renderRun(FIRST_RUN);
+    expect(screen.getByText('Got it')).toBeVisible();
+    expect(screen.getByText('Not yet')).toBeVisible();
+  });
+
   it('shows how many cards are left in the round and counts down as they are marked', async () => {
     const user = renderRun(FIRST_RUN);
     expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
