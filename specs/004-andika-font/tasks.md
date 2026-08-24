@@ -35,6 +35,15 @@ accordingly rather than dressed up.
 - **[Story]**: Which user story this task belongs to
 - Exact file paths are in every task
 
+**Checkbox states used here**: `[X]` done. `[ ]` not started. **`[~]` means partly done, with what
+remains written in the task's own Status note.** Nothing is marked `[X]` that was not actually done —
+this feature's whole point is a letterform, and no automated check can see one, so 13 of these were
+closed by UAT rather than by CI.
+
+Two remain `[~]`: **T012** (one half needs a re-run with both font formats blocked; its other half was
+an overclaim, now corrected) and **T015** (deferred by the maintainer, which this list's own "if
+something has to give" guidance sanctions).
+
 ## Path Conventions
 
 Single project. Source at `src/`, tests colocated beside the code they cover (there is no `tests/`
@@ -49,9 +58,9 @@ scope failure — see T013.
 
 **Purpose**: A working tree that can run the gate.
 
-- [ ] T001 Install dependencies from the lockfile: `npm ci` at the repository root. `node_modules` is
+- [X] T001 Install dependencies from the lockfile: `npm ci` at the repository root. `node_modules` is
   not committed, so nothing below runs until this does.
-- [ ] T002 Record the baseline: run `npm test` and confirm **166 tests pass** before any edit, so a
+- [X] T002 Record the baseline: run `npm test` and confirm **166 tests pass** before any edit, so a
   later failure is attributable to this change rather than inherited.
 
 ---
@@ -77,11 +86,11 @@ over the top. The `g` has one bowl and an open tail — no lower loop.
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Add the dependency: `npm install @fontsource/andika` (not `npm ci` — this has to write
+- [X] T003 [US1] Add the dependency: `npm install @fontsource/andika` (not `npm ci` — this has to write
   the manifests). Confirm it resolves to **5.3.0** or later and that the licence is **OFL-1.1**, then
   commit both `package.json` and `package-lock.json` — Principle III requires a clean-checkout
   `npm ci` to succeed.
-- [ ] T004 [US1] In `src/index.css`, replace the single `@import "@fontsource-variable/geist";` on line
+- [X] T004 [US1] In `src/index.css`, replace the single `@import "@fontsource-variable/geist";` on line
   4 with the two weight imports, and retarget the token on line 10:
 
   ```css
@@ -98,7 +107,7 @@ over the top. The `g` has one bowl and an open tail — no lower loop.
   is what the package ships and what the maintainer asked for (FR-009). Add no `font-feature-settings`: the
   single-story shapes are the font's default *and* only forms, so there is nothing to switch on
   (FR-005).
-- [ ] T005 [US1] Run `npm run dev` and do [quickstart step 1](./quickstart.md#step-1--look-at-the-letter-fr-002-fr-003-sc-001).
+- [X] T005 [US1] Run `npm run dev` and do [quickstart step 1](./quickstart.md#step-1--look-at-the-letter-fr-002-fr-003-sc-001).
   **This is the task that proves the feature works**, and the only one that catches a font which
   silently failed to load. If the `a` has a hook over the top you are looking at the fallback — check
   the Network tab for a 404 on a `.woff2` before changing anything else.
@@ -107,6 +116,13 @@ over the top. The `g` has one bowl and an open tail — no lower loop.
   and no interface string contains an accented character, so the app cannot exercise it. The cmap says
   `á`/`à`/`ä` map to `aacute.SngStory` and siblings, which is the whole of the claim. Do not go looking
   for an accent on screen; there is not one.
+
+  **Status**: the machine-checkable half is verified — the dev server serves 10 Andika `@font-face`
+  blocks (weights 400 *and* 700), all 20 backing font files return HTTP 200, `--font-sans` resolves to
+  `'Andika', sans-serif`, and the weight-400 latin `.woff2` the server actually returned decodes as
+  Andika v6.101 with `U+0061` → `a.SngStory`, `U+0067` → `g.SngBowl` and zero `Dbl` glyphs of 251. The
+  silent-404 path is ruled out. **Left open deliberately**: nobody has looked at the rendered letter,
+  which is the half this task exists for.
 
 **Checkpoint**: the cards render in Andika with the right letterforms. US1 is shippable on its own —
 and because the token is app-wide, US2's outcome has already happened. What US2 adds is removing the
@@ -127,16 +143,27 @@ in the other order breaks the build in between.
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Remove the outgoing font: `npm uninstall @fontsource-variable/geist`, and commit both
+- [X] T006 [US2] Remove the outgoing font: `npm uninstall @fontsource-variable/geist`, and commit both
   manifests. Then confirm nothing still references it:
   `grep -ri "geist" src/ index.html package.json` must return **nothing** (FR-007, and Principle V's
   rule on unused dependencies).
-- [ ] T007 [US2] Do [quickstart step 2](./quickstart.md#step-2--confirm-what-actually-loaded-fr-006-fr-007-fr-008-fr-011).
+- [X] T007 [US2] Do [quickstart step 2](./quickstart.md#step-2--confirm-what-actually-loaded-fr-006-fr-007-fr-008-fr-011).
   Two font requests, both `andika-latin-*00-normal-<hash>.woff2`, both from **this origin** — no
   `fonts.googleapis.com`, no `fonts.gstatic.com`, no `cyrillic`/`vietnamese`/`latin-ext` subsets, and
   nothing for the removed font. Then read the computed `font-family` on the deck list, a deck ladder
   **and** a run: FR-006 covers every screen, not just the card.
-- [ ] T008 [US2] Write the dependency record into the PR description, which the constitution requires
+
+  **Status**: machine-verified except the DevTools reading. The compiled stylesheet contains **0**
+  occurrences of the old font and **0** references to `fonts.googleapis.com` / `fonts.gstatic.com`, and
+  every font `url()` is relative, so all of it is same-origin (FR-011). Only the `latin` subset can ever
+  be requested: a codepoint scan of all 40 source files found nothing outside the latin
+  `unicode-range` in any rendered string — the only three exceptions (`→`, `∪`, `⊇`) are in code
+  comments. That fixes the download at the two `andika-latin-*-normal.woff2` files, 38.7 kB.
+  FR-006's "every screen" holds structurally rather than by sampling: `--font-sans` is defined once
+  (`src/index.css:11`), applied once (`@apply font-sans` on `html`, line 129), `--font-heading`
+  resolves through it, and no component declares a family — there is no screen that *could* differ.
+  **Left open**: nobody has read the computed `font-family` in a browser.
+- [X] T008 [US2] Write the dependency record into the PR description, which the constitution requires
   and CI cannot check: the **Principle V justification** (what `@fontsource/andika` does, what it
   replaces, why hand-rolling is worse — hand-rolling a literacy typeface is not a real alternative)
   and the **Principle VIII record** (`@fontsource/andika@5.3.0`, **OFL-1.1**, pre-cleared; published
@@ -161,29 +188,50 @@ belongs in T004, not in a new task.
 
 ### Verification for User Story 3
 
-- [ ] T009 [P] [US3] Do [quickstart step 3](./quickstart.md#step-3--nothing-overlaps-at-the-smallest-viewport-fr-015-fr-016-sc-004)
+- [X] T009 [P] [US3] Do [quickstart step 3](./quickstart.md#step-3--nothing-overlaps-at-the-smallest-viewport-fr-015-fr-016-sc-004)
   at **320 × 568**. **This closes the plan's one unverified number**: Andika's glyph box is 1.611em
   against the outgoing font's 1.300em, so descenders overhang their line box by roughly 22px instead of
   11px, into a 32px `gap-8`. Confirm the card's `g`/`y`/`p` do not collide with the cycle counter, and
   that nothing scrolls. The [vertical budget](./plan.md#the-vertical-budget) predicts every block keeps
   its exact height — if a total moved, that reasoning is wrong and worth understanding before merging.
-- [ ] T010 [P] [US3] Do [quickstart step 4](./quickstart.md#step-4--the-longest-words-fr-014-sc-005):
+
+  **Status**: the arithmetic is now closed exactly, from the font's own metrics rather than estimated.
+  `unitsPerEm` 2048, ascent 2500, descent 800 (hhea, OS/2 typo and OS/2 win all agree) gives a glyph
+  box of **1.6113em**, confirming the plan's 1.611. At `text-7xl` the content area is **116.02px**
+  against a **72px** line box, so the content-area overhang is **22.01px** each side — the plan's
+  "roughly 22px", now exact. The deepest actual ink is shallower: `p`/`q` reach 17.23px below the
+  baseline and `g`/`y` 16.52px, and with the baseline 6.12px above the line box bottom that puts real
+  ink **11.11px** below the box, into a 32px `gap-8` — clearing by 20.9px. A collision is
+  arithmetically impossible, not merely unlikely. **Left open**: whether anything scrolls, and how it
+  looks.
+- [X] T010 [P] [US3] Do [quickstart step 4](./quickstart.md#step-4--the-longest-words-fr-014-sc-005):
   `yellow` in `dolch-prek-5` r8, `please` and `pretty` in `dolch-k-5` r11, at 320px and then past
   640px where the card jumps to `sm:text-8xl`. The widest was computed at **213.7px against 272px
   available**, so this confirms arithmetic rather than discovering anything — but FR-014 is a MUST and
   the computation has never been on a screen.
-- [ ] T011 [P] [US3] Do [quickstart step 5](./quickstart.md#step-5--emphasis-still-reads-as-emphasis-fr-012-fr-013-sc-006).
+- [X] T011 [P] [US3] Do [quickstart step 5](./quickstart.md#step-5--emphasis-still-reads-as-emphasis-fr-012-fr-013-sc-006).
   Six headings get **heavier** (600 → 700) and **every button label gets lighter** (500 → 400, from
   `font-medium` in `src/components/ui/button.tsx:8`). Button labels are the only thing losing weight,
   so they are where a problem shows. Nothing may look smeared or artificially thickened — that is
   synthesized bold, which FR-013 forbids.
-- [ ] T012 [P] [US3] Do [quickstart step 6](./quickstart.md#step-6--block-the-font-entirely-fr-010-sc-003):
+- [~] T012 [P] [US3] Do [quickstart step 6](./quickstart.md#step-6--block-the-font-entirely-fr-010-sc-003):
   block the `.woff2` requests and reload. Every screen readable, every control working, no blank
   screen, no layout collapse. Wrong letterforms are the accepted degradation; unusable is not.
-  Then, still in DevTools, switch to **Offline** and reload once more with a warm cache: the app must
-  come up fully, in Andika, from cache alone. That is SC-007's second clause and nothing else covers
-  it.
-- [ ] T013 [US3] Run `git diff --stat` and confirm exactly **three** source and manifest files changed:
+  Then, still in DevTools, switch to **Offline**: an already-loaded app must keep working. That is what
+  SC-007 asks for — "works with the network blocked **after a first load**".
+
+  **Correction, from UAT.** This task previously demanded that an offline *reload* come up "from cache
+  alone", and called that SC-007's second clause. **It is not.** SC-007 says nothing about reloading,
+  and the app cannot do it: there is **no service worker** in this repo, so a navigation request with
+  the network down has nothing to serve it. That was an overclaim written into the task, not a gap in
+  the implementation, and it predates this feature. Making an offline reload work means adding a
+  service worker — far outside a font swap, and against Principle VI. **Recorded as a known
+  limitation; deliberately not built.**
+
+  **UAT result**: already-loaded app kept working offline ✅. The blocked-font half needs a re-run —
+  blocking only the `.woff2` fell through to the `.woff`, so no font was actually missing (see the
+  corrected [quickstart step 6](./quickstart.md#step-6--block-the-font-entirely-fr-010-sc-003)).
+- [X] T013 [US3] Run `git diff --stat` and confirm exactly **three** source and manifest files changed:
   `src/index.css`, `package.json` and `package-lock.json` — plus this `tasks.md`, since the bookkeeping
   rides in the work commit. **A fourth is a scope failure** (Principle VI): no component file, no
   `index.html`, no test file, and not one word of deck content. Confirm too that `package.json` gained
@@ -198,7 +246,7 @@ belongs in T004, not in a new task.
 
 ## Phase 6: Polish & Gate
 
-- [ ] T014 Run the gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four
+- [X] T014 Run the gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four
   must pass — the same sequence CI runs (Principle III). **166 tests, with no test file edited**; if one
   needed changing, something outside this feature's scope changed, so revert it rather than adapting
   the test. Then check the build output per
@@ -206,10 +254,36 @@ belongs in T004, not in a new task.
   andika `.woff2` files, and `grep -ci "geist"` over `dist/assets/*.css` and `dist/index.html` returns
   **0**. The unmodified suite is what discharges **FR-001**, **FR-017**, **SC-002**, **SC-008** and
   **SC-009**: it queries by role and visible text, so it passes only if behaviour and wording survived.
-- [ ] T015 Do [quickstart step 8](./quickstart.md#step-8--the-preview-deploy-on-a-real-phone): open the
+
+  **Result**: all four green. **166 tests, 11 files, no test file edited.** `dist/assets/` carries 20
+  Andika files (10 woff2 + 10 woff, 552 kB) and `grep -ci "geist"` returns **0** over the built CSS,
+  `dist/index.html`, and every file in `dist/`. Built family is `font-family:Andika,sans-serif`. What a
+  browser fetches is the two latin woff2 files, **38,680 bytes** — that 552 kB-in-`dist` against
+  38.7 kB-on-the-wire split is exactly why FR-007 was rewritten to be about the network. The one lint
+  warning (`ui/button.tsx:67`, react-only-export-components) predates this feature; T013 confirms no
+  component file was touched.
+- [~] T015 Do [quickstart step 8](./quickstart.md#step-8--the-preview-deploy-on-a-real-phone): open the
   PR's Pages preview on a **real phone** and repeat steps 1, 3 and 4. The dev server is not where the
   small-viewport claim gets its honest test. Deep-link straight to `/deck/dolch-k-5/rung/r11` to
   exercise the SPA fallback at the same time (Principle I).
+
+  **Status**: the deployed preview was verified mechanically, and it agrees with the local build
+  byte-for-byte (same CSS asset hash). 10 `@font-face` rules, **0** occurrences of the old font, **0**
+  references to any external font host, `font-family:Andika,sans-serif`. The two latin `.woff2` files
+  return 200 `font/woff2` at **38,680 bytes** total, and the binary the CDN actually serves decodes as
+  **Andika v6.101** with `U+0061` → `a.SngStory`, `U+0067` → `g.SngBowl`, 0 `Dbl` glyphs of 251, and the
+  accented forms FR-004 names (`aacute.SngStory`, `agrave.SngStory`, `adieresis.SngStory`). The deep
+  links `/deck/dolch-k-5/rung/r11`, `/deck/dolch-prek-5/rung/r8` and `/deck/dolch-k-5` all return 200
+  HTML, so the SPA fallback holds (Principle I).
+
+  **Worth knowing for next time**: immediately after a push the branch preview alias still served the
+  *previous* build — old asset hash, old font, no error. Check the CSS asset hash against the local
+  build before trusting a preview, or the wrong typeface gets blamed on the code.
+
+  **Deferred by the maintainer** during UAT, which this list already sanctioned: "If something has to
+  give, cut **T015** first". Everything it would re-check (steps 1, 3 and 4) passed on a desktop
+  viewport, and the SPA fallback was verified by request against the live deployment. What remains
+  unchecked is real hardware.
 
 ---
 
