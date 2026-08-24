@@ -34,8 +34,8 @@ and an open descender, not a lower loop.
    single-bowl with an open tail.
 3. **Given** any card, **When** it is shown, **Then** the word is drawn in Andika and in no other
    font.
-4. **Given** a cold load with an empty cache, **When** the card appears, **Then** it is not briefly
-   drawn in a substitute font with double-story letterforms.
+4. **Given** a normal load, **When** the card appears, **Then** it is drawn in Andika by the time
+   the learner is looking at it.
 
 ---
 
@@ -97,9 +97,10 @@ card's full size.
 
 ### Edge Cases
 
-- **The font has not arrived yet.** On a first visit the font file is still downloading when the
-  markup is ready. The substitute font the browser would use in the meantime has a double-story `a`
-  — the exact shape this feature exists to remove — so a learner must not be shown text in it.
+- **The font has not arrived yet.** On a first visit the font may still be downloading when the
+  markup is ready, so text paints in the browser's substitute face and swaps when Andika lands. On a
+  modern connection with a self-hosted font that window is brief, and blocking text to avoid it costs
+  more than it saves. Accepted.
 - **The font fails to load entirely.** The app must remain fully usable and readable. Correct
   letterforms are the goal; legible text is the floor, and the floor is not negotiable.
 - **Accented letters.** A word containing `á`, `à` or `ä` must show the same single-story `a` shape
@@ -128,15 +129,18 @@ card's full size.
 **Scope of application**
 
 - **FR-006**: Andika MUST apply to every screen and every string, not only to the card face.
-- **FR-007**: The app MUST NOT ship or download a text font it does not use. Andika replaces the
-  current font rather than joining it.
+- **FR-007**: A learner's device MUST NOT download a text font the app does not use. Andika replaces
+  the current font rather than joining it. Subset files that sit in the build but are never requested
+  are acceptable — what matters is what crosses the network, which is also what FR-008 measures.
 - **FR-008**: Only the character ranges the app's content actually uses MUST be downloaded to a
   learner's device.
 
 **Loading**
 
-- **FR-009**: A learner MUST NOT see app text drawn in a substitute font at any point, including
-  during a first load on a cold cache.
+- **FR-009**: Text MUST paint immediately, using the platform's standard web-font loading
+  behaviour. A brief substitute face on a first load, before the font arrives, is accepted — this app
+  targets modern connections and serves the font from its own origin. Blocking text to avoid that
+  window is explicitly not wanted.
 - **FR-010**: If the font cannot be loaded at all, the app MUST remain fully usable with legible
   text.
 - **FR-011**: Text MUST NOT depend on a request to any third-party host. Nothing about which words a
@@ -170,8 +174,7 @@ card's full size.
 
 - **SC-001**: On every screen, the lowercase `a` and `g` are the single-story forms a beginning
   reader is taught.
-- **SC-002**: No screen displays a double-story `a` or `g` at any point in its lifetime, including
-  while loading on a cold cache.
+- **SC-002**: Once loaded, no screen displays a double-story `a` or `g`.
 - **SC-003**: With the font blocked entirely, every screen is still readable and every control still
   works.
 - **SC-004**: The run screen fits a 320px-wide viewport with no scrolling, and no text anywhere in

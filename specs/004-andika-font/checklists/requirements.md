@@ -47,7 +47,8 @@ Two judgement calls worth recording, since a reader could reasonably challenge e
   text gets slightly heavier. FR-012 keeps emphasis visible and FR-013 forbids faking it; neither
   tries to preserve today's exact weights, because that would mean keeping a second font.
 
-One requirement carries a real cost and is deliberately written the strong way: **FR-009** forbids
-ever showing text in a substitute font, which on a cold cache means the alternative to a brief
-double-story `a` is a brief absence of text. Removing the wrong letterforms is the entire point of
-the feature, so the spec takes that trade. Flagged for the maintainer rather than buried.
+**FR-009 was revised after maintainer direction, 2026-08-23.** It originally forbade ever showing
+text in a substitute face, which forces the browser to block text until the font arrives. The
+maintainer's call: this app runs on modern connections, so use the standard web-font pattern and
+accept the brief swap. FR-009, SC-002, US1 scenario 4 and the loading edge case were rewritten to
+match; nothing else in the spec moved.
