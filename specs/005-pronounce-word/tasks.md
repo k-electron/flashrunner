@@ -143,11 +143,15 @@ the feature.
       card content. The grid also keeps the wrapper a single child of `main`, so the existing four
       `gap-8` gaps stay four. (FR-002, FR-010, FR-017, T003)
 
-- [ ] T007 [US1] Confirm the vertical budget still holds: the new row adds `h-12` + `gap-y-2` = 56px
+- [~] T007 [US1] Confirm the vertical budget still holds: the new row adds `h-12` + `gap-y-2` = 56px
       to the 420px measured for the font change, giving **476px against 568px** on a 320 × 568
       viewport. Check in DevTools rather than trusting the arithmetic, since this is the number
       [research Decision 6](./research.md#decision-6-a-two-column-grid-puts-the-button-above-not-yet-without-touching-the-outcome-buttons)
       computed rather than measured. (SC-007, quickstart step 6, T006)
+
+      **Status**: NOT DONE. Nothing in this repository can measure a rendered
+      layout — `jsdom` does no layout — so the 476px against 568px is still the
+      arithmetic it was, unmeasured. Needs DevTools at 320 × 568. Two minutes.
 
 - [X] T008 [US1] Add a reusable `speechSynthesis` stub to `src/routes/Run.test.tsx` — installed in
       `beforeEach`, removed in `afterEach` — recording every utterance it is handed and exposing a
@@ -158,13 +162,18 @@ the feature.
       "cards left in this round" count, and writes nothing new to storage. Assert on **what was
       spoken**, never on which methods were called. (FR-001, FR-005, FR-006, FR-010, T006)
 
-- [ ] T009 [US1] Browser check — [quickstart](./quickstart.md) steps **1, 2 and 5**, with the volume
+- [~] T009 [US1] Browser check — [quickstart](./quickstart.md) steps **1, 2 and 5**, with the volume
       up. Confirm it speaks; that it sounds American and female; that it says the word currently on
       screen and never the previous one; and that the run-complete screen has no speaker. **Record
       which voice actually spoke**, since the name list is the one thing in this feature that cannot
       be verified from a repository. A singing, whispering or robotic voice is a real bug — that is
       the fallback failing — while a male voice is an accepted outcome on a device with no female
       en-US voice. (FR-001, FR-003, FR-004, FR-005, FR-010, SC-001, SC-002, SC-004)
+
+      **Status**: NOT DONE, and it is the one that matters most. Every test here
+      passes against a button that makes no sound. Nothing has yet heard this
+      feature speak. Needs a human with the volume up, and the voice that actually
+      spoke written back into this file.
 
 **Checkpoint**: the button works and is usable. It may still queue repeats. **166 + new tests green,
 no existing test edited.**
@@ -210,12 +219,17 @@ separately because each closes a different requirement, not because they can be 
       an outcome while speaking cancels and advances the run normally. Count utterances — the count
       *is* the requirement. (FR-007, FR-008, FR-009, FR-012, SC-003, SC-005, T010, T011)
 
-- [ ] T014 [US2] Browser check — [quickstart](./quickstart.md) steps **3 and 4**. Press five times as
+- [~] T014 [US2] Browser check — [quickstart](./quickstart.md) steps **3 and 4**. Press five times as
       fast as possible and confirm the word is spoken once, with nothing played afterwards. Watch the
       button while it speaks and confirm the movement is small and does not pull the eye off the card
       — **this is the one judgement call in the feature, and it is the maintainer's to make**, not
       something a test can settle. Then confirm marking, "Start over" and "Leave this run" each
       silence it immediately. (FR-007, FR-008, FR-009, FR-013a, SC-003, SC-005)
+
+      **Status**: NOT DONE. The count is covered by test — five presses record
+      exactly one utterance — but "is the pulse subtle enough" is a judgement no
+      assertion can make, and deliberately has no test (Principle IV bans reading
+      the class name). Needs the maintainer's eye.
 
 **Checkpoint**: the feature is behaviourally complete.
 
@@ -247,12 +261,18 @@ Phase 3 without it. This phase is the verification.
       outcome buttons, "Start over" and "Leave this run" all are. This states FR-011 as an
       expectation rather than leaving it as an implicit property of the environment. (FR-011, SC-006)
 
-- [ ] T017 [US3] Browser check — [quickstart](./quickstart.md) step **7**. Remove
+- [~] T017 [US3] Browser check — [quickstart](./quickstart.md) step **7**. Remove
       `window.speechSynthesis` in the console, navigate client-side into a run, and confirm no speaker
       button, no error, no gap in the layout, and every other control working. If `delete` returns
       `false` — the property may be non-configurable — use the `Object.defineProperty` form given in
       the quickstart instead; a step that appears to fail because the setup did not take is worse
       than no step. (FR-011, US3, SC-006)
+
+      **Status**: partly. The code path is verified by test: T016 asserts the
+      control is absent while the card, both outcomes, "Start over" and "Leave this
+      run" are present, and removing the guard fails that test and only that test.
+      What remains is the console check in a real browser, which is the only thing
+      that can show there is no error and no gap left in the layout.
 
 **Checkpoint**: all three stories verified.
 
@@ -260,12 +280,17 @@ Phase 3 without it. This phase is the verification.
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T018 Run the gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four
+- [X] T018 Run the gate: `npm run lint && npm run typecheck && npm test && npm run build`. All four
       must pass — the same sequence CI runs, and `lint` includes `prettier --check .`, which covers
       the markdown in this directory as well as the source. Confirm the test count is **166 plus the
       new ones** and that the 166 are unmodified. (Principle III, SC-008, quickstart step 8)
 
-- [ ] T019 Confirm the diff is what the plan said: **two files added** (`src/speech/voice.ts`,
+      **Verified 2026-08-24**: `lint` clean (one pre-existing warning on the
+      vendored `src/components/ui/button.tsx`, not from this feature), `typecheck`
+      exit 0, **182 tests** in 12 files, `build` succeeded. 182 = the original 166
+      plus 16 new, with zero lines removed from any pre-existing test file.
+
+- [X] T019 Confirm the diff is what the plan said: **two files added** (`src/speech/voice.ts`,
       `src/components/PronounceButton.tsx`) plus their tests, **two modified**
       (`src/routes/Run.tsx`, `src/routes/Run.test.tsx`), and **`package.json` unchanged**. A
       dependency appearing here means something was reached for that the platform already provides.
@@ -277,11 +302,25 @@ Phase 3 without it. This phase is the verification.
       there being no request to make, and this is the check that keeps it that way.
       (Principle I, Principle VI, FR-015, FR-016, FR-017)
 
-- [ ] T020 Browser check on a **real phone**, via the PR's Pages preview —
+      **Verified 2026-08-24** against `cbe5348`: 3 files added
+      (`src/speech/voice.ts`, `src/speech/voice.test.ts`,
+      `src/components/PronounceButton.tsx`), 2 modified (`src/routes/Run.tsx`,
+      `src/routes/Run.test.tsx`). `package.json` and `package-lock.json` are not in
+      the diff. `OutcomeButtons.tsx`, `src/run/`, `src/storage/` and `src/decks/`
+      are not in the diff. Grep of both new source files for `fetch`,
+      `XMLHttpRequest`, a URL, `useSpeech`, `setTimeout`, `setInterval`, `autoplay`
+      and `localStorage` returns nothing — so none of the four declined items crept
+      in and FR-015 holds by there being no request to make.
+
+- [~] T020 Browser check on a **real phone**, via the PR's Pages preview —
       [quickstart](./quickstart.md) step 6, repeating steps **1, 3 and 6**. iOS is where speech
       behaves least like the desktop and where the app is actually used; a desktop pass is not
       evidence for it. Deep-link straight into a run to exercise the SPA fallback at the same time
       (Principle I). (FR-002, FR-014, SC-002, SC-007)
+
+      **Status**: NOT DONE. Needs the PR's Pages preview open on an actual phone.
+      A desktop pass is not evidence for iOS, which is where speech behaves least
+      like the desktop and where the app is actually used.
 
 ---
 

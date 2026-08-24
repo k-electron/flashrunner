@@ -14,24 +14,28 @@ import { pickVoice } from '@/speech/voice';
 
 export function PronounceButton({ word }: { word: string }) {
   // The whole of the state machine (contract § 4): idle or speaking, and no
-  // queue, because nothing is ever enqueued. Deliberately not read from
-  // `speechSynthesis.speaking` — React cannot re-render on a browser global, and
-  // Safari has been known to leave that flag true after speech has ended.
-  const [speaking, setSpeaking] = useState(false);
+  // queue, because nothing is ever enqueued. What is stored is the word being
+  // said rather than a bare flag, so that "is it speaking?" is derived at render
+  // and a word change lands on idle by arithmetic instead of by anyone
+  // remembering to reset it.
+  //
+  // That matters because the alternative depends on a promise another program
+  // keeps. A cancel is meant to come back through the utterance's `error`
+  // handler; a device that stops making sound without admitting it would leave a
+  // flag latched and the button dead for the rest of the run — silently, which is
+  // this feature's whole failure mode. Nothing can latch a value that is only
+  // ever compared.
+  //
+  // Deliberately not read from `speechSynthesis.speaking` either: React cannot
+  // re-render on a browser global, and Safari has been known to leave that flag
+  // true after speech has ended.
+  const [spokenWord, setSpokenWord] = useState<string | null>(null);
+  const speaking = spokenWord === word;
 
   // Stops the talking in all four cases at once: marking a card and restarting
   // change the word, leaving the run and completing it unmount the component
-  // (FR-009, FR-010).
-  //
-  // A new word is idle by definition, and saying so here rather than waiting for
-  // the browser to report the cancel is what keeps the control from latching. The
-  // cancel below is meant to come back through the utterance's `error` handler,
-  // but that is the browser's promise to keep, not ours; a device that stops
-  // making sound without admitting it would otherwise leave the button dead for
-  // the rest of the run — silently, which is this feature's whole failure mode.
-  // Contract § 4 makes the word change a transition to idle outright, so this
-  // implements it outright. On mount the value is already `false` and React bails
-  // out of the render, so it costs nothing.
+  // (FR-009, FR-010). Returning to idle is the line above's job, not this one's —
+  // all this does is stop the sound.
   //
   // It keys on the word rather than the card id because the word is all this
   // component is given. Two consecutive cards showing the same string would not
@@ -40,10 +44,7 @@ export function PronounceButton({ word }: { word: string }) {
   // The optional call is not defensiveness: the hook has to run before the
   // availability guard below, so on a device with no Web Speech API this cleanup
   // still fires with nothing to cancel. That is the path jsdom takes.
-  useEffect(() => {
-    setSpeaking(false);
-    return () => window.speechSynthesis?.cancel();
-  }, [word]);
+  useEffect(() => () => window.speechSynthesis?.cancel(), [word]);
 
   // A browser without the Web Speech API loses the button and nothing else — no
   // error, no dead control, and no empty row left behind in the grid, since a
@@ -75,10 +76,10 @@ export function PronounceButton({ word }: { word: string }) {
     // `error` matters as much as `end`: a cancel arrives as one (`canceled` /
     // `interrupted`), and a pronunciation that fails must leave the control
     // pressable rather than latched (FR-008, FR-012).
-    const idle = () => setSpeaking(false);
+    const idle = () => setSpokenWord(null);
     utterance.onend = idle;
     utterance.onerror = idle;
-    setSpeaking(true);
+    setSpokenWord(word);
     window.speechSynthesis.speak(utterance);
   }
 
