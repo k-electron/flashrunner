@@ -7,21 +7,47 @@
 // advances nothing and stores nothing, which is why the word is passed to this
 // component rather than into src/components/OutcomeButtons.tsx (FR-006).
 // See specs/005-pronounce-word/contracts/pronunciation.md.
+import { useEffect, useState } from 'react';
 import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { pickVoice } from '@/speech/voice';
 
 export function PronounceButton({ word }: { word: string }) {
+  // The whole of the state machine (contract § 4): idle or speaking, and no
+  // queue, because nothing is ever enqueued. Deliberately not read from
+  // `speechSynthesis.speaking` — React cannot re-render on a browser global, and
+  // Safari has been known to leave that flag true after speech has ended.
+  const [speaking, setSpeaking] = useState(false);
+
+  // Stops the talking in all four cases at once: marking a card and restarting
+  // change the word, leaving the run and completing it unmount the component
+  // (FR-009, FR-010). The browser answers a cancel through the utterance's
+  // `error` handler, which is what returns the control to idle.
+  //
+  // It keys on the word rather than the card id because the word is all this
+  // component is given. Two consecutive cards showing the same string would not
+  // re-trigger it — which cannot happen, since a rung's cards are distinct words.
+  //
+  // The optional call is not defensiveness: the hook has to run before the
+  // availability guard below, so on a device with no Web Speech API this cleanup
+  // still fires with nothing to cancel. That is the path jsdom takes.
+  useEffect(() => () => window.speechSynthesis?.cancel(), [word]);
+
   // A browser without the Web Speech API loses the button and nothing else — no
   // error, no dead control, and no empty row left behind in the grid, since a
   // component that renders nothing is not a grid item (FR-011). This is the path
   // jsdom takes, which is why the run screen's existing tests never meet this
-  // component at all.
+  // component at all. The hooks above run unconditionally, ahead of this return.
   if (!('speechSynthesis' in window)) {
     return null;
   }
 
   function speak(): void {
+    // A press while the word is still being said does nothing at all: no second
+    // utterance, and nothing held back to play afterwards (FR-007).
+    if (speaking) {
+      return;
+    }
     const utterance = new SpeechSynthesisUtterance(word);
     // Set whether or not a voice is chosen below, and the whole of the last
     // resort when none is: an unset `voice` with an American English `lang`
@@ -34,6 +60,13 @@ export function PronounceButton({ word }: { word: string }) {
     if (voice !== undefined) {
       utterance.voice = voice;
     }
+    // `error` matters as much as `end`: a cancel arrives as one (`canceled` /
+    // `interrupted`), and a pronunciation that fails must leave the control
+    // pressable rather than latched (FR-008, FR-012).
+    const idle = () => setSpeaking(false);
+    utterance.onend = idle;
+    utterance.onerror = idle;
+    setSpeaking(true);
     window.speechSynthesis.speak(utterance);
   }
 
@@ -54,7 +87,15 @@ export function PronounceButton({ word }: { word: string }) {
       variant="outline"
       onClick={speak}
     >
-      <Volume2 className="size-6" aria-hidden="true" />
+      {/* The sign of activity is the icon alone, and only while speaking: the
+          button is never dimmed, greyed or animated as a whole, so it cannot
+          compete with the card for a learner's attention (FR-013a). Under
+          `prefers-reduced-motion: reduce` the pulse does not run and the control
+          works exactly the same, which is what `motion-safe:` is doing here. */}
+      <Volume2
+        className={speaking ? 'size-6 motion-safe:animate-pulse' : 'size-6'}
+        aria-hidden="true"
+      />
     </Button>
   );
 }

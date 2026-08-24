@@ -879,6 +879,9 @@ describe('Run — hearing the word (US1)', () => {
     /** Every utterance handed over, in the order it was handed over. */
     spoken: [] as StubUtterance[],
 
+    /** How many times the device was told to stop talking. */
+    cancelled: 0,
+
     /** What the device was asked to say — the assertable outcome. */
     words(): string[] {
       return speech.spoken.map((utterance) => utterance.text);
@@ -908,11 +911,21 @@ describe('Run — hearing the word (US1)', () => {
 
   beforeEach(() => {
     speech.spoken.length = 0;
+    speech.cancelled = 0;
     Object.defineProperty(window, 'speechSynthesis', {
       configurable: true,
       value: {
         getVoices: () => [],
         speak: (utterance: StubUtterance) => speech.spoken.push(utterance),
+        // A browser's `cancel` ends whatever is speaking through the error path,
+        // so the stub does too — otherwise it would model a device that stops
+        // making sound but never admits it, which no real one does. Called on
+        // every word change and every unmount, including ones where nothing was
+        // ever spoken, hence the missing handler being unremarkable.
+        cancel: () => {
+          speech.cancelled += 1;
+          speech.spoken.at(-1)?.onerror?.();
+        },
       },
     });
     Object.defineProperty(window, 'SpeechSynthesisUtterance', {
@@ -972,5 +985,76 @@ describe('Run — hearing the word (US1)', () => {
     expect(shownCard(FIRST_RUNG_CARDS)).toBe(card);
     expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
     expect(readDeckRecord(dolchPreK5)).toEqual(before);
+  });
+
+  // Inside the block above so it speaks through the same stub. What is counted
+  // here is utterances, because the count is the requirement: "spoken exactly
+  // once" is a number, not a state, and it is the only form of the rule a test
+  // can hold. The animation is not asserted — it is a class name (Principle IV)
+  // and whether it is subtle enough is a judgement a person makes, not a test.
+  describe('pressing it again while it is still speaking (US2)', () => {
+    it('says the word once however many times it is pressed (FR-007, SC-003)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const card = shownCard(FIRST_RUNG_CARDS);
+
+      const hear = screen.getByRole('button', { name: 'Hear the word' });
+      for (let press = 0; press < 5; press += 1) {
+        await user.click(hear);
+      }
+
+      // Four of the five presses reached a control that was already speaking and
+      // did nothing at all — nothing spoken twice, and nothing kept back to play
+      // afterwards, which is what the run has to show once speech ends.
+      expect(speech.words()).toEqual([frontOf(card)]);
+      speech.end();
+      expect(speech.words()).toEqual([frontOf(card)]);
+    });
+
+    it('says it again once it has finished saying it (FR-008)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const card = shownCard(FIRST_RUNG_CARDS);
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      speech.end();
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(speech.words()).toEqual([frontOf(card), frontOf(card)]);
+    });
+
+    it('says it again after a pronunciation that failed (FR-012)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const card = shownCard(FIRST_RUNG_CARDS);
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      // The same end of speech as `end`, arrived at the other way. A failure that
+      // left the control unpressable would strand a learner on a word for the
+      // rest of the run.
+      speech.error();
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(speech.words()).toEqual([frontOf(card), frontOf(card)]);
+    });
+
+    it('stops talking and advances as usual when a card is marked mid-word (FR-009, SC-005)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const first = shownCard(FIRST_RUNG_CARDS);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      expect(speech.words()).toEqual([frontOf(first)]);
+
+      // Marked while it is still talking, which is what a child does.
+      await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+      // The device was told to stop, and the run moved on exactly as it does
+      // when nothing is speaking: a new card, one fewer left in the round.
+      expect(speech.cancelled).toBe(1);
+      const second = shownCard(FIRST_RUNG_CARDS);
+      expect(second).not.toBe(first);
+      expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
+
+      // And the control came back to the new card rather than staying latched on
+      // the interrupted one.
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      expect(speech.words()).toEqual([frontOf(first), frontOf(second)]);
+    });
   });
 });

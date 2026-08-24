@@ -176,7 +176,7 @@ to end, press again, it speaks again.
 **Note**: T010–T012 all edit `src/components/PronounceButton.tsx`, so none are `[P]`. They are listed
 separately because each closes a different requirement, not because they can be done at once.
 
-- [ ] T010 [US2] Add the guard to `src/components/PronounceButton.tsx`: one piece of state,
+- [X] T010 [US2] Add the guard to `src/components/PronounceButton.tsx`: one piece of state,
       `const [speaking, setSpeaking] = useState(false)`. Set it true when speaking starts; return
       early from the click handler when it is already true. Reset it on the utterance's **`end`
       and `error`** — `error` matters as much as `end`, because a cancel arrives as an error
@@ -185,20 +185,20 @@ separately because each closes a different requirement, not because they can be 
       and Safari has been known to leave it `true` after speech ends. There is no queue to drain
       because nothing is ever enqueued. (FR-007, FR-008, FR-012, contract §4, T004)
 
-- [ ] T011 [US2] Add the cleanup effect to `src/components/PronounceButton.tsx`:
+- [X] T011 [US2] Add the cleanup effect to `src/components/PronounceButton.tsx`:
       `useEffect(() => () => window.speechSynthesis.cancel(), [word])`. Three lines covering all four
       stop-talking cases — marking a card and restarting change the word, leaving the run and
       completing it unmount the component. Comment that the effect keys on the word rather than the
       card id, and that two consecutive cards showing the same string would not re-trigger it, which
       cannot happen because a rung's cards are distinct words. (FR-009, FR-010, T010)
 
-- [ ] T012 [US2] Add the speaking indicator to `src/components/PronounceButton.tsx`: while `speaking`
+- [X] T012 [US2] Add the speaking indicator to `src/components/PronounceButton.tsx`: while `speaking`
       is true, a **subtle** animation confined to the icon — `motion-safe:animate-pulse` on the svg
       only. It must not dim, grey, or animate the button as a whole, and it must not compete with the
       card for attention (FR-013a). `motion-safe:` is not optional decoration: the control must still
       work, silently, under `prefers-reduced-motion: reduce`. (FR-013a, contract §4, T010)
 
-- [ ] T013 [US2] Test the outcomes in `src/routes/Run.test.tsx` using T008's stub: pressing five
+- [X] T013 [US2] Test the outcomes in `src/routes/Run.test.tsx` using T008's stub: pressing five
       times in succession records **exactly one** utterance; firing `end` and pressing again records
       a second; firing `error` instead of `end` also leaves the button usable (FR-012); and marking
       an outcome while speaking cancels and advances the run normally. Count utterances — the count
