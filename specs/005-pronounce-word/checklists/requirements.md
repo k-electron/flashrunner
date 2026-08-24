@@ -33,7 +33,8 @@
 
 - All three clarifications were answered by the maintainer on 2026-08-24 and written into the spec:
   - **FR-002** — the control sits above the "Not yet" button only, not spanning both.
-  - **FR-004** — prefer a female American English voice, fall back to any American English voice.
+  - **FR-004** — prefer a female American English voice, fall back to the device's own American
+    English default rather than an arbitrary voice from its list.
   - **FR-013a** — a subtle in-control animation while speaking; no dimming, nothing that draws the
     eye away from the card.
 - 16/16 pass. Ready for `/speckit-plan`.

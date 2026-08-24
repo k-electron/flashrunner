@@ -102,6 +102,14 @@ In the DevTools console, before the run screen renders:
 delete window.speechSynthesis;
 ```
 
+**Check that it took** — `'speechSynthesis' in window` must now be `false`. `delete` returns `false`
+instead of removing it if the browser defines the property as non-configurable, and a step that fails
+because the setup silently did not take is worse than no step at all. If it is still there:
+
+```js
+Object.defineProperty(window, 'speechSynthesis', { value: undefined, configurable: true });
+```
+
 Then navigate to a run (client-side, so the page does not reload).
 
 **Expected**: no speaker button, and every other part of the run screen works exactly as it always

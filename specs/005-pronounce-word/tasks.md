@@ -85,7 +85,8 @@ built without it.
       fallthrough to the browser's own en-US default rather than a broken feature. **Do not** add a
       "return any en-US voice" branch: over a third of macOS's en_US voices are novelty voices, and
       the fallback exists specifically to avoid reading `yellow` to a five-year-old in a singing bell.
-      Comment that reason at the fallback, because it looks like a missing case otherwise. (T001)
+      Comment that reason at the fallback, because it looks like a missing case otherwise.
+      (FR-003, FR-004, T001)
 
 **Checkpoint**: `npm test` green, voice selection covered, nothing rendered yet.
 
@@ -230,9 +231,12 @@ Phase 3 without it. This phase is the verification.
       outcome buttons, "Start over" and "Leave this run" all are. This states FR-011 as an
       expectation rather than leaving it as an implicit property of the environment. (FR-011, SC-006)
 
-- [ ] T017 [US3] Browser check — [quickstart](./quickstart.md) step **7**. `delete
-      window.speechSynthesis` in the console, navigate client-side into a run, and confirm no speaker
-      button, no error, no gap in the layout, and every other control working. (FR-011, US3, SC-006)
+- [ ] T017 [US3] Browser check — [quickstart](./quickstart.md) step **7**. Remove
+      `window.speechSynthesis` in the console, navigate client-side into a run, and confirm no speaker
+      button, no error, no gap in the layout, and every other control working. If `delete` returns
+      `false` — the property may be non-configurable — use the `Object.defineProperty` form given in
+      the quickstart instead; a step that appears to fail because the setup did not take is worse
+      than no step. (FR-011, US3, SC-006)
 
 **Checkpoint**: all three stories verified.
 

@@ -114,9 +114,12 @@ run screen renders and every other control works.
   relative to each other, and appearance.
 - **FR-003**: The spoken word MUST be rendered in American English.
 - **FR-004**: The spoken word MUST use a female American English voice where the device has one.
-  Where it does not, the system MUST fall back to any American English voice the device does have,
-  rather than going silent or hiding the control — hearing the word matters more than the voice
-  being female.
+  Where it does not, the system MUST fall back to **the device's own American English default**
+  rather than to an arbitrary voice from its list, and MUST NOT go silent or hide the control —
+  hearing the word matters more than the voice being female. The distinction is not pedantic: many
+  devices list novelty voices (ones that sing, whisper, or sound robotic) alongside real ones, and
+  an arbitrary pick can land on one. See
+  [research Decision 2](./research.md#decision-2-there-is-no-gender-field-so-female-is-a-name-match-with-a-safe-fallback).
 - **FR-005**: The control MUST speak the word that is on the card at the moment it is pressed, and
   never a word from an earlier card.
 - **FR-006**: Pressing the control MUST NOT record an outcome, advance the run, alter cycle
@@ -153,8 +156,10 @@ run screen renders and every other control works.
 
 - **SC-001**: A learner who cannot read the word on the card can hear it spoken with a single press,
   with no adult intervention and no prior setup.
-- **SC-002**: The spoken word is recognisably American English in a female voice on the devices the
-  app is used on.
+- **SC-002**: The spoken word is recognisably American English, and is spoken in a female voice on
+  every device that has one. A device with no female American English voice speaks it in whatever
+  American English voice it does have, which is a pass rather than a failure (FR-004) — but never in
+  a novelty voice.
 - **SC-003**: Pressing the control five times in rapid succession results in the word being spoken
   exactly once.
 - **SC-004**: Speech begins within roughly one second of the press, so the connection between

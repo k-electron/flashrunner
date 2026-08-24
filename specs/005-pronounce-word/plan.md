@@ -47,7 +47,7 @@ downloaded, so this is the device's own latency.
 **Constraints**: FR-015 — nothing about the word or the run leaves the device. Satisfied by
 construction: there is no request to make.
 
-**Scale/Scope**: 2 files added, 2 modified. 0 dependencies. 0 storage changes.
+**Scale/Scope**: 3 files added (2 source, 1 test), 2 modified. 0 dependencies. 0 storage changes.
 
 ## Constitution Check
 
