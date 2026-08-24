@@ -253,6 +253,21 @@ belongs in T004, not in a new task.
   small-viewport claim gets its honest test. Deep-link straight to `/deck/dolch-k-5/rung/r11` to
   exercise the SPA fallback at the same time (Principle I).
 
+  **Status**: the deployed preview was verified mechanically, and it agrees with the local build
+  byte-for-byte (same CSS asset hash). 10 `@font-face` rules, **0** occurrences of the old font, **0**
+  references to any external font host, `font-family:Andika,sans-serif`. The two latin `.woff2` files
+  return 200 `font/woff2` at **38,680 bytes** total, and the binary the CDN actually serves decodes as
+  **Andika v6.101** with `U+0061` → `a.SngStory`, `U+0067` → `g.SngBowl`, 0 `Dbl` glyphs of 251, and the
+  accented forms FR-004 names (`aacute.SngStory`, `agrave.SngStory`, `adieresis.SngStory`). The deep
+  links `/deck/dolch-k-5/rung/r11`, `/deck/dolch-prek-5/rung/r8` and `/deck/dolch-k-5` all return 200
+  HTML, so the SPA fallback holds (Principle I).
+
+  **Worth knowing for next time**: immediately after a push the branch preview alias still served the
+  *previous* build — old asset hash, old font, no error. Check the CSS asset hash against the local
+  build before trusting a preview, or the wrong typeface gets blamed on the code.
+
+  **Left open**: opening it on a real phone, which is the whole point of this task.
+
 ---
 
 ## Dependencies & Execution Order
