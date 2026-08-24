@@ -66,7 +66,13 @@ export function PronounceButton({ word }: { word: string }) {
     if (speaking) {
       return;
     }
-    const utterance = new SpeechSynthesisUtterance(word);
+    // A lone capital is announced as one: the card "I" comes out as "capital I"
+    // rather than as the word, which is the opposite of hearing it read. Lower
+    // case for the device only — the card keeps its capital, because that is how
+    // a reader meets the word (FR-005). Nothing longer is touched, so the fix
+    // cannot reach a word where case carries meaning.
+    const spoken = word.length === 1 ? word.toLowerCase() : word;
+    const utterance = new SpeechSynthesisUtterance(spoken);
     // Set whether or not a voice is chosen below, and the whole of the last
     // resort when none is: an unset `voice` with an American English `lang`
     // leaves the browser to use what it has (contract § 3 rule 5).

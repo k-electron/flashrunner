@@ -170,10 +170,16 @@ the feature.
       the fallback failing — while a male voice is an accepted outcome on a device with no female
       en-US voice. (FR-001, FR-003, FR-004, FR-005, FR-010, SC-001, SC-002, SC-004)
 
-      **Status**: NOT DONE, and it is the one that matters most. Every test here
-      passes against a button that makes no sound. Nothing has yet heard this
-      feature speak. Needs a human with the volume up, and the voice that actually
-      spoke written back into this file.
+      **Status**: partly. UAT on the Pages preview found one real defect and it is
+      fixed: the Pre-K deck's **"I"** was being announced as **"capital I"** rather
+      than as the word, because a device reads a lone capital as one. The card
+      keeps its capital — that is how a reader meets the word — and only what is
+      handed to the device is lowered. Covered by a test that presses every card
+      of the rung, since the shuffle decides which one is "I".
+
+      What remains: the rest of quickstart steps 1, 2 and 5 on a device with the
+      volume up, and **the name of the voice that actually spoke written back into
+      this file**. That is the one thing here no repository check can validate.
 
 **Checkpoint**: the button works and is usable. It may still queue repeats. **166 + new tests green,
 no existing test edited.**

@@ -889,9 +889,22 @@ describe('Run — hearing the word (US1)', () => {
      */
     reportsCancel: true,
 
-    /** What the device was asked to say — the assertable outcome. */
+    /**
+     * What the device was asked to say — the assertable outcome. Compared in
+     * lower case because none of the tests below is about capitalisation, and one
+     * card in this rung is capitalised; `saidAsCapital` is where case is the
+     * point. `frontOf` is likewise lowered at each comparison rather than here,
+     * so the two sides stay independently written.
+     */
     words(): string[] {
-      return speech.spoken.map((utterance) => utterance.text);
+      return speech.spoken.map((utterance) => utterance.text.toLowerCase());
+    },
+
+    /** Anything handed over that a device would announce as "capital X". */
+    saidAsCapital(): string[] {
+      return speech.spoken
+        .map((utterance) => utterance.text)
+        .filter((text) => text.length === 1 && text !== text.toLowerCase());
     },
 
     /**
@@ -961,13 +974,32 @@ describe('Run — hearing the word (US1)', () => {
     expect(screen.queryByRole('button', { name: 'Hear the word' })).not.toBeInTheDocument();
   });
 
+  it('never hands over a lone capital, which a device announces as one', async () => {
+    // The Pre-K deck's "I" is capitalised, because that is how a reader meets the
+    // word — and a device reads a lone capital as "capital I", which is the
+    // opposite of hearing the word read. The card keeps its capital; only what is
+    // handed to the device is lowered. Every card of the rung is pressed, since
+    // the shuffle decides which one is "I".
+    const user = renderRun(FIRST_RUN);
+    for (let card = 0; card < FIRST_RUNG_CARDS.length; card += 1) {
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      speech.end();
+      await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    }
+
+    expect(speech.words()).toHaveLength(FIRST_RUNG_CARDS.length);
+    expect(speech.saidAsCapital()).toEqual([]);
+    // And the word itself is still what was asked for, not something emptied out.
+    expect(speech.words()).toContain('i');
+  });
+
   it('says the word on the card currently on screen, never the one before it (FR-005)', async () => {
     const user = renderRun(FIRST_RUN);
     // Read off the screen rather than named: the run is shuffled, so the only
     // thing that says which word should be spoken is the card being presented.
     const first = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Hear the word' }));
-    expect(speech.words()).toEqual([frontOf(first)]);
+    expect(speech.words()).toEqual([frontOf(first).toLowerCase()]);
 
     speech.end();
     await user.click(screen.getByRole('button', { name: 'Got it' }));
@@ -975,7 +1007,7 @@ describe('Run — hearing the word (US1)', () => {
     // The card has moved on, and so has what is said.
     const second = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Hear the word' }));
-    expect(speech.words()).toEqual([frontOf(first), frontOf(second)]);
+    expect(speech.words()).toEqual([frontOf(first).toLowerCase(), frontOf(second).toLowerCase()]);
   });
 
   it('changes nothing about the run: no outcome, no advance, nothing stored (FR-006, FR-016)', async () => {
@@ -989,7 +1021,7 @@ describe('Run — hearing the word (US1)', () => {
 
     // Both presses reached the device, so what follows is a claim about a button
     // that did something rather than about one that did nothing at all.
-    expect(speech.words()).toEqual([frontOf(card), frontOf(card)]);
+    expect(speech.words()).toEqual([frontOf(card).toLowerCase(), frontOf(card).toLowerCase()]);
     // The same card, the same round, and the device holding exactly what it held
     // before the button was ever pressed.
     expect(shownCard(FIRST_RUNG_CARDS)).toBe(card);
@@ -1015,9 +1047,9 @@ describe('Run — hearing the word (US1)', () => {
       // Four of the five presses reached a control that was already speaking and
       // did nothing at all — nothing spoken twice, and nothing kept back to play
       // afterwards, which is what the run has to show once speech ends.
-      expect(speech.words()).toEqual([frontOf(card)]);
+      expect(speech.words()).toEqual([frontOf(card).toLowerCase()]);
       speech.end();
-      expect(speech.words()).toEqual([frontOf(card)]);
+      expect(speech.words()).toEqual([frontOf(card).toLowerCase()]);
     });
 
     it('says it again once it has finished saying it (FR-008)', async () => {
@@ -1028,7 +1060,7 @@ describe('Run — hearing the word (US1)', () => {
       speech.end();
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
 
-      expect(speech.words()).toEqual([frontOf(card), frontOf(card)]);
+      expect(speech.words()).toEqual([frontOf(card).toLowerCase(), frontOf(card).toLowerCase()]);
     });
 
     it('says it again after a pronunciation that failed (FR-012)', async () => {
@@ -1042,14 +1074,14 @@ describe('Run — hearing the word (US1)', () => {
       speech.error();
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
 
-      expect(speech.words()).toEqual([frontOf(card), frontOf(card)]);
+      expect(speech.words()).toEqual([frontOf(card).toLowerCase(), frontOf(card).toLowerCase()]);
     });
 
     it('stops talking and advances as usual when a card is marked mid-word (FR-009, SC-005)', async () => {
       const user = renderRun(FIRST_RUN);
       const first = shownCard(FIRST_RUNG_CARDS);
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
-      expect(speech.words()).toEqual([frontOf(first)]);
+      expect(speech.words()).toEqual([frontOf(first).toLowerCase()]);
 
       // Marked while it is still talking, which is what a child does.
       await user.click(screen.getByRole('button', { name: 'Got it' }));
@@ -1064,7 +1096,7 @@ describe('Run — hearing the word (US1)', () => {
       // And the control came back to the new card rather than staying latched on
       // the interrupted one.
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
-      expect(speech.words()).toEqual([frontOf(first), frontOf(second)]);
+      expect(speech.words()).toEqual([frontOf(first).toLowerCase(), frontOf(second).toLowerCase()]);
     });
 
     it('comes back to idle on a browser that cancels without saying so', async () => {
@@ -1083,7 +1115,7 @@ describe('Run — hearing the word (US1)', () => {
       const second = shownCard(FIRST_RUNG_CARDS);
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
 
-      expect(speech.words()).toEqual([frontOf(first), frontOf(second)]);
+      expect(speech.words()).toEqual([frontOf(first).toLowerCase(), frontOf(second).toLowerCase()]);
     });
   });
 });
