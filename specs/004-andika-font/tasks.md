@@ -134,15 +134,26 @@ in the other order breaks the build in between.
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Remove the outgoing font: `npm uninstall @fontsource-variable/geist`, and commit both
+- [X] T006 [US2] Remove the outgoing font: `npm uninstall @fontsource-variable/geist`, and commit both
   manifests. Then confirm nothing still references it:
   `grep -ri "geist" src/ index.html package.json` must return **nothing** (FR-007, and Principle V's
   rule on unused dependencies).
-- [ ] T007 [US2] Do [quickstart step 2](./quickstart.md#step-2--confirm-what-actually-loaded-fr-006-fr-007-fr-008-fr-011).
+- [~] T007 [US2] Do [quickstart step 2](./quickstart.md#step-2--confirm-what-actually-loaded-fr-006-fr-007-fr-008-fr-011).
   Two font requests, both `andika-latin-*00-normal-<hash>.woff2`, both from **this origin** — no
   `fonts.googleapis.com`, no `fonts.gstatic.com`, no `cyrillic`/`vietnamese`/`latin-ext` subsets, and
   nothing for the removed font. Then read the computed `font-family` on the deck list, a deck ladder
   **and** a run: FR-006 covers every screen, not just the card.
+
+  **Status**: machine-verified except the DevTools reading. The compiled stylesheet contains **0**
+  occurrences of the old font and **0** references to `fonts.googleapis.com` / `fonts.gstatic.com`, and
+  every font `url()` is relative, so all of it is same-origin (FR-011). Only the `latin` subset can ever
+  be requested: a codepoint scan of all 40 source files found nothing outside the latin
+  `unicode-range` in any rendered string — the only three exceptions (`→`, `∪`, `⊇`) are in code
+  comments. That fixes the download at the two `andika-latin-*-normal.woff2` files, 38.7 kB.
+  FR-006's "every screen" holds structurally rather than by sampling: `--font-sans` is defined once
+  (`src/index.css:11`), applied once (`@apply font-sans` on `html`, line 129), `--font-heading`
+  resolves through it, and no component declares a family — there is no screen that *could* differ.
+  **Left open**: nobody has read the computed `font-family` in a browser.
 - [ ] T008 [US2] Write the dependency record into the PR description, which the constitution requires
   and CI cannot check: the **Principle V justification** (what `@fontsource/andika` does, what it
   replaces, why hand-rolling is worse — hand-rolling a literacy typeface is not a real alternative)
