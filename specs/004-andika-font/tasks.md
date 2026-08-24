@@ -49,9 +49,9 @@ scope failure — see T013.
 
 **Purpose**: A working tree that can run the gate.
 
-- [ ] T001 Install dependencies from the lockfile: `npm ci` at the repository root. `node_modules` is
+- [X] T001 Install dependencies from the lockfile: `npm ci` at the repository root. `node_modules` is
   not committed, so nothing below runs until this does.
-- [ ] T002 Record the baseline: run `npm test` and confirm **166 tests pass** before any edit, so a
+- [X] T002 Record the baseline: run `npm test` and confirm **166 tests pass** before any edit, so a
   later failure is attributable to this change rather than inherited.
 
 ---
@@ -77,11 +77,11 @@ over the top. The `g` has one bowl and an open tail — no lower loop.
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Add the dependency: `npm install @fontsource/andika` (not `npm ci` — this has to write
+- [X] T003 [US1] Add the dependency: `npm install @fontsource/andika` (not `npm ci` — this has to write
   the manifests). Confirm it resolves to **5.3.0** or later and that the licence is **OFL-1.1**, then
   commit both `package.json` and `package-lock.json` — Principle III requires a clean-checkout
   `npm ci` to succeed.
-- [ ] T004 [US1] In `src/index.css`, replace the single `@import "@fontsource-variable/geist";` on line
+- [X] T004 [US1] In `src/index.css`, replace the single `@import "@fontsource-variable/geist";` on line
   4 with the two weight imports, and retarget the token on line 10:
 
   ```css
@@ -98,7 +98,7 @@ over the top. The `g` has one bowl and an open tail — no lower loop.
   is what the package ships and what the maintainer asked for (FR-009). Add no `font-feature-settings`: the
   single-story shapes are the font's default *and* only forms, so there is nothing to switch on
   (FR-005).
-- [ ] T005 [US1] Run `npm run dev` and do [quickstart step 1](./quickstart.md#step-1--look-at-the-letter-fr-002-fr-003-sc-001).
+- [~] T005 [US1] Run `npm run dev` and do [quickstart step 1](./quickstart.md#step-1--look-at-the-letter-fr-002-fr-003-sc-001).
   **This is the task that proves the feature works**, and the only one that catches a font which
   silently failed to load. If the `a` has a hook over the top you are looking at the fallback — check
   the Network tab for a 404 on a `.woff2` before changing anything else.
@@ -107,6 +107,13 @@ over the top. The `g` has one bowl and an open tail — no lower loop.
   and no interface string contains an accented character, so the app cannot exercise it. The cmap says
   `á`/`à`/`ä` map to `aacute.SngStory` and siblings, which is the whole of the claim. Do not go looking
   for an accent on screen; there is not one.
+
+  **Status**: the machine-checkable half is verified — the dev server serves 10 Andika `@font-face`
+  blocks (weights 400 *and* 700), all 20 backing font files return HTTP 200, `--font-sans` resolves to
+  `'Andika', sans-serif`, and the weight-400 latin `.woff2` the server actually returned decodes as
+  Andika v6.101 with `U+0061` → `a.SngStory`, `U+0067` → `g.SngBowl` and zero `Dbl` glyphs of 251. The
+  silent-404 path is ruled out. **Left open deliberately**: nobody has looked at the rendered letter,
+  which is the half this task exists for.
 
 **Checkpoint**: the cards render in Andika with the right letterforms. US1 is shippable on its own —
 and because the token is app-wide, US2's outcome has already happened. What US2 adds is removing the
