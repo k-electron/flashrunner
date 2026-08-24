@@ -168,7 +168,14 @@ if the earlier phases were built correctly this phase finds nothing to fix.
 
 ### Deferred to after merge
 
-- [ ] T051 Enable branch protection on `main` requiring the CI check, with no approving review required (FR-040, FR-041). **Cannot be done before merge** — the platform can only require a check that has already run at least once.
+- [X] T051 Enable branch protection on `main` requiring the CI check, with no approving review required (FR-040, FR-041). **Cannot be done before merge** — the platform can only require a check that has already run at least once.
+
+  **Done.** Confirmed live against the platform API on 2026-08-24: `main` requires the `Verify`
+  and `Cloudflare Pages` checks, `strict: true` so a branch must be up to date before merging,
+  force pushes and deletions disabled, and **no `required_pull_request_reviews` block at all** —
+  which is FR-041, since a solo maintainer cannot supply a second approver. The task had been
+  complete on the platform for some time; only this checkbox was outstanding, found by
+  `/speckit-converge`.
 
 ---
 
