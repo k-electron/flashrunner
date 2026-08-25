@@ -52,9 +52,9 @@ setup and them.
 
 **Purpose**: Get the vendored component in, and prove it cost nothing.
 
-- [ ] T001 Add the progress component by running `npx shadcn add progress` from the repository root. It resolves through this project's preset (`radix-nova`) and writes `src/components/ui/progress.tsx`. Do **not** hand-write the file, and do **not** edit it afterwards — it ships verbatim ([research.md § Decision 5](./research.md)).
+- [X] T001 Add the progress component by running `npx shadcn add progress` from the repository root. It resolves through this project's preset (`radix-nova`) and writes `src/components/ui/progress.tsx`. Do **not** hand-write the file, and do **not** edit it afterwards — it ships verbatim ([research.md § Decision 5](./research.md)).
 
-- [ ] T002 Confirm nothing was installed: `git diff --stat package.json package-lock.json` must be **empty**. `radix-ui` is already a dependency at `^1.6.7` and already used for `Slot` in `src/components/ui/button.tsx`, so this component is a file copy (plan.md, Principle V). Any diff here means something went wrong and Principle V/VIII need revisiting before continuing. The "still unmodified" check happens later, at T017.
+- [X] T002 Confirm nothing was installed: `git diff --stat package.json package-lock.json` must be **empty**. `radix-ui` is already a dependency at `^1.6.7` and already used for `Slot` in `src/components/ui/button.tsx`, so this component is a file copy (plan.md, Principle V). Any diff here means something went wrong and Principle V/VIII need revisiting before continuing. The "still unmodified" check happens later, at T017.
 
 **Checkpoint**: `npm run lint && npm run typecheck && npm test && npm run build` is green. The
 component exists and nothing renders it yet.
