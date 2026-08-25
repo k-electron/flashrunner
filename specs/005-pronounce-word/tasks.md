@@ -143,15 +143,16 @@ the feature.
       card content. The grid also keeps the wrapper a single child of `main`, so the existing four
       `gap-8` gaps stay four. (FR-002, FR-010, FR-017, T003)
 
-- [~] T007 [US1] Confirm the vertical budget still holds: the new row adds `h-12` + `gap-y-2` = 56px
+- [X] T007 [US1] Confirm the vertical budget still holds: the new row adds `h-12` + `gap-y-2` = 56px
       to the 420px measured for the font change, giving **476px against 568px** on a 320 × 568
       viewport. Check in DevTools rather than trusting the arithmetic, since this is the number
       [research Decision 6](./research.md#decision-6-a-two-column-grid-puts-the-button-above-not-yet-without-touching-the-outcome-buttons)
       computed rather than measured. (SC-007, quickstart step 6, T006)
 
-      **Status**: NOT DONE. Nothing in this repository can measure a rendered
-      layout — `jsdom` does no layout — so the 476px against 568px is still the
-      arithmetic it was, unmeasured. Needs DevTools at 320 × 568. Two minutes.
+      **Verified 2026-08-24** in DevTools at 320 × 568: the run screen fits with no
+      vertical scrolling and nothing overlapping. The 476px-against-568px figure
+      was arithmetic rather than measurement, and it holds. `jsdom` does no layout,
+      so no test in this repository could have told us.
 
 - [X] T008 [US1] Add a reusable `speechSynthesis` stub to `src/routes/Run.test.tsx` — installed in
       `beforeEach`, removed in `afterEach` — recording every utterance it is handed and exposing a
@@ -162,7 +163,7 @@ the feature.
       "cards left in this round" count, and writes nothing new to storage. Assert on **what was
       spoken**, never on which methods were called. (FR-001, FR-005, FR-006, FR-010, T006)
 
-- [~] T009 [US1] Browser check — [quickstart](./quickstart.md) steps **1, 2 and 5**, with the volume
+- [X] T009 [US1] Browser check — [quickstart](./quickstart.md) steps **1, 2 and 5**, with the volume
       up. Confirm it speaks; that it sounds American and female; that it says the word currently on
       screen and never the previous one; and that the run-complete screen has no speaker. **Record
       which voice actually spoke**, since the name list is the one thing in this feature that cannot
@@ -177,9 +178,13 @@ the feature.
       handed to the device is lowered. Covered by a test that presses every card
       of the rung, since the shuffle decides which one is "I".
 
-      What remains: the rest of quickstart steps 1, 2 and 5 on a device with the
-      volume up, and **the name of the voice that actually spoke written back into
-      this file**. That is the one thing here no repository check can validate.
+      **Verified 2026-08-24** on the preview: it speaks, promptly, in American
+      English, in a voice that sounds female; it says the word currently on screen
+      and never the previous one; and the run-complete screen has no speaker.
+
+      **Still unrecorded**: the *name* of the voice that spoke. Everything on the
+      hint list except `Samantha` is guesswork, and a real observation is the only
+      evidence that can settle it. Worth filling in the next time anyone runs this.
 
 **Checkpoint**: the button works and is usable. It may still queue repeats. **166 + new tests green,
 no existing test edited.**
@@ -280,18 +285,18 @@ Phase 3 without it. This phase is the verification.
       outcome buttons, "Start over" and "Leave this run" all are. This states FR-011 as an
       expectation rather than leaving it as an implicit property of the environment. (FR-011, SC-006)
 
-- [~] T017 [US3] Browser check — [quickstart](./quickstart.md) step **7**. Remove
+- [X] T017 [US3] Browser check — [quickstart](./quickstart.md) step **7**. Remove
       `window.speechSynthesis` in the console, navigate client-side into a run, and confirm no speaker
       button, no error, no gap in the layout, and every other control working. If `delete` returns
       `false` — the property may be non-configurable — use the `Object.defineProperty` form given in
       the quickstart instead; a step that appears to fail because the setup did not take is worse
       than no step. (FR-011, US3, SC-006)
 
-      **Status**: partly. The code path is verified by test: T016 asserts the
-      control is absent while the card, both outcomes, "Start over" and "Leave this
-      run" are present, and removing the guard fails that test and only that test.
-      What remains is the console check in a real browser, which is the only thing
-      that can show there is no error and no gap left in the layout.
+      **Verified 2026-08-24** in a real browser with `speechSynthesis` deleted: no
+      speaker button, **no gap in the layout**, no error, and every other control
+      working. The no-gap result is what confirms `col-start-2` belongs on the
+      Button rather than on a wrapper — a wrapper would have left a phantom grid
+      row here. T016 covers the same path in the suite.
 
 **Checkpoint**: all three stories verified.
 
@@ -331,15 +336,16 @@ Phase 3 without it. This phase is the verification.
       and `localStorage` returns nothing — so none of the four declined items crept
       in and FR-015 holds by there being no request to make.
 
-- [~] T020 Browser check on a **real phone**, via the PR's Pages preview —
+- [X] T020 Browser check on a **real phone**, via the PR's Pages preview —
       [quickstart](./quickstart.md) step 6, repeating steps **1, 3 and 6**. iOS is where speech
       behaves least like the desktop and where the app is actually used; a desktop pass is not
       evidence for it. Deep-link straight into a run to exercise the SPA fallback at the same time
       (Principle I). (FR-002, FR-014, SC-002, SC-007)
 
-      **Status**: NOT DONE. Needs the PR's Pages preview open on an actual phone.
-      A desktop pass is not evidence for iOS, which is where speech behaves least
-      like the desktop and where the app is actually used.
+      **Verified 2026-08-24** on a real phone via the Pages preview at
+      <https://005-pronounce-word.flashrunner.pages.dev>. Speech, the no-queue rule
+      and the small-viewport layout all hold on the device the app is actually used
+      on, which a desktop pass is not evidence for.
 
 ---
 
