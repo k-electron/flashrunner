@@ -239,8 +239,12 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
             {card !== undefined && <CardFace front={card.front} />}
             {/* Two columns, so the pronounce button lines up with "Not yet" without
                 anyone writing a width by hand, and nothing sits above "Got it"
-                (FR-002). The pair is one child of `main`, which is what keeps the
-                existing four `gap-8` gaps at four (research § Decision 6).
+                (FR-002). The pair is one child of `main`, so the speaker adds no
+                `gap-8` of its own (005 research § Decision 6). Deleting the
+                cycle counter took one child away, so `main` now spaces three
+                gaps rather than four — the grouping is what keeps the speaker
+                from making it five.
+
                 `OutcomeButtons` is composed with, never modified: the speaker is
                 not an outcome, and that file never sees a card's text. Rendered
                 only here, so the run-complete screen — which has no word — never
