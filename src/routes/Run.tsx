@@ -187,9 +187,8 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
     <>
       {/* Before <main> rather than inside it, so a screen reader meets the two
           indicators before the card they describe (FR-025) and <main>'s gap-8
-          spacing is left untouched. The counts are built here rather than behind
-          selectors: one call site, four lines (research § Decision 9). No zero
-          guard — validate.ts rule V8 forbids an empty rung.
+          spacing is left untouched. No zero guard — validate.ts rule V8 forbids
+          an empty rung.
 
           It sits in RunLoop and outside the `complete ? … : …` branch, so
           FR-019 (no bars on either "Run not found" screen, which live in `Run`)

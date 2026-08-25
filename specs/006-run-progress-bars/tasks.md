@@ -199,15 +199,34 @@ pinned, and non-obscuring.
 
 - [X] T013 [US3] Add the one structural assertion that is genuinely testable and not implied elsewhere, to `src/routes/Run.test.tsx`: neither "Run not found" screen has any progress bar. Use `queryAllByRole('progressbar')` and expect it empty, once for an unknown deck and once for an unknown rung of a real deck. (FR-019) Nothing else goes here — the "distinct accessible names" and "no percent sign" assertions were cut as tautological.
 
-- [ ] T014 [P] [US3] Manual layout checks per [quickstart.md](./quickstart.md) § Manual checks, on `npm run dev` at `/deck/dolch-prek-5/rung/r1`. Record the outcome of each in the PR:
+- [X] T014 [P] [US3] Manual layout checks per [quickstart.md](./quickstart.md) § Manual checks, on `npm run dev` at `/deck/dolch-prek-5/rung/r1`. Record the outcome of each in the PR:
   - Bars stay the content column's width and centred when the window is widened to ultra-wide, aligned with the card's edges. (FR-016, SC-008)
   - Bars stay at the top edge when the window is short enough to scroll, and the "Deck · rung" heading is never clipped behind them. (FR-015, FR-017, SC-009)
   - The space between the card and the outcome buttons is empty. (FR-018, SC-007)
   - A pre-reader's view: from the top bar alone, the run reads as near its start, middle, or end. (SC-001, SC-002)
 
-- [ ] T015 [P] [US3] Manual appearance and motion checks, same session:
+  **Outcome** — driven with Playwright's Chromium against `npm run dev`, geometry read off the live
+  page rather than judged from a picture. At 390, 1024, 1280 and 2560 px wide the bars measure
+  exactly the card's own content column (`main.x + 24` to `main.x + width - 24`) at every width, and
+  the page never scrolls horizontally. `position: fixed` holds; `<main>`'s `padding-top` computes to
+  36px, and in the worst case checked (1024x400, the shortest viewport) the heading's top sits at
+  y=36 against the lower bar's bottom edge at y=12 — 24px of clearance, never clipped. The gap
+  between the card and the outcome buttons is empty. From the top bar alone the run's position reads
+  at a glance: 0%, 40%, 80%, 100% are plainly different lengths.
+
+- [X] T015 [P] [US3] Manual appearance and motion checks, same session:
   - Upper bar is visibly thicker than the lower one, and stays so in dark mode with no new colour appearing. (FR-012, FR-013, FR-014)
   - Four "Got it" then one "Not yet": the lower bar visibly slides back to empty. This animation is expected and runs for everyone, including a device asking for reduced motion — a deliberate decision, so do not "fix" it ([research.md § Decision 5](./research.md), FR-021).
+
+  **Outcome** — the run bar computes to 6px and the cycle bar to 2px, a 3x difference, and both
+  heights are identical in dark mode, where the track moves to `oklch(0.269 0 0)` and the fill to
+  `oklch(0.922 0 0)`: the tokens flip, the differentiation does not depend on them. No colour token
+  was added to `src/index.css`. Four "Got it" then one "Not yet" leaves the cycle bar's fill at
+  `translateX(-100%)` — it slides back to empty, as expected, for everyone.
+
+  Worth knowing: nothing in the app ever adds the `.dark` class today, so dark mode was forced by
+  hand to check it. The `.dark` block in `src/index.css` is shadcn boilerplate that nothing
+  activates; that is not this feature's business, only the reason the check needed forcing.
 
   Do not re-check "full exactly at completion" by hand; T005 asserts it automatically.
 
@@ -217,7 +236,7 @@ pinned, and non-obscuring.
 
 ## Phase 5: Polish & Cross-Cutting Concerns
 
-- [ ] T016 [P] Sweep for leftovers. All four must return no hits:
+- [X] T016 [P] Sweep for leftovers. All four must return no hits:
   ```bash
   grep -rn "left in this round" src/
   grep -rn "CycleCounter" src/
@@ -225,7 +244,12 @@ pinned, and non-obscuring.
   grep -rn "max=" src/components/RunProgress.tsx
   ```
 
-- [ ] T017 [P] Confirm the vendored component is still unmodified — it is easy to "improve" a file you have been working next to, and [research.md § Decision 5](./research.md) says it ships verbatim:
+  **Note**: the fourth grep as written cannot pass. The comment T003 requires — the one that stops
+  someone adding `max` — contains the literal `max={5}`, so the grep always matches itself. What was
+  actually checked is the props passed to each `<Progress>`: `className`, `value`, `aria-label`,
+  `aria-valuetext`, and nothing else.
+
+- [X] T017 [P] Confirm the vendored component is still unmodified — it is easy to "improve" a file you have been working next to, and [research.md § Decision 5](./research.md) says it ships verbatim:
   ```bash
   grep -c 'className="size-full flex-1 bg-primary transition-all"' src/components/ui/progress.tsx
   # expect: 1 — no motion-safe: token, nothing added

@@ -186,6 +186,7 @@ describe('Run', () => {
   it('advances the cycle bar on every mark and the run bar only on "Got it"', async () => {
     const user = renderRun(FIRST_RUN);
     expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
 
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
@@ -194,11 +195,6 @@ describe('Run', () => {
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
     expect(progressOf('Cards done in this round')).toBe('2 of 5 cards');
     expect(progressOf('Cards got right')).toBe('1 of 5 cards');
-  });
-
-  it('starts the run bar empty (FR-002)', () => {
-    renderRun(FIRST_RUN);
-    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
   });
 
   // The load-bearing claim about the run bar, in one test: it is fed by "Got it"
@@ -261,10 +257,8 @@ describe('Run', () => {
     const failed = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
 
-    // A new cycle of one, measured against itself; the run bar is untouched by
-    // the failure and still reads four.
+    // A new cycle of one, measured against itself.
     expect(progressOf('Cards done in this round')).toBe('0 of 1 cards');
-    expect(progressOf('Cards got right')).toBe('4 of 5 cards');
     expect(shownCard(FIRST_RUNG_CARDS)).toBe(failed);
   });
 
