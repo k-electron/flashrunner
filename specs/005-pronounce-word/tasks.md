@@ -225,7 +225,7 @@ separately because each closes a different requirement, not because they can be 
       an outcome while speaking cancels and advances the run normally. Count utterances — the count
       *is* the requirement. (FR-007, FR-008, FR-009, FR-012, SC-003, SC-005, T010, T011)
 
-- [~] T014 [US2] Browser check — [quickstart](./quickstart.md) steps **3 and 4**. Press five times as
+- [X] T014 [US2] Browser check — [quickstart](./quickstart.md) steps **3 and 4**. Press five times as
       fast as possible and confirm the word is spoken once, with nothing played afterwards. Watch the
       button while it speaks and confirm the movement is small and does not pull the eye off the card
       — **this is the one judgement call in the feature, and it is the maintainer's to make**, not
@@ -246,9 +246,9 @@ separately because each closes a different requirement, not because they can be 
       `animation` shorthand in the cascade, and stays inside the
       `prefers-reduced-motion: no-preference` block.
 
-      What remains: the maintainer's eye on whether the pulse is now visible and
-      still subtle enough not to pull attention off the card. That judgement has no
-      test by design — Principle IV bans reading the class name.
+      Confirmed visible by the maintainer on the preview after the change, which
+      closes step 5 and with it the whole of T014. The judgement has no test by
+      design — Principle IV bans reading the class name.
 
 **Checkpoint**: the feature is behaviourally complete.
 
