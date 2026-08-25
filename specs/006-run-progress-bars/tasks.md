@@ -142,7 +142,7 @@ that cycle's own size.
 **⚠️ T007–T010 are one atomic group.** The tree is red from the moment T008 lands until T009
 finishes. Do not stop in the middle, and do not commit T008 on its own.
 
-- [ ] T007 [US2] Add the cycle bar to `src/components/RunProgress.tsx`. Widen the props to `{ run, cycle }: { run: Count; cycle: Count }` and add a second `<Progress>` **below** the first, inside the same flex column:
+- [X] T007 [US2] Add the cycle bar to `src/components/RunProgress.tsx`. Widen the props to `{ run, cycle }: { run: Count; cycle: Count }` and add a second `<Progress>` **below** the first, inside the same flex column:
 
   ```tsx
   <Progress
@@ -159,9 +159,9 @@ finishes. Do not stop in the middle, and do not commit T008 on its own.
   because the indicator's `bg-primary` sits on a child no prop reaches
   ([research.md § Decision 2](./research.md)). Add no colour token to `src/index.css` (FR-014).
 
-- [ ] T008 [US2] Remove the sentence. In `src/routes/Run.tsx`: delete the `<CycleCounter …/>` line, delete its import, and pass `cycle={{ done: state.position, total: state.queue.length }}` to `RunProgress`. Then delete `src/components/CycleCounter.tsx` outright. Nothing goes in the gap between the card and the outcome buttons (FR-010, FR-011, FR-018).
+- [X] T008 [US2] Remove the sentence. In `src/routes/Run.tsx`: delete the `<CycleCounter …/>` line, delete its import, and pass `cycle={{ done: state.position, total: state.queue.length }}` to `RunProgress`. Then delete `src/components/CycleCounter.tsx` outright. Nothing goes in the gap between the card and the outcome buttons (FR-010, FR-011, FR-018).
 
-- [ ] T009 [US2] Migrate all 17 broken assertions in `src/routes/Run.test.tsx`. **Find them by string, not by line number** — T005 inserted a helper and three tests into this file, so the line numbers recorded during planning have shifted. Locate them with:
+- [X] T009 [US2] Migrate all 17 broken assertions in `src/routes/Run.test.tsx`. **Find them by string, not by line number** — T005 inserted a helper and three tests into this file, so the line numbers recorded during planning have shifted. Locate them with:
 
   ```bash
   grep -n "cards\? left in this round" src/routes/Run.test.tsx    # expect 17 hits
@@ -174,16 +174,16 @@ finishes. Do not stop in the middle, and do not commit T008 on its own.
   - the resume tests → prove FR-009
   - the pronounce test, whose surrounding assertions already claim "no outcome, no advance, nothing stored" → proves FR-022
 
-- [ ] T010 [US2] Delete `remainingInCycle` from `src/run/selectors.ts`, now that nothing renders it (Principle V — remove what nothing uses). Add nothing in its place. Then **trim, do not rewrite**, the two tests in `src/run/reducer.test.ts` that use it (currently the `describe('selectors')` block, around lines 466–487): drop the `remainingInCycle` assertions, keep the `currentCard` ones, and drop it from the file's import list. The second test becomes "reports no current card once complete".
+- [X] T010 [US2] Delete `remainingInCycle` from `src/run/selectors.ts`, now that nothing renders it (Principle V — remove what nothing uses). Add nothing in its place. Then **trim, do not rewrite**, the two tests in `src/run/reducer.test.ts` that use it (currently the `describe('selectors')` block, around lines 466–487): drop the `remainingInCycle` assertions, keep the `currentCard` ones, and drop it from the file's import list. The second test becomes "reports no current card once complete".
 
-- [ ] T011 [US2] Add three assertions for the cycle bar to `src/routes/Run.test.tsx`:
-  - One "Not yet" advances the cycle bar while leaving the run bar unmoved — a single test asserting both, which is the clearest possible statement of what separates the two indicators. (FR-005, SC-005)
+- [X] T011 [US2] Add three assertions for the cycle bar to `src/routes/Run.test.tsx`:
+  - One "Not yet" advances the cycle bar while leaving the run bar unmoved — a single test asserting both, which is the clearest possible statement of what separates the two indicators. (FR-005, SC-005) **Landed in T009 instead**: the sentence's own test was one of the 17, and migrating it produced exactly this assertion. Writing it a second time would have been the duplication this feature's test plan spends a whole section avoiding.
   - Four "Got it" then one "Not yet" on `r1` opens a one-card cycle: cycle reads `0 of 1 cards`, run reads `4 of 5 cards`. Then one more mark reads against that cycle's own size, not the rung's. (FR-006, FR-007, SC-006)
-  - Both bars read full on the run-complete screen. (FR-020)
+  - Both bars read full on the run-complete screen. (FR-020) Added as one line to T005's completion test rather than as a test of its own, for the same reason.
 
   Do **not** add `queryByText(/cards left in this round/)` — T016's grep covers it statically and cannot pass by accident. See [Tests that were cut](#tests-that-were-cut).
 
-- [ ] T012 [US2] Run the full gate. It must be green again. If any assertion still references the deleted sentence, T009 missed a site — re-run its grep, which must return zero hits.
+- [X] T012 [US2] Run the full gate. It must be green again. If any assertion still references the deleted sentence, T009 missed a site — re-run its grep, which must return zero hits.
 
 **Checkpoint**: US1 and US2 both complete. The sentence is gone, both bars work, the tree is green.
 Everything assertable in jsdom is now asserted.

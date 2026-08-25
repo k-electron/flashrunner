@@ -9,7 +9,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { CardFace } from '@/components/CardFace';
-import { CycleCounter } from '@/components/CycleCounter';
 import { OutcomeButtons } from '@/components/OutcomeButtons';
 import { PronounceButton } from '@/components/PronounceButton';
 import { RunProgress } from '@/components/RunProgress';
@@ -18,7 +17,7 @@ import { nextRung } from '@/decks/ladder';
 import { deckById } from '@/decks/registry';
 import type { DeckConfig, RungConfig } from '@/decks/types';
 import { mark, restart, start } from '@/run/reducer';
-import { currentCard, isComplete, remainingInCycle } from '@/run/selectors';
+import { currentCard, isComplete } from '@/run/selectors';
 import type { Outcome, RunState } from '@/run/types';
 import { readDeckRecord, writeDeckRecord, type PersistedRun } from '@/storage/deckRecord';
 
@@ -196,7 +195,10 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
           FR-019 (no bars on either "Run not found" screen, which live in `Run`)
           and FR-020 (the bars survive onto the run-complete screen) both fall
           out with no condition written for either. */}
-      <RunProgress run={{ done: state.passedThisRun.length, total: rung.cardIds.length }} />
+      <RunProgress
+        run={{ done: state.passedThisRun.length, total: rung.cardIds.length }}
+        cycle={{ done: state.position, total: state.queue.length }}
+      />
       {/* pt-9 is <main>'s original 24px plus the 12px the bars occupy, written
           out rather than appended because this className is a plain string, so
           tailwind-merge is not here to resolve `p-6` against `pt-9` (FR-017). */}
@@ -236,7 +238,6 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
         ) : (
           <>
             {card !== undefined && <CardFace front={card.front} />}
-            <CycleCounter remaining={remainingInCycle(state)} />
             {/* Two columns, so the pronounce button lines up with "Not yet" without
                 anyone writing a width by hand, and nothing sits above "Got it"
                 (FR-002). The pair is one child of `main`, which is what keeps the
