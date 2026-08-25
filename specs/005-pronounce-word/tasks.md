@@ -182,9 +182,12 @@ the feature.
       English, in a voice that sounds female; it says the word currently on screen
       and never the previous one; and the run-complete screen has no speaker.
 
-      **Still unrecorded**: the *name* of the voice that spoke. Everything on the
-      hint list except `Samantha` is guesswork, and a real observation is the only
-      evidence that can settle it. Worth filling in the next time anyone runs this.
+      **The voice that spoke was `Samantha`.** That is the first time any entry on
+      the hint list has been verified through the Web Speech API rather than
+      inferred from `say -v '?'`, which is one layer removed from what the browser
+      actually exposes. Rule 1 of contract §3 is therefore known to fire, not just
+      believed to. The other four entries — `zira`, `aria`, `jenny`,
+      `google us english` — remain unverified and cost only a fallthrough if wrong.
 
 **Checkpoint**: the button works and is usable. It may still queue repeats. **166 + new tests green,
 no existing test edited.**

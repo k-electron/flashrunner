@@ -60,8 +60,15 @@ Language tags get the same treatment for the same reason: `en_US`, `en-us` and `
 language written three ways.
 
 **The hint list**: `samantha`, `zira`, `aria`, `jenny`, `google us english`, `female`, compared
-lower-case. `Samantha` is the only entry verified present on a real machine. A wrong entry is cheap:
-it matches nothing and the next rule answers.
+lower-case.
+
+`Samantha` is **verified end to end**: UAT on the Pages preview on 2026-08-24 confirmed it is the
+voice the browser actually selected and spoke with. That matters more than it sounds — `say -v '?'`
+lists macOS's speech voices, which is one layer removed from the names the Web Speech API exposes to
+a page, so until UAT the whole list rested on an inference. Rule 1 is now known to fire.
+
+The other four are still unverified, and a wrong entry is cheap: it matches nothing and the next rule
+answers.
 
 **Why the device default sits above "any American voice".** Real data, from `say -v '?'`:
 
