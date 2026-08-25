@@ -12,6 +12,7 @@ import { CardFace } from '@/components/CardFace';
 import { CycleCounter } from '@/components/CycleCounter';
 import { OutcomeButtons } from '@/components/OutcomeButtons';
 import { PronounceButton } from '@/components/PronounceButton';
+import { RunProgress } from '@/components/RunProgress';
 import { Button } from '@/components/ui/button';
 import { nextRung } from '@/decks/ladder';
 import { deckById } from '@/decks/registry';
@@ -184,77 +185,96 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
   }
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-xl flex-col items-center justify-center gap-8 p-6">
-      <h1 className="text-muted-foreground text-center text-sm">
-        {deck.title} · {rung.label}
-      </h1>
+    <>
+      {/* Before <main> rather than inside it, so a screen reader meets the two
+          indicators before the card they describe (FR-025) and <main>'s gap-8
+          spacing is left untouched. The counts are built here rather than behind
+          selectors: one call site, four lines (research § Decision 9). No zero
+          guard — validate.ts rule V8 forbids an empty rung.
 
-      {storageFull && (
-        <p role="status" className="text-center text-sm">
-          Progress is not being saved: this device is out of storage space. The run keeps working,
-          but it will not be here after this tab is closed.
-        </p>
-      )}
+          It sits in RunLoop and outside the `complete ? … : …` branch, so
+          FR-019 (no bars on either "Run not found" screen, which live in `Run`)
+          and FR-020 (the bars survive onto the run-complete screen) both fall
+          out with no condition written for either. */}
+      <RunProgress run={{ done: state.passedThisRun.length, total: rung.cardIds.length }} />
+      {/* pt-9 is <main>'s original 24px plus the 12px the bars occupy, written
+          out rather than appended because this className is a plain string, so
+          tailwind-merge is not here to resolve `p-6` against `pt-9` (FR-017). */}
+      <main className="mx-auto flex min-h-svh w-full max-w-xl flex-col items-center justify-center gap-8 px-6 pt-9 pb-6">
+        <h1 className="text-muted-foreground text-center text-sm">
+          {deck.title} · {rung.label}
+        </h1>
 
-      {complete ? (
-        <div className="flex flex-col items-center gap-6">
-          <p className="text-2xl font-semibold tracking-tight">Run complete</p>
-          {next === undefined && <p className="text-base">Deck mastered</p>}
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Button
-              className="h-12 text-base"
-              size="lg"
-              variant="secondary"
-              onClick={() => apply({ type: 'restart', deck })}
-            >
-              Repeat this run
-            </Button>
-            {/* No larger run exists on the top rung (US2 scenario 3). */}
-            {next !== undefined && (
-              <Button asChild className="h-12 text-base" size="lg">
-                <Link to={`/deck/${deck.id}/rung/${next.id}`}>Next run</Link>
+        {storageFull && (
+          <p role="status" className="text-center text-sm">
+            Progress is not being saved: this device is out of storage space. The run keeps working,
+            but it will not be here after this tab is closed.
+          </p>
+        )}
+
+        {complete ? (
+          <div className="flex flex-col items-center gap-6">
+            <p className="text-2xl font-semibold tracking-tight">Run complete</p>
+            {next === undefined && <p className="text-base">Deck mastered</p>}
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Button
+                className="h-12 text-base"
+                size="lg"
+                variant="secondary"
+                onClick={() => apply({ type: 'restart', deck })}
+              >
+                Repeat this run
               </Button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          {card !== undefined && <CardFace front={card.front} />}
-          <CycleCounter remaining={remainingInCycle(state)} />
-          {/* Two columns, so the pronounce button lines up with "Not yet" without
-              anyone writing a width by hand, and nothing sits above "Got it"
-              (FR-002). The pair is one child of `main`, which is what keeps the
-              existing four `gap-8` gaps at four (research § Decision 6).
-              `OutcomeButtons` is composed with, never modified: the speaker is
-              not an outcome, and that file never sees a card's text. Rendered
-              only here, so the run-complete screen — which has no word — never
-              has one (FR-010). */}
-          <div className="grid w-full max-w-md grid-cols-2 gap-x-4 gap-y-2">
-            {card !== undefined && <PronounceButton word={card.front} />}
-            <div className="col-span-2">
-              <OutcomeButtons onMark={(outcome) => apply({ type: 'mark', outcome })} />
+              {/* No larger run exists on the top rung (US2 scenario 3). */}
+              {next !== undefined && (
+                <Button asChild className="h-12 text-base" size="lg">
+                  <Link to={`/deck/${deck.id}/rung/${next.id}`}>Next run</Link>
+                </Button>
+              )}
             </div>
           </div>
-        </>
-      )}
-
-      <div className="flex items-center gap-6">
-        {/* Restarting mid-run (FR-033). `apply` writes the fresh run over the old
-            one, as it does for every other transition — the entry write above
-            happens once, as this screen's state is set up, so it is not what
-            records a restart. Nothing outside this run is touched (FR-032).
-            Once the run is over "Repeat this run" is the same action, so it is
-            not offered twice. */}
-        {!complete && (
-          <Button variant="ghost" onClick={() => apply({ type: 'restart', deck })}>
-            Start over
-          </Button>
+        ) : (
+          <>
+            {card !== undefined && <CardFace front={card.front} />}
+            <CycleCounter remaining={remainingInCycle(state)} />
+            {/* Two columns, so the pronounce button lines up with "Not yet" without
+                anyone writing a width by hand, and nothing sits above "Got it"
+                (FR-002). The pair is one child of `main`, which is what keeps the
+                existing four `gap-8` gaps at four (research § Decision 6).
+                `OutcomeButtons` is composed with, never modified: the speaker is
+                not an outcome, and that file never sees a card's text. Rendered
+                only here, so the run-complete screen — which has no word — never
+                has one (FR-010). */}
+            <div className="grid w-full max-w-md grid-cols-2 gap-x-4 gap-y-2">
+              {card !== undefined && <PronounceButton word={card.front} />}
+              <div className="col-span-2">
+                <OutcomeButtons onMark={(outcome) => apply({ type: 'mark', outcome })} />
+              </div>
+            </div>
+          </>
         )}
-        {/* Leaving records no completion (FR-012, FR-034). */}
-        <Link className="text-primary text-sm underline underline-offset-4" to={`/deck/${deck.id}`}>
-          Leave this run
-        </Link>
-      </div>
-    </main>
+
+        <div className="flex items-center gap-6">
+          {/* Restarting mid-run (FR-033). `apply` writes the fresh run over the old
+              one, as it does for every other transition — the entry write above
+              happens once, as this screen's state is set up, so it is not what
+              records a restart. Nothing outside this run is touched (FR-032).
+              Once the run is over "Repeat this run" is the same action, so it is
+              not offered twice. */}
+          {!complete && (
+            <Button variant="ghost" onClick={() => apply({ type: 'restart', deck })}>
+              Start over
+            </Button>
+          )}
+          {/* Leaving records no completion (FR-012, FR-034). */}
+          <Link
+            className="text-primary text-sm underline underline-offset-4"
+            to={`/deck/${deck.id}`}
+          >
+            Leave this run
+          </Link>
+        </div>
+      </main>
+    </>
   );
 }

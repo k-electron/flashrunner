@@ -148,6 +148,16 @@ async function clearRun(user: ReturnType<typeof userEvent.setup>, cards: number)
   }
 }
 
+/**
+ * What an indicator announces: `aria-valuetext`, reached through role and
+ * accessible name only. Never `aria-valuenow` (an unrounded percentage), never
+ * `data-state`, never a class name — see
+ * specs/006-run-progress-bars/contracts/run-progress.md § 4.
+ */
+function progressOf(name: string): string | null {
+  return screen.getByRole('progressbar', { name }).getAttribute('aria-valuetext');
+}
+
 describe('Run', () => {
   // Which word leads the run is the shuffle's business (FR-001); that the run opens
   // on a card of this rung and only one is not.
@@ -180,6 +190,32 @@ describe('Run', () => {
 
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
     expect(screen.getByText('3 cards left in this round')).toBeInTheDocument();
+  });
+
+  it('starts the run bar empty (FR-002)', () => {
+    renderRun(FIRST_RUN);
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
+  });
+
+  // The load-bearing claim about the run bar, in one test: it is fed by "Got it"
+  // and by nothing else, so its end means the run is over rather than that the
+  // learner has been busy.
+  it('grows the run bar on "Got it" and leaves it where it was on "Not yet" (FR-003)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(progressOf('Cards got right')).toBe('2 of 5 cards');
+
+    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    expect(progressOf('Cards got right')).toBe('2 of 5 cards');
+  });
+
+  it('fills the run bar exactly when the run completes (FR-004, FR-020)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await clearRun(user, 5);
+
+    expect(screen.getByText('Run complete')).toBeInTheDocument();
+    expect(progressOf('Cards got right')).toBe('5 of 5 cards');
   });
 
   it('advances to the next card when the current one is marked', async () => {

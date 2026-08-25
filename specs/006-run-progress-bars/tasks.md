@@ -69,7 +69,7 @@ component exists and nothing renders it yet.
 advances a fifth per "Got it", does not move on "Not yet", and is full on the same mark that shows
 "Run complete". The sentence is still on screen at this point; ignore it.
 
-- [ ] T003 [US1] Create `src/components/RunProgress.tsx`. Presentational, no state, no effect. Declare the count shape locally — it is not exported and has no other user:
+- [X] T003 [US1] Create `src/components/RunProgress.tsx`. Presentational, no state, no effect. Declare the count shape locally — it is not exported and has no other user:
 
   ```tsx
   type Count = { done: number; total: number };
@@ -102,14 +102,14 @@ advances a fifth per "Got it", does not move on "Not yet", and is full on the sa
   contradict FR-004. The inner `max-w-xl px-6` deliberately mirrors `<main>`'s own column so the bars
   align with the card's edges (FR-016).
 
-- [ ] T004 [US1] Wire it into `src/routes/Run.tsx`. Three edits inside `RunLoop`:
+- [X] T004 [US1] Wire it into `src/routes/Run.tsx`. Three edits inside `RunLoop`:
   - Return a fragment: `<><RunProgress run={{ done: state.passedThisRun.length, total: rung.cardIds.length }} /><main …>…</main></>`. Built inline rather than through a selector ([research.md § Decision 9](./research.md)). No zero guard — `validate.ts` rule V8 forbids an empty rung.
   - Placing it before `<main>` rather than inside it satisfies FR-025's reading order and avoids any question about `<main>`'s `gap-8` spacing, which 003's research flagged as worth keeping stable. Because it lives in `RunLoop` and outside the `complete ? … : …` branch, FR-019 (no bars on the two "Run not found" screens, which live in `Run`) and FR-020 (bars survive onto the run-complete screen) both fall out with no condition written for either. Add a comment saying so.
   - Change `<main>`'s `p-6` to `px-6 pb-6 pt-9` (FR-017). Written out rather than appending `pt-9` because this className is a plain string, not passed through `cn()`, so `tailwind-merge` is not there to resolve the conflict. `pt-9` is the original 24px plus the 12px the bars occupy (`h-1.5` + `gap-1` + `h-0.5`).
 
   Leave the `<CycleCounter>` line alone. It goes in T008.
 
-- [ ] T005 [US1] Add the shared reader and three assertions to `src/routes/Run.test.tsx`. Put the reader near the existing helpers, since T009 uses it 17 more times:
+- [X] T005 [US1] Add the shared reader and three assertions to `src/routes/Run.test.tsx`. Put the reader near the existing helpers, since T009 uses it 17 more times:
 
   ```ts
   function progressOf(name: string): string | null {
@@ -124,7 +124,7 @@ advances a fifth per "Got it", does not move on "Not yet", and is full on the sa
 
   Do **not** add tests for start-over, resume, or the pronounce control. All three are existing tests among the 17 that T009 migrates, and the migration proves them — see [Tests that were cut](#tests-that-were-cut).
 
-- [ ] T006 [US1] Run the full gate: `npm run lint && npm run typecheck && npm test && npm run build`. All 17 original `'N cards left in this round'` assertions must **still pass** — nothing has been deleted yet, so if any of them fail, T004 changed something it should not have.
+- [X] T006 [US1] Run the full gate: `npm run lint && npm run typecheck && npm test && npm run build`. All 17 original `'N cards left in this round'` assertions must **still pass** — nothing has been deleted yet, so if any of them fail, T004 changed something it should not have.
 
 **Checkpoint**: US1 is complete and independently verifiable. The screen temporarily shows both the
 run bar and the old sentence. The tree is green.
