@@ -197,7 +197,7 @@ Everything assertable in jsdom is now asserted.
 **Independent Test**: Open a run at several viewport sizes and confirm the pair stays capped, centred,
 pinned, and non-obscuring.
 
-- [ ] T013 [US3] Add the one structural assertion that is genuinely testable and not implied elsewhere, to `src/routes/Run.test.tsx`: neither "Run not found" screen has any progress bar. Use `queryAllByRole('progressbar')` and expect it empty, once for an unknown deck and once for an unknown rung of a real deck. (FR-019) Nothing else goes here — the "distinct accessible names" and "no percent sign" assertions were cut as tautological.
+- [X] T013 [US3] Add the one structural assertion that is genuinely testable and not implied elsewhere, to `src/routes/Run.test.tsx`: neither "Run not found" screen has any progress bar. Use `queryAllByRole('progressbar')` and expect it empty, once for an unknown deck and once for an unknown rung of a real deck. (FR-019) Nothing else goes here — the "distinct accessible names" and "no percent sign" assertions were cut as tautological.
 
 - [ ] T014 [P] [US3] Manual layout checks per [quickstart.md](./quickstart.md) § Manual checks, on `npm run dev` at `/deck/dolch-prek-5/rung/r1`. Record the outcome of each in the PR:
   - Bars stay the content column's width and centred when the window is widened to ultra-wide, aligned with the card's edges. (FR-016, SC-008)

@@ -454,6 +454,17 @@ describe('Run', () => {
     );
     expect(screen.queryByRole('link', { name: 'Back home' })).not.toBeInTheDocument();
   });
+
+  // There is no run to report on, so nothing reports on one. The bars live in
+  // RunLoop, which neither of these screens reaches — this asserts that stays
+  // true (FR-019).
+  it('shows no progress bar on either "Run not found" screen', () => {
+    renderRun('/deck/no-such-deck/rung/r1');
+    expect(screen.queryAllByRole('progressbar')).toEqual([]);
+
+    renderRun('/deck/dolch-prek-5/rung/r99');
+    expect(screen.queryAllByRole('progressbar')).toEqual([]);
+  });
 });
 
 // The store is only ever reached through src/storage/, so these assert what a
