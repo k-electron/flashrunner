@@ -838,3 +838,303 @@ describe('Run — an interrupted run resumes into the run it already was (SC-005
     expect(members([...new Set(sequence(marked))])).toEqual(members(SECOND_RUNG_CARDS));
   });
 });
+
+// jsdom has no Web Speech API, so every test above this line runs down the path
+// FR-011 describes and never meets a pronounce button at all. This block installs
+// one for its own duration and takes it away again — the rest of the file depends
+// on the API being absent, and a leaked stub would quietly turn those tests into
+// something else.
+//
+// What is asserted here is what the device was asked to say. Whether `speak` was
+// called is not a claim about anything a learner can hear, and whether sound
+// leaves the device is the one thing no test can see (research § Decision 7).
+describe('Run — hearing the word (US1)', () => {
+  /**
+   * A stand-in for `SpeechSynthesisUtterance`: the text it was made with, and the
+   * two handlers that mean speech has stopped. Nothing else of the real interface
+   * is touched, and the properties the control sets on it — `lang`, `voice` — are
+   * deliberately not read back. A stub that echoes whatever it was handed can
+   * only restate the diff (research § Decision 7).
+   */
+  class StubUtterance {
+    readonly text: string;
+    onend: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+
+    constructor(text: string) {
+      this.text = text;
+    }
+  }
+
+  /**
+   * The stubbed API, and the only window onto what would have been said.
+   *
+   * `getVoices` answers with an empty list on purpose: `pickVoice` finds nothing
+   * in it, so no voice is set and the browser's own en-US default speaks, which
+   * is the last resort the contract specifies (§ 3 rule 5) and the path a device
+   * with no voices loaded yet takes. Which voice is chosen is
+   * src/speech/voice.test.ts's question, not this file's.
+   */
+  const speech = {
+    /** Every utterance handed over, in the order it was handed over. */
+    spoken: [] as StubUtterance[],
+
+    /** How many times the device was told to stop talking. */
+    cancelled: 0,
+
+    /**
+     * Whether this stubbed browser reports a cancel back through the utterance's
+     * `error` handler. Real ones are supposed to; the point of being able to turn
+     * it off is that the control must not depend on it.
+     */
+    reportsCancel: true,
+
+    /**
+     * What the device was asked to say — the assertable outcome. Compared in
+     * lower case because none of the tests below is about capitalisation, and one
+     * card in this rung is capitalised; `saidAsCapital` is where case is the
+     * point. `frontOf` is likewise lowered at each comparison rather than here,
+     * so the two sides stay independently written.
+     */
+    words(): string[] {
+      return speech.spoken.map((utterance) => utterance.text.toLowerCase());
+    },
+
+    /** Anything handed over that a device would announce as "capital X". */
+    saidAsCapital(): string[] {
+      return speech.spoken
+        .map((utterance) => utterance.text)
+        .filter((text) => text.length === 1 && text !== text.toLowerCase());
+    },
+
+    /**
+     * The utterance still speaking finishes, or fails. Both are the end of
+     * speech, and both are here because a cancel comes back through the error
+     * path (`canceled` / `interrupted`) rather than through `end`.
+     */
+    end(): void {
+      speech.stop('onend');
+    },
+    error(): void {
+      speech.stop('onerror');
+    },
+    stop(handler: 'onend' | 'onerror'): void {
+      const utterance = speech.spoken.at(-1);
+      if (utterance === undefined) {
+        throw new Error('Nothing has been spoken, so nothing can stop speaking');
+      }
+      act(() => {
+        utterance[handler]?.();
+      });
+    },
+  };
+
+  beforeEach(() => {
+    speech.spoken.length = 0;
+    speech.cancelled = 0;
+    speech.reportsCancel = true;
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        getVoices: () => [],
+        speak: (utterance: StubUtterance) => speech.spoken.push(utterance),
+        // A browser's `cancel` ends whatever is speaking through the error path,
+        // so the stub does too — otherwise it would model a device that stops
+        // making sound but never admits it, which no real one does. Called on
+        // every word change and every unmount, including ones where nothing was
+        // ever spoken, hence the missing handler being unremarkable.
+        cancel: () => {
+          speech.cancelled += 1;
+          if (speech.reportsCancel) {
+            speech.spoken.at(-1)?.onerror?.();
+          }
+        },
+      },
+    });
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+      configurable: true,
+      value: StubUtterance,
+    });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(window, 'speechSynthesis');
+    Reflect.deleteProperty(window, 'SpeechSynthesisUtterance');
+  });
+
+  it('offers a way to hear the word while a card is showing, and none once the run is over', async () => {
+    const user = renderRun(FIRST_RUN);
+    expect(screen.getByRole('button', { name: 'Hear the word' })).toBeInTheDocument();
+
+    await clearRun(user, 5);
+
+    // There is no word on the completed screen, so there is nothing to hear
+    // (FR-010).
+    expect(screen.getByText('Run complete')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hear the word' })).not.toBeInTheDocument();
+  });
+
+  it('never hands over a lone capital, which a device announces as one', async () => {
+    // The Pre-K deck's "I" is capitalised, because that is how a reader meets the
+    // word — and a device reads a lone capital as "capital I", which is the
+    // opposite of hearing the word read. The card keeps its capital; only what is
+    // handed to the device is lowered. Every card of the rung is pressed, since
+    // the shuffle decides which one is "I".
+    const user = renderRun(FIRST_RUN);
+    for (let card = 0; card < FIRST_RUNG_CARDS.length; card += 1) {
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      speech.end();
+      await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    }
+
+    expect(speech.words()).toHaveLength(FIRST_RUNG_CARDS.length);
+    expect(speech.saidAsCapital()).toEqual([]);
+    // And the word itself is still what was asked for, not something emptied out.
+    expect(speech.words()).toContain('i');
+  });
+
+  it('says the word on the card currently on screen, never the one before it (FR-005)', async () => {
+    const user = renderRun(FIRST_RUN);
+    // Read off the screen rather than named: the run is shuffled, so the only
+    // thing that says which word should be spoken is the card being presented.
+    const first = shownCard(FIRST_RUNG_CARDS);
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+    expect(speech.words()).toEqual([frontOf(first).toLowerCase()]);
+
+    speech.end();
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    // The card has moved on, and so has what is said.
+    const second = shownCard(FIRST_RUNG_CARDS);
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+    expect(speech.words()).toEqual([frontOf(first).toLowerCase(), frontOf(second).toLowerCase()]);
+  });
+
+  it('changes nothing about the run: no outcome, no advance, nothing stored (FR-006, FR-016)', async () => {
+    const user = renderRun(FIRST_RUN);
+    const card = shownCard(FIRST_RUNG_CARDS);
+    const before = readDeckRecord(dolchPreK5);
+
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+    speech.end();
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+    // Both presses reached the device, so what follows is a claim about a button
+    // that did something rather than about one that did nothing at all.
+    expect(speech.words()).toEqual([frontOf(card).toLowerCase(), frontOf(card).toLowerCase()]);
+    // The same card, the same round, and the device holding exactly what it held
+    // before the button was ever pressed.
+    expect(shownCard(FIRST_RUNG_CARDS)).toBe(card);
+    expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(readDeckRecord(dolchPreK5)).toEqual(before);
+  });
+
+  // Inside the block above so it speaks through the same stub. What is counted
+  // here is utterances, because the count is the requirement: "spoken exactly
+  // once" is a number, not a state, and it is the only form of the rule a test
+  // can hold. The animation is not asserted — it is a class name (Principle IV)
+  // and whether it is subtle enough is a judgement a person makes, not a test.
+  describe('pressing it again while it is still speaking (US2)', () => {
+    it('says the word once however many times it is pressed (FR-007, SC-003)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const card = shownCard(FIRST_RUNG_CARDS);
+
+      const hear = screen.getByRole('button', { name: 'Hear the word' });
+      for (let press = 0; press < 5; press += 1) {
+        await user.click(hear);
+      }
+
+      // Four of the five presses reached a control that was already speaking and
+      // did nothing at all — nothing spoken twice, and nothing kept back to play
+      // afterwards, which is what the run has to show once speech ends.
+      expect(speech.words()).toEqual([frontOf(card).toLowerCase()]);
+      speech.end();
+      expect(speech.words()).toEqual([frontOf(card).toLowerCase()]);
+    });
+
+    it('says it again once it has finished saying it (FR-008)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const card = shownCard(FIRST_RUNG_CARDS);
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      speech.end();
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(speech.words()).toEqual([frontOf(card).toLowerCase(), frontOf(card).toLowerCase()]);
+    });
+
+    it('says it again after a pronunciation that failed (FR-012)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const card = shownCard(FIRST_RUNG_CARDS);
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      // The same end of speech as `end`, arrived at the other way. A failure that
+      // left the control unpressable would strand a learner on a word for the
+      // rest of the run.
+      speech.error();
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(speech.words()).toEqual([frontOf(card).toLowerCase(), frontOf(card).toLowerCase()]);
+    });
+
+    it('stops talking and advances as usual when a card is marked mid-word (FR-009, SC-005)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const first = shownCard(FIRST_RUNG_CARDS);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      expect(speech.words()).toEqual([frontOf(first).toLowerCase()]);
+
+      // Marked while it is still talking, which is what a child does.
+      await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+      // The device was told to stop, and the run moved on exactly as it does
+      // when nothing is speaking: a new card, one fewer left in the round.
+      expect(speech.cancelled).toBe(1);
+      const second = shownCard(FIRST_RUNG_CARDS);
+      expect(second).not.toBe(first);
+      expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
+
+      // And the control came back to the new card rather than staying latched on
+      // the interrupted one.
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      expect(speech.words()).toEqual([frontOf(first).toLowerCase(), frontOf(second).toLowerCase()]);
+    });
+
+    it('comes back to idle on a browser that cancels without saying so', async () => {
+      // The test above passes on the strength of the stub firing `onerror` when
+      // it is cancelled, which is what a browser is supposed to do. This one
+      // takes that away. Reaching the next word must not depend on a promise
+      // another program keeps: a device that stops making sound without
+      // admitting it would leave the button dead for the rest of the run, and
+      // silently, which is the failure this whole feature is most exposed to.
+      speech.reportsCancel = false;
+      const user = renderRun(FIRST_RUN);
+      const first = shownCard(FIRST_RUNG_CARDS);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      await user.click(screen.getByRole('button', { name: 'Got it' }));
+      const second = shownCard(FIRST_RUNG_CARDS);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(speech.words()).toEqual([frontOf(first).toLowerCase(), frontOf(second).toLowerCase()]);
+    });
+  });
+});
+
+describe('Run — where nothing can speak (US3)', () => {
+  // No stub, so `speechSynthesis` is absent exactly as it is for every other
+  // test in this file. That is jsdom's own state and the reason the rest of the
+  // suite never meets the control at all — this states it as an expectation
+  // rather than leaving it an unremarked property of the environment (FR-011).
+  it('drops the control and keeps every other one', () => {
+    renderRun(FIRST_RUN);
+
+    expect(screen.queryByRole('button', { name: 'Hear the word' })).not.toBeInTheDocument();
+
+    // The run is untouched: the word is readable and every way through it works.
+    expect(shownCard(FIRST_RUNG_CARDS)).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Got it' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Not yet' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start over' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Leave this run' })).toBeInTheDocument();
+  });
+});

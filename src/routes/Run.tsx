@@ -11,6 +11,7 @@ import { Link, useParams } from 'react-router';
 import { CardFace } from '@/components/CardFace';
 import { CycleCounter } from '@/components/CycleCounter';
 import { OutcomeButtons } from '@/components/OutcomeButtons';
+import { PronounceButton } from '@/components/PronounceButton';
 import { Button } from '@/components/ui/button';
 import { nextRung } from '@/decks/ladder';
 import { deckById } from '@/decks/registry';
@@ -220,7 +221,20 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
         <>
           {card !== undefined && <CardFace front={card.front} />}
           <CycleCounter remaining={remainingInCycle(state)} />
-          <OutcomeButtons onMark={(outcome) => apply({ type: 'mark', outcome })} />
+          {/* Two columns, so the pronounce button lines up with "Not yet" without
+              anyone writing a width by hand, and nothing sits above "Got it"
+              (FR-002). The pair is one child of `main`, which is what keeps the
+              existing four `gap-8` gaps at four (research § Decision 6).
+              `OutcomeButtons` is composed with, never modified: the speaker is
+              not an outcome, and that file never sees a card's text. Rendered
+              only here, so the run-complete screen — which has no word — never
+              has one (FR-010). */}
+          <div className="grid w-full max-w-md grid-cols-2 gap-x-4 gap-y-2">
+            {card !== undefined && <PronounceButton word={card.front} />}
+            <div className="col-span-2">
+              <OutcomeButtons onMark={(outcome) => apply({ type: 'mark', outcome })} />
+            </div>
+          </div>
         </>
       )}
 
