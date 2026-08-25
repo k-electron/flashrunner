@@ -55,6 +55,13 @@ than no voice.
 
 **Never**: silent, hidden, or an error, because no preferred voice was found (FR-004).
 
+## 3a. What is handed to the device
+
+The card's text, with one exception: **a card of a single character is lowered**. A device reads a
+lone capital as its letter name, so the Pre-K deck's `I` is announced as "capital I" rather than as
+the word. The card itself keeps its capital — that is how a reader meets the word. Anything longer is
+passed through untouched, where no letter name is possible and a capital may carry meaning.
+
 ## 4. The speaking state machine
 
 Two states. No queue, because nothing is ever enqueued.
@@ -79,6 +86,12 @@ Two states. No queue, because nothing is ever enqueued.
 **While speaking**, the control shows a subtle sign of activity confined to the icon. It is not
 dimmed, not greyed, and does not animate as a whole (FR-013a). Under
 `prefers-reduced-motion: reduce` the animation does not run; the control still works.
+
+**A whole cycle of that animation must fit inside the shortest word in either deck.** The constraint
+is stated rather than a duration, so it survives a change of animation. It is not theoretical: the
+stock 2s pulse shipped and was invisible, because a one-syllable sight word ends while the opacity
+has barely moved. Note that `duration-500` does not set this — it sets `transition-duration`, not
+`animation-duration`, so it compiles, passes every check and changes nothing.
 
 ## 5. What this contract does not cover
 

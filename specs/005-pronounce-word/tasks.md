@@ -314,8 +314,7 @@ Phase 3 without it. This phase is the verification.
 
       **Verified 2026-08-24**: `lint` clean (one pre-existing warning on the
       vendored `src/components/ui/button.tsx`, not from this feature), `typecheck`
-      exit 0, **182 tests** in 12 files, `build` succeeded. 182 = the original 166
-      plus 16 new, with zero lines removed from any pre-existing test file.
+      exit 0, **183 tests** in 12 files, `build` succeeded. 183 = the original 166 plus 17 new, with zero lines removed from any pre-existing test file.
 
 - [X] T019 Confirm the diff is what the plan said: **two files added** (`src/speech/voice.ts`,
       `src/components/PronounceButton.tsx`) plus their tests, **two modified**
@@ -433,20 +432,20 @@ Status notes.
 **Nothing here changes behaviour** unless T026 or T024 is answered the other way. Read those two
 before starting; the rest is making the documents describe the code that shipped.
 
-- [ ] T021 Rewrite the last edge case in [spec.md](./spec.md) (`contradicts`, MEDIUM, per spec edge
+- [X] T021 Rewrite the last edge case in [spec.md](./spec.md) (`contradicts`, MEDIUM, per spec edge
       cases). It asserts "every card in both decks is a plain lowercase English sight word, so there
       is no pronunciation-of-symbols case to handle". That is false: `src/decks/dolch-prek-5.ts` has
       `{ id: 'i', front: 'I' }`, and a device announces a lone capital as "capital I" — the defect
       UAT actually found. State the case and what the app does about it.
 
-- [ ] T022 Add a requirement covering the lone-capital rule (`unrequested`, MEDIUM, per FR-005 and
+- [X] T022 Add a requirement covering the lone-capital rule (`unrequested`, MEDIUM, per FR-005 and
       contract §3). `src/components/PronounceButton.tsx` lowercases single-character words before
       speaking, and **no FR, SC, contract section or task body asks for it** — it exists only in
       T009's Status note. Give it an FR and a contract line so it is intent rather than folklore, and
       say why the rule stops at one character: nothing longer can be read as a letter name, and case
       may carry meaning.
 
-- [ ] T023 Record the animation-duration constraint in
+- [X] T023 Record the animation-duration constraint in
       [contracts/pronunciation.md §4](./contracts/pronunciation.md) (`unrequested`, LOW, per FR-013a
       and T012). The 500ms override exists because Tailwind's stock `animate-pulse` is a 2s cycle and
       a one-syllable sight word ends before the opacity has visibly moved. Write the constraint —
@@ -454,44 +453,51 @@ before starting; the rest is making the documents describe the code that shipped
       it survives a change of animation. Worth adding that `duration-500` does not do this: it sets
       `transition-duration`, not `animation-duration`.
 
-- [ ] T024 Qualify **FR-013a** with the reduced-motion exemption (`partial`, LOW). It says the
+- [X] T024 Qualify **FR-013a** with the reduced-motion exemption (`partial`, LOW). It says the
       control MUST show a subtle sign of activity, unqualified, but under
       `prefers-reduced-motion: reduce` there is deliberately no sign at all. Contract §4 already
       carves this out; the requirement does not. **Decide rather than assume**: either qualify FR-013a
       to match the contract, or give the reduced-motion path a non-animated indication. The first is
       what shipped.
 
-- [ ] T025 Qualify **FR-009** to match [research Decision 5](./research.md) (`partial`, LOW). The
+- [X] T025 Qualify **FR-009** to match [research Decision 5](./research.md) (`partial`, LOW). The
       cleanup effect keys on the word, so a "Start over" that reshuffles onto the card already showing
       does not cancel. FR-009 says speaking MUST stop when the run is restarted, without exception.
       Research argues it is harmless — the word on screen is still the word being said — and that
       argument is sound, so the requirement should say so. Keying on the card id instead is the
       alternative and costs this component an id it has no other use for.
 
-- [ ] T026 Decide **SC-002** against what a name-hint list can actually promise (`partial`, LOW).
+- [X] T026 Decide **SC-002** against what a name-hint list can actually promise (`partial`, LOW).
       It says the word "is spoken in a female voice on every device that has one". Six substrings
       cannot guarantee that: a device whose only female American voices are `Flo`, `Kathy` or
       `Shelley` and whose default is `Alex` falls to rung 2 and speaks male. FR-004's "where the
       device has one" is the achievable form. Either soften SC-002 to match FR-004, **or** widen
       `FEMALE_HINTS` in `src/speech/voice.ts` — the only task here that would change behaviour.
 
-- [ ] T027 Correct research Decision 4's ceiling wording (`partial`, LOW, per FR-012). It says a
+- [X] T027 Correct research Decision 4's ceiling wording (`partial`, LOW, per FR-012). It says a
       browser that fires neither `end` nor `error` leaves the button unpressable "only for the card it
       is on". That understates it: `spokenWord` stays set, so the control is dead for **every later
       re-presentation of that same word** — and a "Not yet" card comes back in the next cycle by
       design. The ceiling is real and still acceptable; it should be stated at its true size. The
       `reportsCancel = false` test only marks "Got it", so it never exercises the return.
 
-- [ ] T028 Update T018's Status in this file (`partial`, LOW). It records **182 tests**; the suite is
+- [X] T028 Update T018's Status in this file (`partial`, LOW). It records **183 tests**; the suite is
       now **183**, because T009's post-UAT fix added one. A stale count in a gate record is the kind
       of number someone later trusts.
 
-- [ ] T029 Record the Principle IV exemption for the pulse-duration fix (`partial`, LOW, per
+- [X] T029 Record the Principle IV exemption for the pulse-duration fix (`partial`, LOW, per
       Constitution IV and Workflow & Gates). Every bug fix is supposed to add a test that fails
       against the unfixed code; the lowercase fix did, the duration fix did not, because asserting it
       means reading a class name, which Principle IV bans outright. T014's Status names the reason —
       Workflow & Gates wants the principle, why the simpler route fails, and the exit path, recorded
       in the PR.
 
-**Nothing in this phase is a blocker.** The feature works, UAT passed on a real phone, and the gate
-is green at 183 tests. This is the documents catching up with the code.
+**Closed 2026-08-24.** Two were maintainer decisions and both came back the same way — *do not
+promise more than the code can keep*:
+
+- **T026** — a female voice was never a requirement, only a slight preference. FR-004 and SC-002 both
+  said MUST; both now say what was actually meant. `FEMALE_HINTS` is unchanged, because the code was
+  never the problem.
+- **T024** — FR-013a gains a short "except where the device asks for reduced motion" and nothing more.
+
+No behaviour changed. 183 tests, gate green.

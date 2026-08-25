@@ -100,8 +100,10 @@ run screen renders and every other control works.
 - **Speaking fails or is cut short by the device** — the button becomes pressable again rather than
   latching (US3 scenario 3).
 - **The device is silent or muted** — out of scope. Nothing in the app can detect or fix this.
-- **The word contains only letters an English voice can say** — every card in both decks is a plain
-  lowercase English sight word, so there is no pronunciation-of-symbols case to handle.
+- **The card is a single capital letter** — the Pre-K deck's **"I"** is capitalised, because that is
+  how a reader meets the word. A device reads a lone capital as its letter name, announcing "capital
+  I" rather than the word. The card keeps its capital and the device is given the lower-case form
+  (FR-005a).
 
 ## Requirements *(mandatory)*
 
@@ -113,21 +115,27 @@ run screen renders and every other control works.
   space above "Got it" left empty. The two outcome buttons MUST keep their present size, position
   relative to each other, and appearance.
 - **FR-003**: The spoken word MUST be rendered in American English.
-- **FR-004**: The spoken word MUST use a female American English voice where the device has one.
-  Where it does not, the system MUST fall back in order — the device's own American English default,
-  then any American English voice, then any English voice — and MUST NOT go silent or hide the
-  control. Hearing the word matters more than the voice being female, and more than the accent being
-  American. See
+- **FR-004**: The system SHOULD prefer a female American English voice, and MUST NOT go silent or
+  hide the control when it cannot find one. A female voice is a preference, not a requirement: it is
+  recognised by name, and no device exposes a voice's gender, so no promise about it can be kept.
+  Selection MUST fall through in order — a female-sounding American voice, the device's own American
+  default, any American voice, any English voice. Hearing the word matters more than the voice being
+  female, and more than the accent being American. See
   [research Decision 2](./research.md#decision-2-there-is-no-gender-field-so-female-is-a-name-match-with-a-safe-fallback).
 - **FR-005**: The control MUST speak the word that is on the card at the moment it is pressed, and
   never a word from an earlier card.
+- **FR-005a**: A card of a single character MUST be given to the device in lower case, because a
+  lone capital is announced as its letter name rather than as the word. What is shown on the card is
+  unchanged. Words of more than one character MUST be left alone, where no letter name is possible
+  and capitals may carry meaning.
 - **FR-006**: Pressing the control MUST NOT record an outcome, advance the run, alter cycle
   position, or change anything that is remembered about the run.
 - **FR-007**: While a word is being spoken, pressing the control again MUST do nothing at all — no
   second pronunciation, and nothing held back to play afterwards.
 - **FR-008**: Once speaking has ended, pressing the control MUST speak the word again.
-- **FR-009**: Speaking MUST stop when the card changes, when the run is restarted, and when the
-  learner leaves the run screen.
+- **FR-009**: Speaking MUST stop when the word on the card changes, and when the learner leaves the
+  run screen. A restart that happens to present the same word again need not stop it: what is being
+  said is still what is on screen.
 - **FR-010**: The control MUST be shown only while a card is on screen. It MUST NOT appear on the
   run-complete screen, where there is no word.
 - **FR-011**: Where the device cannot speak text aloud at all, the control MUST NOT be shown, and
@@ -139,7 +147,8 @@ run screen renders and every other control works.
 - **FR-013a**: While the word is being spoken, the control MUST show a **subtle** sign that it is
   working. The signal MUST be confined to a small part of the control rather than the whole of it,
   MUST NOT dim or grey the control, and MUST NOT compete for attention with the card or the outcome
-  buttons. The card is what the learner should be looking at.
+  buttons — except where the device asks for reduced motion, in which case there is no signal and the
+  control works exactly as it otherwise does. The card is what the learner should be looking at.
 - **FR-014**: The control MUST be distinguishable from the two outcome buttons, so that a learner
   reaching for "hear it again" cannot mark the card by mistake.
 - **FR-015**: Nothing about the word, the card, or the run MUST leave the device in order to produce
@@ -155,10 +164,9 @@ run screen renders and every other control works.
 
 - **SC-001**: A learner who cannot read the word on the card can hear it spoken with a single press,
   with no adult intervention and no prior setup.
-- **SC-002**: The spoken word is recognisably American English, and is spoken in a female voice on
-  every device that has one. A device with no female American English voice speaks it in whatever
-  American English voice it does have, and a device with no American voice at all uses another
-  English accent; both are a pass rather than a failure (FR-004).
+- **SC-002**: The spoken word is recognisably American English. A female voice is preferred where one
+  is recognised, and its absence is a pass rather than a failure — a device may speak in any American
+  English voice, or in another English accent where it has no American one (FR-004).
 - **SC-003**: Pressing the control five times in rapid succession results in the word being spoken
   exactly once.
 - **SC-004**: Speech begins within roughly one second of the press, so the connection between

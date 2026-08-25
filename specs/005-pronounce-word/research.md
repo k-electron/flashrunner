@@ -133,8 +133,10 @@ known to be unreliable across Safari versions, where it can stay `true` after sp
 same path a failure does and the button is pressable again either way.
 
 **Ceiling, named rather than engineered around**: if a browser fires *neither* `end` nor `error`,
-the button stays unpressable — but only for the card it is on, because the next card is a different
-word and `spokenWord === word` is then false. Note this is why it is scoped: the component is **not**
+the button stays unpressable for that word — and, stated at its true size, for **every later
+presentation of the same word in the run**, since `spokenWord` is never cleared and a "Not yet" card
+comes back in the next cycle by design. Any *other* card is unaffected, because `spokenWord === word`
+is then false. Note this is why it is scoped: the component is **not**
 remounted on a card change. It has no `key` and a stable position in `src/routes/Run.tsx`, so it
 re-renders with a new prop. Under the old boolean that distinction was the bug; under a derived
 value it is simply correct. A watchdog timer for a case no known browser produces is exactly the
