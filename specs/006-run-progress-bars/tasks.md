@@ -260,7 +260,18 @@ pinned, and non-obscuring.
 
 - [X] T019 Open the PR, running the gate one final time in CI order first: `npm run lint && npm run typecheck && npm test && npm run build`. The description states what was asked for, so Principle VI can be checked against it. Call out four things a reviewer would otherwise have to discover: no new dependency (`git diff package.json` is empty), no vendored code modified, no persisted shape change so no `schemaVersion` bump or migration, and no new exported function. Note the two planning amendments — FR-021 dropped reduced-motion handling at the maintainer's direction, and `/speckit-analyze` cut a `CardCount` type plus two selectors and six redundant assertions.
 
-- [ ] T020 **Left for a human — see the PR description.** On the PR's Pages preview, re-run T014's viewport checks — on a real phone if one is to hand. Per constitution Principle I, viewport and deep-link behaviour is verified on a preview deploy, not on the dev server.
+- [ ] T020 On the PR's Pages preview, re-run T014's viewport checks — on a real phone if one is to hand. Per constitution Principle I, viewport and deep-link behaviour is verified on a preview deploy, not on the dev server.
+
+  **Partly done.** T014's checks were re-run against
+  <https://006-run-progress-bars.flashrunner.pages.dev> (PR #196) and every number matches the dev
+  server exactly: bars on the card's content column at 390, 1024, 1280 and 2560px, no horizontal
+  scroll anywhere, 6px against 2px, and 24px of heading clearance at 1024x400. The deep link
+  `/deck/dolch-prek-5/rung/r1` returns 200, so SPA fallback holds. The preview's bundle contains
+  "Cards done in this round" and no "left in this round", confirming it is this branch's build.
+
+  **Still open: the real phone.** A desktop browser told to be 390px wide is not an iPhone — it does
+  not have the same rasteriser, the same font metrics, or a notch. A 2px bar under a real safe-area
+  inset is exactly the kind of thing this check exists to catch, and it stays a human's to do.
 
 ---
 
