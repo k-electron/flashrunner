@@ -148,6 +148,16 @@ async function clearRun(user: ReturnType<typeof userEvent.setup>, cards: number)
   }
 }
 
+/**
+ * What an indicator announces: `aria-valuetext`, reached through role and
+ * accessible name only. Never `aria-valuenow` (an unrounded percentage), never
+ * `data-state`, never a class name — see
+ * specs/006-run-progress-bars/contracts/run-progress.md § 4.
+ */
+function progressOf(name: string): string | null {
+  return screen.getByRole('progressbar', { name }).getAttribute('aria-valuetext');
+}
+
 describe('Run', () => {
   // Which word leads the run is the shuffle's business (FR-001); that the run opens
   // on a card of this rung and only one is not.
@@ -171,15 +181,59 @@ describe('Run', () => {
     expect(screen.getByText('Not yet')).toBeVisible();
   });
 
-  it('shows how many cards are left in the round and counts down as they are marked', async () => {
+  // What separates the two indicators, in one test: every mark moves the cycle
+  // bar, and only "Got it" moves the run bar (FR-005, SC-005).
+  it('advances the cycle bar on every mark and the run bar only on "Got it"', async () => {
     const user = renderRun(FIRST_RUN);
-    expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
 
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
-    expect(screen.getByText('3 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('2 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
+  });
+
+  // The load-bearing claim about the run bar, in one test: it is fed by "Got it"
+  // and by nothing else, so its end means the run is over rather than that the
+  // learner has been busy.
+  it('grows the run bar on "Got it" and leaves it where it was on "Not yet" (FR-003)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(progressOf('Cards got right')).toBe('2 of 5 cards');
+
+    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    expect(progressOf('Cards got right')).toBe('2 of 5 cards');
+  });
+
+  it('fills the run bar exactly when the run completes (FR-004, FR-020)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await clearRun(user, 5);
+
+    expect(screen.getByText('Run complete')).toBeInTheDocument();
+    expect(progressOf('Cards got right')).toBe('5 of 5 cards');
+    expect(progressOf('Cards done in this round')).toBe('5 of 5 cards');
+  });
+
+  // The cycle bar's denominator is this cycle's size, not the rung's: a repeat
+  // cycle of one reads 0 of 1 and then 1 of 1, while the run bar goes on
+  // measuring the same five words throughout (FR-006, FR-007, SC-006).
+  it("resets the cycle bar to the new cycle's own size when a cycle closes", async () => {
+    const user = renderRun(FIRST_RUN);
+    await clearRun(user, 4);
+    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+
+    expect(progressOf('Cards done in this round')).toBe('0 of 1 cards');
+    expect(progressOf('Cards got right')).toBe('4 of 5 cards');
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    expect(progressOf('Cards done in this round')).toBe('1 of 1 cards');
+    expect(progressOf('Cards got right')).toBe('5 of 5 cards');
   });
 
   it('advances to the next card when the current one is marked', async () => {
@@ -203,7 +257,8 @@ describe('Run', () => {
     const failed = shownCard(FIRST_RUNG_CARDS);
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
 
-    expect(screen.getByText('1 card left in this round')).toBeInTheDocument();
+    // A new cycle of one, measured against itself.
+    expect(progressOf('Cards done in this round')).toBe('0 of 1 cards');
     expect(shownCard(FIRST_RUNG_CARDS)).toBe(failed);
   });
 
@@ -211,14 +266,16 @@ describe('Run', () => {
     const user = renderRun(FIRST_RUN);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
-    expect(screen.getByText('3 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('2 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
     await user.click(screen.getByRole('button', { name: 'Start over' }));
 
     // Cycle 0 again with nothing behind it, and a card of the rung on screen. Which
     // word leads is not the claim: a restart shuffles anew (FR-017), so naming one
     // would assert the seed rather than the reset.
-    expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
     expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
     expect(storedRun()).toMatchObject({
       cycleIndex: 0,
@@ -267,15 +324,18 @@ describe('Run', () => {
   it('starts a new run when the route moves to another rung', async () => {
     const { user, router } = renderRunWithRouter(FIRST_RUN);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
     await act(async () => {
       await router.navigate(SECOND_RUN);
     });
 
     // The ten-word rung from a standing start, not the five-word queue carried
-    // over: ten left rather than four, and the card on screen is one of r2's.
-    expect(screen.getByText('10 cards left in this round')).toBeInTheDocument();
+    // over: both bars empty and measured against ten, and the card on screen is
+    // one of r2's.
+    expect(progressOf('Cards done in this round')).toBe('0 of 10 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 10 cards');
     expect(SECOND_RUNG_CARDS).toContain(shownCard(SECOND_RUNG_CARDS));
   });
 
@@ -297,7 +357,8 @@ describe('Run', () => {
 
     // The same five words, all of them to do again, in whatever order the repeat
     // drew (FR-018).
-    expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
     expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
     expect(members(storedRun().queue)).toEqual(members(FIRST_RUNG_CARDS));
   });
@@ -386,6 +447,17 @@ describe('Run', () => {
       '/deck/dolch-prek-5',
     );
     expect(screen.queryByRole('link', { name: 'Back home' })).not.toBeInTheDocument();
+  });
+
+  // There is no run to report on, so nothing reports on one. The bars live in
+  // RunLoop, which neither of these screens reaches — this asserts that stays
+  // true (FR-019).
+  it('shows no progress bar on either "Run not found" screen', () => {
+    renderRun('/deck/no-such-deck/rung/r1');
+    expect(screen.queryAllByRole('progressbar')).toEqual([]);
+
+    renderRun('/deck/dolch-prek-5/rung/r99');
+    expect(screen.queryAllByRole('progressbar')).toEqual([]);
   });
 });
 
@@ -477,7 +549,9 @@ describe('Run — persistence and resume', () => {
     const user = renderRun(FIRST_RUN);
 
     expect(screen.getByText('the')).toBeInTheDocument();
-    expect(screen.getByText('3 cards left in this round')).toBeInTheDocument();
+    // Both bars come back where the interruption left them, not at zero.
+    expect(progressOf('Cards done in this round')).toBe('2 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
     expect(screen.queryByText('a')).not.toBeInTheDocument();
 
     // Clearing the three that are left ends the run on the one still failed,
@@ -486,7 +560,8 @@ describe('Run — persistence and resume', () => {
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     expect(screen.getByText('I')).toBeInTheDocument();
-    expect(screen.getByText('1 card left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('0 of 1 cards');
+    expect(progressOf('Cards got right')).toBe('4 of 5 cards');
   });
 
   it('starts a fresh run when the stored one belongs to another rung', () => {
@@ -504,7 +579,8 @@ describe('Run — persistence and resume', () => {
 
     // All five of r1 to do, in r1's own fresh order — not the four left of the
     // stored r2 run, and not resumed into it.
-    expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
     expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
     expect(members(storedRun().queue)).toEqual(members(FIRST_RUNG_CARDS));
   });
@@ -605,11 +681,13 @@ describe('Run — a device with no room left', () => {
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     const second = shownCard(FIRST_RUNG_CARDS);
     expect(second).not.toBe(first);
-    expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
     expect([first, second]).not.toContain(shownCard(FIRST_RUNG_CARDS));
-    expect(screen.getByText('3 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('2 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
     expect(screen.getByRole('status')).toHaveTextContent(/Progress is not being saved/);
   });
 
@@ -639,9 +717,11 @@ describe('Run — a device with no room left', () => {
     await user.click(screen.getByRole('button', { name: 'Start over' }));
 
     // The discarded run does not come back: the store still holds it, but this
-    // session reads its own write back and finds nothing to resume. Ten left, not
-    // the six the abandoned run stopped on, and a card of r2 freshly drawn.
-    expect(screen.getByText('10 cards left in this round')).toBeInTheDocument();
+    // session reads its own write back and finds nothing to resume. Both bars
+    // empty against ten, not four marked of the abandoned run, and a card of r2
+    // freshly drawn.
+    expect(progressOf('Cards done in this round')).toBe('0 of 10 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 10 cards');
     expect(SECOND_RUNG_CARDS).toContain(shownCard(SECOND_RUNG_CARDS));
 
     // And the learner is told, on the screen they are now looking at, that the
@@ -1022,10 +1102,11 @@ describe('Run — hearing the word (US1)', () => {
     // Both presses reached the device, so what follows is a claim about a button
     // that did something rather than about one that did nothing at all.
     expect(speech.words()).toEqual([frontOf(card).toLowerCase(), frontOf(card).toLowerCase()]);
-    // The same card, the same round, and the device holding exactly what it held
-    // before the button was ever pressed.
+    // The same card, neither bar moved, and the device holding exactly what it
+    // held before the button was ever pressed (FR-022).
     expect(shownCard(FIRST_RUNG_CARDS)).toBe(card);
-    expect(screen.getByText('5 cards left in this round')).toBeInTheDocument();
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
     expect(readDeckRecord(dolchPreK5)).toEqual(before);
   });
 
@@ -1087,11 +1168,12 @@ describe('Run — hearing the word (US1)', () => {
       await user.click(screen.getByRole('button', { name: 'Got it' }));
 
       // The device was told to stop, and the run moved on exactly as it does
-      // when nothing is speaking: a new card, one fewer left in the round.
+      // when nothing is speaking: a new card, and both bars a card further on.
       expect(speech.cancelled).toBe(1);
       const second = shownCard(FIRST_RUNG_CARDS);
       expect(second).not.toBe(first);
-      expect(screen.getByText('4 cards left in this round')).toBeInTheDocument();
+      expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+      expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
       // And the control came back to the new card rather than staying latched on
       // the interrupted one.

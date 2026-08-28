@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CardId, DeckConfig } from '@/decks/types';
 import { mark, restart, start } from '@/run/reducer';
-import { currentCard, isComplete, remainingInCycle } from '@/run/selectors';
+import { currentCard, isComplete } from '@/run/selectors';
 import type { Outcome, Rng, RunState } from '@/run/types';
 import { seededRng } from '@/test/rng';
 
@@ -464,25 +464,22 @@ describe('order — distribution across runs (SC-001, SC-003, SC-010)', () => {
 });
 
 describe('selectors', () => {
-  it('reports the current card and the cards left in this cycle', () => {
-    // The claim is that the selectors track the opening order as position advances.
+  it('reports the current card as position advances', () => {
+    // The claim is that the selector tracks the opening order as position advances.
     // c1 then c2 was that order before the shuffle; the order the cycle actually
     // opened with is captured up front and the same two steps are checked against it.
     const rng = seededRng(6);
     let state = start(deck, 'r1', rng);
     const dealt = [...state.queue];
     expect(currentCard(state)).toBe(dealt[0]);
-    expect(remainingInCycle(state)).toBe(5);
 
     state = mark(state, 'got-it', rng);
     expect(currentCard(state)).toBe(dealt[1]);
-    expect(remainingInCycle(state)).toBe(4);
   });
 
-  it('reports no current card and nothing remaining once complete', () => {
+  it('reports no current card once complete', () => {
     const done = applyAll(start(deck, 'r1'), pass(5));
     expect(currentCard(done)).toBeUndefined();
-    expect(remainingInCycle(done)).toBe(0);
   });
 });
 
