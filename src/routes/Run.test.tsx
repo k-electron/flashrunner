@@ -1273,6 +1273,12 @@ describe('Run — hearing the word (US1)', () => {
 
       // The device was told to stop, and the run moved on exactly as it does
       // when nothing is speaking: a new card, and both bars a card further on.
+      //
+      // `Cards got right` is also 007's only guard on US1/AC3 — that a "Got it"
+      // pressed while the outcomes are swapped still records *got it*. The press
+      // above sets that state, so do not let the speech finish before the mark:
+      // an added `speech.end()` here would clear the swap and take the guard
+      // with it, silently, since a wrong outcome advances the run just as far.
       expect(speech.cancelled).toBe(1);
       const second = shownCard(FIRST_RUNG_CARDS);
       expect(second).not.toBe(first);
