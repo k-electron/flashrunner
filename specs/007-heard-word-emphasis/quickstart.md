@@ -119,6 +119,32 @@ delete window.speechSynthesis;
 delete window.SpeechSynthesisUtterance;
 ```
 
+## UAT on the Pages preview
+
+Per constitution Principle I, the visual and viewport behaviour is signed off on a preview deploy,
+not on the dev server.
+
+**Preview**: <https://007-heard-word-emphasis.flashrunner.pages.dev> (PR #207), confirmed to be this
+branch's build rather than main's — the bundle carries this branch's split `bg-green-800 text-white
+hover:bg-green-900` literal, which main's combined `bg-green-800 text-xl text-white` is not. The
+first response after pushing was still the branch's earlier docs-only deploy, whose source is
+identical to main; that is the trap to watch for on the next feature.
+
+**Signed off by the maintainer, 2026-08-29.** All sixteen checks pass. The two that no test can
+make and that are the actual deliverable:
+
+- **Does the screen now recommend "Not yet"?** — *"yes"*.
+- **Does the grey "Got it" read as plain rather than disabled?** — *"its fine"*. No darker grey
+  needed, and none was substituted.
+
+Also confirmed by eye rather than by measurement: the black matches "Resume" on the ladder, the
+speaker button is unchanged, and nothing overlaps or scrolls sideways in landscape or on a tablet.
+
+The one check the maintainer did not run by hand is the DevTools `localStorage` inspection
+(FR-008). It is covered twice over automatically: by the assertion that the stored record is
+untouched by a press, and by the Playwright run above finding `localStorage` byte-identical across
+press → leave → resume.
+
 ## What is deliberately not checked
 
 - **Screen-reader behaviour.** Nothing is announced differently by design (FR-003), and the
