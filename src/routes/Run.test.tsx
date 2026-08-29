@@ -1110,6 +1110,110 @@ describe('Run — hearing the word (US1)', () => {
     expect(readDeckRecord(dolchPreK5)).toEqual(before);
   });
 
+  // Hearing the word points the learner at "Not yet" (007). The observable is
+  // `data-variant`, set by src/components/ui/button.tsx — read as a pair it is
+  // unambiguous, because green never accompanies `secondary`. Deliberately not a
+  // class name and not a colour: jsdom does not resolve Tailwind utilities, so a
+  // computed-style check here would pass while checking nothing (007 research
+  // § Decision 3). Whether the two fills are far enough apart to read as
+  // emphasis is a judgement a person makes at the screen, not a test.
+  describe('what the screen recommends after hearing it (007 US1)', () => {
+    function emphasis(): { gotIt: string | null; notYet: string | null } {
+      return {
+        gotIt: screen.getByRole('button', { name: 'Got it' }).getAttribute('data-variant'),
+        notYet: screen.getByRole('button', { name: 'Not yet' }).getAttribute('data-variant'),
+      };
+    }
+
+    it('swaps which outcome is emphasised (007 FR-001)', async () => {
+      const user = renderRun(FIRST_RUN);
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(emphasis()).toEqual({ gotIt: 'secondary', notYet: 'default' });
+    });
+
+    it('presses nothing and marks nothing (007 FR-003)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const card = shownCard(FIRST_RUNG_CARDS);
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      // The same word is still being asked for, and both ways of answering are
+      // still open — the emphasis is a suggestion, not a decision taken for the
+      // learner.
+      expect(shownCard(FIRST_RUNG_CARDS)).toBe(card);
+      expect(screen.getByRole('button', { name: 'Got it' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Not yet' })).toBeEnabled();
+    });
+
+    // Every presentation of a card starts from the default pair (007 FR-007).
+    // "Not yet" rather than "Got it" for the marking case: the rung has five
+    // cards so neither mark can complete the run and unmount the outcomes, and
+    // marking "Not yet" also shows the reset does not depend on which outcome
+    // was chosen.
+    it('presents the next card with the default emphasis (007 FR-007)', async () => {
+      const user = renderRun(FIRST_RUN);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      await user.click(screen.getByRole('button', { name: 'Not yet' }));
+
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+    });
+
+    it('presents a started-over run with the default emphasis (007 FR-007)', async () => {
+      const user = renderRun(FIRST_RUN);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      await user.click(screen.getByRole('button', { name: 'Start over' }));
+
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+    });
+
+    it('leaves the emphasis alone when pressed again mid-word (007 FR-006)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const hear = screen.getByRole('button', { name: 'Hear the word' });
+
+      await user.click(hear);
+      const afterFirst = emphasis();
+      // No `speech.end()` between them, so the second press reaches a control
+      // that is already speaking and starts nothing. It must still leave the
+      // screen recommending the same thing rather than toggling back.
+      await user.click(hear);
+
+      expect(emphasis()).toEqual(afterFirst);
+    });
+
+    // The one path where it matters that the press is reported *above* the
+    // already-speaking guard rather than below it, and the only one a test can
+    // reach: fail the last card of a cycle as its only failure and the engine
+    // re-presents that same card at once (src/run/reducer.ts). The word has not
+    // changed, so nothing cancelled the speech and the control is still
+    // speaking — a press here starts no sound at all. It must still point the
+    // learner at "Not yet", because what the learner did was ask to hear the
+    // word (007 FR-002). Move `onHeard()` below the guard and this is the test
+    // that goes red.
+    it('swaps on a press that starts no sound (007 FR-002)', async () => {
+      const user = renderRun(FIRST_RUN);
+      for (let card = 0; card < FIRST_RUNG_CARDS.length - 1; card += 1) {
+        await user.click(screen.getByRole('button', { name: 'Got it' }));
+      }
+      const last = shownCard(FIRST_RUNG_CARDS);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      await user.click(screen.getByRole('button', { name: 'Not yet' }));
+
+      // The same word came straight back, so this is a new presentation of a
+      // card that is still being spoken — the reset ran, and the speech did not.
+      expect(shownCard(FIRST_RUNG_CARDS)).toBe(last);
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+      const spokenSoFar = speech.words().length;
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(speech.words()).toHaveLength(spokenSoFar);
+      expect(emphasis()).toEqual({ gotIt: 'secondary', notYet: 'default' });
+    });
+  });
+
   // Inside the block above so it speaks through the same stub. What is counted
   // here is utterances, because the count is the requirement: "spoken exactly
   // once" is a number, not a state, and it is the only form of the rule a test
@@ -1169,6 +1273,12 @@ describe('Run — hearing the word (US1)', () => {
 
       // The device was told to stop, and the run moved on exactly as it does
       // when nothing is speaking: a new card, and both bars a card further on.
+      //
+      // `Cards got right` is also 007's only guard on US1/AC3 — that a "Got it"
+      // pressed while the outcomes are swapped still records *got it*. The press
+      // above sets that state, so do not let the speech finish before the mark:
+      // an added `speech.end()` here would clear the swap and take the guard
+      // with it, silently, since a wrong outcome advances the run just as far.
       expect(speech.cancelled).toBe(1);
       const second = shownCard(FIRST_RUNG_CARDS);
       expect(second).not.toBe(first);
