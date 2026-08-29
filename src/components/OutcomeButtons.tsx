@@ -20,13 +20,11 @@ export function OutcomeButtons({
       {/* Plain text children, so each accessible name is exactly its visible text.
           Each icon carries its own size-* because the base Button class forces an
           unsized descendant svg to size-4. */}
-      {/* Having heard the word, the learner is being pointed at "Not yet" — so the
-          green is *removed* rather than overridden. `Button` composes
-          `cn(buttonVariants({ variant, size, className }))`, so a className wins
-          over its variant; leaving the green on and changing only the variant
-          would emphasise nothing. Both accessible names, both icons and both
-          sizes are untouched, and nothing here is disabled: this is a hint to the
-          eye, not a restriction (FR-003, FR-005). */}
+      {/* The green is *removed* in the heard state rather than overridden: `Button`
+          composes `cn(buttonVariants({ variant, size, className }))`, so a
+          className beats its variant, and leaving the green on would emphasise
+          nothing. Only the fill moves — nothing here is disabled, because this is
+          a hint to the eye rather than a restriction. */}
       <Button
         className={cn(
           'h-24 flex-1 flex-col gap-1 text-xl',

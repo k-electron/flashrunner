@@ -1110,11 +1110,6 @@ describe('Run — hearing the word (US1)', () => {
     expect(readDeckRecord(dolchPreK5)).toEqual(before);
   });
 
-  // Inside the block above so it speaks through the same stub. What is counted
-  // here is utterances, because the count is the requirement: "spoken exactly
-  // once" is a number, not a state, and it is the only form of the rule a test
-  // can hold. The animation is not asserted — it is a class name (Principle IV)
-  // and whether it is subtle enough is a judgement a person makes, not a test.
   // Hearing the word points the learner at "Not yet" (007). The observable is
   // `data-variant`, set by src/components/ui/button.tsx — read as a pair it is
   // unambiguous, because green never accompanies `secondary`. Deliberately not a
@@ -1186,10 +1181,44 @@ describe('Run — hearing the word (US1)', () => {
       await user.click(hear);
 
       expect(emphasis()).toEqual(afterFirst);
+    });
+
+    // The one path where it matters that the press is reported *above* the
+    // already-speaking guard rather than below it, and the only one a test can
+    // reach: fail the last card of a cycle as its only failure and the engine
+    // re-presents that same card at once (src/run/reducer.ts). The word has not
+    // changed, so nothing cancelled the speech and the control is still
+    // speaking — a press here starts no sound at all. It must still point the
+    // learner at "Not yet", because what the learner did was ask to hear the
+    // word (007 FR-002). Move `onHeard()` below the guard and this is the test
+    // that goes red.
+    it('swaps on a press that starts no sound (007 FR-002)', async () => {
+      const user = renderRun(FIRST_RUN);
+      for (let card = 0; card < FIRST_RUNG_CARDS.length - 1; card += 1) {
+        await user.click(screen.getByRole('button', { name: 'Got it' }));
+      }
+      const last = shownCard(FIRST_RUNG_CARDS);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      await user.click(screen.getByRole('button', { name: 'Not yet' }));
+
+      // The same word came straight back, so this is a new presentation of a
+      // card that is still being spoken — the reset ran, and the speech did not.
+      expect(shownCard(FIRST_RUNG_CARDS)).toBe(last);
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+      const spokenSoFar = speech.words().length;
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(speech.words()).toHaveLength(spokenSoFar);
       expect(emphasis()).toEqual({ gotIt: 'secondary', notYet: 'default' });
     });
   });
 
+  // Inside the block above so it speaks through the same stub. What is counted
+  // here is utterances, because the count is the requirement: "spoken exactly
+  // once" is a number, not a state, and it is the only form of the rule a test
+  // can hold. The animation is not asserted — it is a class name (Principle IV)
+  // and whether it is subtle enough is a judgement a person makes, not a test.
   describe('pressing it again while it is still speaking (US2)', () => {
     it('says the word once however many times it is pressed (FR-007, SC-003)', async () => {
       const user = renderRun(FIRST_RUN);

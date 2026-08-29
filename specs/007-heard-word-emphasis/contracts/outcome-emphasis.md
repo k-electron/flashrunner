@@ -99,6 +99,12 @@ only block where the speaker button exists:
 2. The press marks nothing: the same card is still showing and both outcomes are still pressable
    (FR-003).
 3. Pressing the speaker twice leaves the pair as it was after the first press (FR-006).
+3a. A press that starts no sound still swaps the pair (FR-002). Reached by failing the last card of
+   a cycle as its only failure: the engine re-presents that same card at once, the word has not
+   changed so the speech was never cancelled, and the press lands on the already-speaking guard.
+   This is the only assertion that fails if the press is reported below that guard rather than
+   above it — added during implementation, when a review found the FR-006 assertion above could not
+   detect that move.
 4. Marking after a press presents the next card with the pair back to `default` / `secondary`
    (FR-007).
 5. "Start over" after a press presents its card with the pair back to `default` / `secondary`

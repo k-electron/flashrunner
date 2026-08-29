@@ -40,7 +40,7 @@ Targeted run while working:
 npx vitest run src/routes/Run.test.tsx
 ```
 
-The five new assertions live in the `describe` block that stubs `window.speechSynthesis` — the only
+The six new assertions live in the `describe` block that stubs `window.speechSynthesis` — the only
 block where the speaker button exists, since jsdom has no Web Speech API. They are listed in
 [contracts/outcome-emphasis.md § The assertions that hold this contract](./contracts/outcome-emphasis.md#the-assertions-that-hold-this-contract).
 
@@ -61,45 +61,63 @@ npm run dev
 
 Open a run: home → a deck → a rung → the run screen.
 
-**Step 1 — the default presentation.** Before touching anything: "Got it" is green, "Not yet" is
-light grey. Unchanged from today.
+**Recorded 2026-08-29** against `npm run dev` (Vite 8.2.2) at 420×900, driven with Playwright
+1.62.1 headless Chromium. Every reading below is a settled `getComputedStyle` value — the base
+`Button` carries `transition-all`, so a colour sampled immediately after a click comes back as an
+interpolated `oklab(…)` and means nothing. The pointer was parked away from all controls before
+reading, so nothing is a hover state.
 
-**Step 2 — the swap, and whether it reads.** Press the speaker button. "Not yet" should turn
-near-black — the same fill as "Resume" on the deck ladder and "Next run" on the run-complete screen
-— and "Got it" should turn the light grey "Not yet" just gave up. The thing to judge, and the one
-claim the plan does **not** assert anywhere: does the screen now read as recommending "Not yet"?
-If both buttons read as equally weighted, or the grey "Got it" reads as disabled rather than plain,
-the feature has not landed even with every test green.
+**Step 1 — the default presentation.** ✅ As before. "Got it" `oklch(0.448 0.119 151.328)`
+(`bg-green-800`) with white text; "Not yet" `oklch(0.97 0 0)` (`--secondary`) with
+`oklch(0.205 0 0)` text.
 
-Compare against the ladder in a second tab if the black needs confirming; it is `bg-primary` in both
-places, so they must match exactly.
+**Step 2 — the swap, and whether it reads.** ✅ After one press: "Not yet" becomes
+`oklch(0.205 0 0)`, "Got it" becomes `oklch(0.97 0 0)` — exactly the fill "Not yet" gave up.
 
-**Step 3 — nothing was pressed.** After step 2, the same word is still on the card, no card has
-advanced, and both buttons still respond to a press. Hover each one: the green's hover is gone with
-the green, and each button hovers as whatever it now is.
+The two judgements the tests cannot make:
 
-**Step 4 — the reset, all four ways.** This is FR-007, and it is the part worth doing by hand even
-though tests cover it:
+- **Does the black match `bg-primary` elsewhere?** ✅ Yes, exactly. All of these read
+  `oklch(0.205 0 0)`: the heard "Not yet", "Resume" and the rung buttons on the deck ladder, and
+  "Next run" on the run-complete screen. One value, no near-miss.
+- **Does the grey "Got it" read as plain, or as disabled?** ✅ **Plain.** Its text and icon stay
+  at full contrast (`oklch(0.205 0 0)` on `oklch(0.97 0 0)`) and `opacity` is `1` — nothing is
+  dimmed. It is the identical treatment "Not yet" wears in step 1, where no one has read it as
+  disabled. No darker grey is needed and none was substituted.
 
-1. Press the speaker, then mark "Got it". The next card shows green / grey again.
-2. Press the speaker, then mark "Not yet", and keep going until that card comes back around in the
-   next cycle. It shows green / grey again.
-3. Press the speaker, then press "Start over". The card that comes up shows green / grey again.
-4. Press the speaker, then "Leave this run", then "Resume" from the ladder. The resumed card shows
-   green / grey again — and nothing in `localStorage` mentions it. Check in DevTools → Application →
-   Local Storage: the `flashrunner:` record must be byte-identical to what it was before the press.
+**Step 3 — nothing was pressed.** ✅ Same word on the card, both buttons `178x96` at the same x
+before and after, same accessible names, `disabled` false on both, and no `aria-disabled` or
+`aria-pressed` on either. Focus stays on the speaker button.
 
-**Step 5 — repeat presses.** Press the speaker three times in a row while the word is speaking. The
-buttons stay swapped and do not flicker back.
+**Step 4 — the reset, all four ways.** ✅ All four, plus the whole of the following cycle:
 
-**Step 6 — no speech available.** In DevTools, before loading the run screen:
+1. Hear, then "Got it" → the next card is `default` / `secondary`.
+2. Hear, then "Not yet", then walked every remaining card of the cycle → `default` / `secondary`
+   at each one, including the re-queued card.
+3. Hear, then "Start over" → `default` / `secondary`.
+4. Hear, then "Leave this run", then "Resume" → `default` / `secondary`, and `localStorage` is
+   byte-identical across press → leave → resume. The stored record is
+   `{"schemaVersion":1,"completedRungIds":[],"run":{…}}` with no mention of the flag (FR-008).
+
+**Step 5 — repeat presses.** ✅ Three presses in a row while the word is speaking leave
+`{ Got it: secondary, Not yet: default }` — no flicker back.
+
+**Step 6 — no speech available.** ✅ Speaker gone, outcomes green / grey for the whole run.
+
+Note the recipe in an earlier draft of this file was wrong and should not be reused:
 
 ```js
+// WRONG — leaves the key present, so `'speechSynthesis' in window` stays true
+// and the button is still rendered.
 Object.defineProperty(window, 'speechSynthesis', { value: undefined, configurable: true });
 ```
 
-Reload the run. The speaker button is gone and the outcomes stay green / grey for the whole run —
-there is nothing to press, so there is nothing to swap.
+`PronounceButton` guards on `'speechSynthesis' in window`, so the API has to be *absent*, not
+undefined. Use a pre-navigation script:
+
+```js
+delete window.speechSynthesis;
+delete window.SpeechSynthesisUtterance;
+```
 
 ## What is deliberately not checked
 

@@ -10,7 +10,7 @@ description: "Task list for 007-heard-word-emphasis"
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md),
 [contracts/outcome-emphasis.md](./contracts/outcome-emphasis.md), [quickstart.md](./quickstart.md)
 
-**Tests**: Included — five new assertions, all inside the existing `window.speechSynthesis`-stubbing
+**Tests**: Included — six new assertions (five planned, plus one added in Phase 3 after review), all inside the existing `window.speechSynthesis`-stubbing
 `describe` block in `src/routes/Run.test.tsx`. Two of them are written *before* the line they guard,
 deliberately (see [Why this order](#why-this-order)). No test file is created.
 
@@ -189,7 +189,7 @@ pair. Then press the speaker and press "Start over", and confirm the same.
 
   Re-run T005's two tests and confirm they now pass.
 
-**Checkpoint**: the full gate is green, all five new assertions pass, and every pre-existing
+**Checkpoint**: the full gate is green, all the new assertions pass, and every pre-existing
 `getByRole('button', { name: 'Got it' | 'Not yet' })` query in the file still passes untouched — that
 is the standing guard that no accessible name changed (FR-003).
 
@@ -197,7 +197,7 @@ is the standing guard that no accessible name changed (FR-003).
 
 ## Phase 3: Polish & Verification
 
-- [ ] T007 [P] Confirm the untouched-file guarantees the plan claims. All four must print nothing:
+- [X] T007 [P] Confirm the untouched-file guarantees the plan claims. All four must print nothing:
 
   ```bash
   git diff --stat package.json package-lock.json
@@ -208,14 +208,14 @@ is the standing guard that no accessible name changed (FR-003).
 
   A diff in any of them means the design was departed from — no dependency is added, no button variant or token is added, and nothing persisted changes (plan.md Constitution Check, Principles II, V, VIII).
 
-- [ ] T008 Run the browser checks in [quickstart.md](./quickstart.md) steps 1–6 against `npm run dev`, driving the page with Playwright from the scratchpad rather than handing the geometry back to the maintainer. Capture the run screen before and after the press. Two judgements that no test makes, and that are the actual deliverable:
+- [X] T008 Run the browser checks in [quickstart.md](./quickstart.md) steps 1–6 against `npm run dev`, driving the page with Playwright from the scratchpad rather than handing the geometry back to the maintainer. Capture the run screen before and after the press. Two judgements that no test makes, and that are the actual deliverable:
 
   - Does the black "Not yet" match `bg-primary` as rendered on "Resume" (deck ladder) and "Next run" (run-complete)? They must be the same fill.
   - Does the grey "Got it" read as *plain*, or as *disabled*? `--secondary` is `oklch(0.97 0 0)`, nearly white, so this is the one visual risk in the feature. If it reads as disabled, stop and report it — the fix is a darker grey and that is the maintainer's call, not a silent substitution.
 
   Also confirm step 4's four reset paths by hand (including leave-and-resume, which no test covers) and step 6 (no `speechSynthesis` → no speaker → no swap for the whole run).
 
-- [ ] T009 Record the outcome of T008 in [quickstart.md](./quickstart.md) — replace the browser-check steps' expectations with what was actually observed, the way 006 recorded its preview-deploy checks. Note the screen-reader pass as **not run** (waived), rather than leaving it ambiguous.
+- [X] T009 Record the outcome of T008 in [quickstart.md](./quickstart.md) — replace the browser-check steps' expectations with what was actually observed, the way 006 recorded its preview-deploy checks. Note the screen-reader pass as **not run** (waived), rather than leaving it ambiguous.
 
 ---
 
