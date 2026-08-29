@@ -162,14 +162,14 @@ works and the emphasis leaks to the next card. That is expected here and is Phas
 **Independent Test**: Press the speaker, mark the card, and confirm the next card shows the default
 pair. Then press the speaker and press "Start over", and confirm the same.
 
-- [ ] T005 [US2] Add the two reset assertions to `src/routes/Run.test.tsx`, in the same `describe` and using the same `emphasis()` reader from T004. **Run them before writing T006 and confirm both FAIL** (`npx vitest run src/routes/Run.test.tsx`). A pass here means the assertion is not testing what it claims and must be fixed before continuing.
+- [X] T005 [US2] Add the two reset assertions to `src/routes/Run.test.tsx`, in the same `describe` and using the same `emphasis()` reader from T004. **Run them before writing T006 and confirm both FAIL** (`npx vitest run src/routes/Run.test.tsx`). A pass here means the assertion is not testing what it claims and must be fixed before continuing.
 
   1. **Marking presents the next card fresh (FR-007)** — press the speaker, click "Not yet", then expect `{ gotIt: 'default', notYet: 'secondary' }`.
   2. **"Start over" presents its card fresh (FR-007)** — press the speaker, click "Start over", then expect the same pair.
 
   Use "Not yet" rather than "Got it" for the first one: the rung has five cards, so one mark cannot complete the run and unmount the outcomes either way, but marking "Not yet" also proves the reset does not depend on the outcome chosen.
 
-- [ ] T006 [US2] Add the reset to `apply` in `src/routes/Run.tsx` — one line, and the comment matters more than the line.
+- [X] T006 [US2] Add the reset to `apply` in `src/routes/Run.tsx` — one line, and the comment matters more than the line.
 
   ```tsx
     function apply(action: RunAction): void {

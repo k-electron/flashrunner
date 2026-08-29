@@ -1153,6 +1153,27 @@ describe('Run — hearing the word (US1)', () => {
       expect(screen.getByRole('button', { name: 'Not yet' })).toBeEnabled();
     });
 
+    // Every presentation of a card starts from the default pair (007 FR-007).
+    // "Not yet" rather than "Got it" for the marking case: the rung has five
+    // cards so neither mark can complete the run and unmount the outcomes, and
+    // marking "Not yet" also shows the reset does not depend on which outcome
+    // was chosen.
+    it('presents the next card with the default emphasis (007 FR-007)', async () => {
+      const user = renderRun(FIRST_RUN);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      await user.click(screen.getByRole('button', { name: 'Not yet' }));
+
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+    });
+
+    it('presents a started-over run with the default emphasis (007 FR-007)', async () => {
+      const user = renderRun(FIRST_RUN);
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+      await user.click(screen.getByRole('button', { name: 'Start over' }));
+
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+    });
+
     it('leaves the emphasis alone when pressed again mid-word (007 FR-006)', async () => {
       const user = renderRun(FIRST_RUN);
       const hear = screen.getByRole('button', { name: 'Hear the word' });

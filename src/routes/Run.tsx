@@ -185,6 +185,13 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
     const nextState = transition(state, action);
     setState(nextState);
     setStorageFull(persist(deck, nextState));
+    // Every presentation of a card begins either here or at this component's
+    // mount, so clearing it here is the whole of FR-007 of 007 — marking, "Start
+    // over", a resumed run, and a move to another rung, since `RunLoop` is keyed
+    // by rung. Deliberately not keyed on the word: a failed last card is
+    // re-queued and a "Start over" can reshuffle onto the card already showing,
+    // so the same word can be a genuinely new presentation.
+    setHeard(false);
   }
 
   return (
