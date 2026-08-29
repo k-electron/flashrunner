@@ -156,6 +156,10 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
   // Recording the entered run twice records the same state under the same key,
   // which is what makes doing it here rather than in an effect harmless.
   const [storageFull, setStorageFull] = useState(() => persist(deck, state));
+  // Whether the learner asked to hear the word on the card in front of them.
+  // Purely visual guidance, never persisted (FR-008 of 007), so it is component
+  // state rather than a field on the run.
+  const [heard, setHeard] = useState(false);
   const card = deck.cards.find((entry) => entry.id === currentCard(state));
   const complete = isComplete(state);
   // Undefined only at the top of the ladder — the whole deck (FR-014).
@@ -250,9 +254,14 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
                 only here, so the run-complete screen — which has no word — never
                 has one (FR-010). */}
             <div className="grid w-full max-w-md grid-cols-2 gap-x-4 gap-y-2">
-              {card !== undefined && <PronounceButton word={card.front} />}
+              {card !== undefined && (
+                <PronounceButton word={card.front} onHeard={() => setHeard(true)} />
+              )}
               <div className="col-span-2">
-                <OutcomeButtons onMark={(outcome) => apply({ type: 'mark', outcome })} />
+                <OutcomeButtons
+                  heard={heard}
+                  onMark={(outcome) => apply({ type: 'mark', outcome })}
+                />
               </div>
             </div>
           </>

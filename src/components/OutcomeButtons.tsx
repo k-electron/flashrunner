@@ -5,16 +5,34 @@
 // yet read the words can still tell them apart (FR-001, FR-002, FR-004).
 import { CircleCheck, CircleQuestionMark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import type { Outcome } from '@/run/types';
 
-export function OutcomeButtons({ onMark }: { onMark: (outcome: Outcome) => void }) {
+export function OutcomeButtons({
+  onMark,
+  heard,
+}: {
+  onMark: (outcome: Outcome) => void;
+  heard: boolean;
+}) {
   return (
     <div className="flex w-full max-w-md gap-4">
       {/* Plain text children, so each accessible name is exactly its visible text.
           Each icon carries its own size-* because the base Button class forces an
           unsized descendant svg to size-4. */}
+      {/* Having heard the word, the learner is being pointed at "Not yet" — so the
+          green is *removed* rather than overridden. `Button` composes
+          `cn(buttonVariants({ variant, size, className }))`, so a className wins
+          over its variant; leaving the green on and changing only the variant
+          would emphasise nothing. Both accessible names, both icons and both
+          sizes are untouched, and nothing here is disabled: this is a hint to the
+          eye, not a restriction (FR-003, FR-005). */}
       <Button
-        className="h-24 flex-1 flex-col gap-1 bg-green-800 text-xl text-white hover:bg-green-900"
+        className={cn(
+          'h-24 flex-1 flex-col gap-1 text-xl',
+          !heard && 'bg-green-800 text-white hover:bg-green-900',
+        )}
+        variant={heard ? 'secondary' : 'default'}
         onClick={() => onMark('got-it')}
       >
         <CircleCheck className="size-12" aria-hidden="true" />
@@ -22,7 +40,7 @@ export function OutcomeButtons({ onMark }: { onMark: (outcome: Outcome) => void 
       </Button>
       <Button
         className="h-24 flex-1 flex-col gap-1 text-xl"
-        variant="secondary"
+        variant={heard ? 'default' : 'secondary'}
         onClick={() => onMark('not-yet')}
       >
         <CircleQuestionMark className="size-12" aria-hidden="true" />

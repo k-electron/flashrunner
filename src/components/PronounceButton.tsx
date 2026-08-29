@@ -12,7 +12,7 @@ import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { pickVoice } from '@/speech/voice';
 
-export function PronounceButton({ word }: { word: string }) {
+export function PronounceButton({ word, onHeard }: { word: string; onHeard: () => void }) {
   // The whole of the state machine (contract § 4): idle or speaking, and no
   // queue, because nothing is ever enqueued. What is stored is the word being
   // said rather than a bare flag, so that "is it speaking?" is derived at render
@@ -61,6 +61,10 @@ export function PronounceButton({ word }: { word: string }) {
   }
 
   function speak(): void {
+    // The press is the signal, not the word finishing (FR-002 of 007). Above the
+    // guard below, so a press during speech — which starts nothing — still
+    // reports. The receiver sets an already-set flag, so repeating is free.
+    onHeard();
     // A press while the word is still being said does nothing at all: no second
     // utterance, and nothing held back to play afterwards (FR-007).
     if (speaking) {

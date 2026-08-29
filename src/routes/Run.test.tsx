@@ -1115,6 +1115,60 @@ describe('Run — hearing the word (US1)', () => {
   // once" is a number, not a state, and it is the only form of the rule a test
   // can hold. The animation is not asserted — it is a class name (Principle IV)
   // and whether it is subtle enough is a judgement a person makes, not a test.
+  // Hearing the word points the learner at "Not yet" (007). The observable is
+  // `data-variant`, set by src/components/ui/button.tsx — read as a pair it is
+  // unambiguous, because green never accompanies `secondary`. Deliberately not a
+  // class name and not a colour: jsdom does not resolve Tailwind utilities, so a
+  // computed-style check here would pass while checking nothing (007 research
+  // § Decision 3). Whether the two fills are far enough apart to read as
+  // emphasis is a judgement a person makes at the screen, not a test.
+  describe('what the screen recommends after hearing it (007 US1)', () => {
+    function emphasis(): { gotIt: string | null; notYet: string | null } {
+      return {
+        gotIt: screen.getByRole('button', { name: 'Got it' }).getAttribute('data-variant'),
+        notYet: screen.getByRole('button', { name: 'Not yet' }).getAttribute('data-variant'),
+      };
+    }
+
+    it('swaps which outcome is emphasised (007 FR-001)', async () => {
+      const user = renderRun(FIRST_RUN);
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      expect(emphasis()).toEqual({ gotIt: 'secondary', notYet: 'default' });
+    });
+
+    it('presses nothing and marks nothing (007 FR-003)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const card = shownCard(FIRST_RUNG_CARDS);
+
+      await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+      // The same word is still being asked for, and both ways of answering are
+      // still open — the emphasis is a suggestion, not a decision taken for the
+      // learner.
+      expect(shownCard(FIRST_RUNG_CARDS)).toBe(card);
+      expect(screen.getByRole('button', { name: 'Got it' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Not yet' })).toBeEnabled();
+    });
+
+    it('leaves the emphasis alone when pressed again mid-word (007 FR-006)', async () => {
+      const user = renderRun(FIRST_RUN);
+      const hear = screen.getByRole('button', { name: 'Hear the word' });
+
+      await user.click(hear);
+      const afterFirst = emphasis();
+      // No `speech.end()` between them, so the second press reaches a control
+      // that is already speaking and starts nothing. It must still leave the
+      // screen recommending the same thing rather than toggling back.
+      await user.click(hear);
+
+      expect(emphasis()).toEqual(afterFirst);
+      expect(emphasis()).toEqual({ gotIt: 'secondary', notYet: 'default' });
+    });
+  });
+
   describe('pressing it again while it is still speaking (US2)', () => {
     it('says the word once however many times it is pressed (FR-007, SC-003)', async () => {
       const user = renderRun(FIRST_RUN);

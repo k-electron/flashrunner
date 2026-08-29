@@ -51,7 +51,7 @@ end state.
 plain grey, the same word is still on the card, and both buttons still work. Do not mark anything —
 the reset does not exist yet and marking will show the bug Phase 2 fixes.
 
-- [ ] T001 [P] [US1] Add the press signal to `src/components/PronounceButton.tsx`. One new required prop and one call, placed as the **first statement of `speak`, above the `if (speaking)` guard** — that placement is what makes FR-002 (a press that never makes a sound still counts) and FR-006 (a repeat press during speech is harmless) both fall out for free.
+- [X] T001 [P] [US1] Add the press signal to `src/components/PronounceButton.tsx`. One new required prop and one call, placed as the **first statement of `speak`, above the `if (speaking)` guard** — that placement is what makes FR-002 (a press that never makes a sound still counts) and FR-006 (a repeat press during speech is harmless) both fall out for free.
 
   ```tsx
   export function PronounceButton({ word, onHeard }: { word: string; onHeard: () => void }) {
@@ -72,7 +72,7 @@ the reset does not exist yet and marking will show the bug Phase 2 fixes.
 
   Nothing else in this file changes: the `aria-label`, the `h-12` / `variant="outline"` / `col-start-2` treatment, the cancel-on-word-change effect, the availability guard and the pulse all stay exactly as they are.
 
-- [ ] T002 [P] [US1] Make the fills conditional in `src/components/OutcomeButtons.tsx`. Add the required `heard` prop, swap both `variant`s on it, and make the green classes conditional with `cn` (new import from `@/lib/utils`). The green must be **removed** in the heard state rather than overridden — `Button` composes `cn(buttonVariants({ variant, size, className }))`, so `className` wins over the variant, which is exactly why today's green works.
+- [X] T002 [P] [US1] Make the fills conditional in `src/components/OutcomeButtons.tsx`. Add the required `heard` prop, swap both `variant`s on it, and make the green classes conditional with `cn` (new import from `@/lib/utils`). The green must be **removed** in the heard state rather than overridden — `Button` composes `cn(buttonVariants({ variant, size, className }))`, so `className` wins over the variant, which is exactly why today's green works.
 
   ```tsx
   import { cn } from '@/lib/utils';
@@ -109,7 +109,7 @@ the reset does not exist yet and marking will show the bug Phase 2 fixes.
 
   Both icons, both labels, `h-24 flex-1`, the order and the accessible names are untouched (FR-003, FR-005). Add **no** `aria-pressed`, no live region, no `disabled` — the emphasis is offered to the eye only, and the file's existing comment about accessible names still has to hold.
 
-- [ ] T003 [US1] Wire the two in `src/routes/Run.tsx`, inside `RunLoop`. One `useState`, two props. **Do not add the reset yet** — that is T005/T006, and Phase 2 needs this state to be wrong first.
+- [X] T003 [US1] Wire the two in `src/routes/Run.tsx`, inside `RunLoop`. One `useState`, two props. **Do not add the reset yet** — that is T005/T006, and Phase 2 needs this state to be wrong first.
 
   ```tsx
     // Whether the learner asked to hear the word on the card in front of them.
@@ -132,7 +132,7 @@ the reset does not exist yet and marking will show the bug Phase 2 fixes.
 
   Nothing goes near `toPersistedRun`, `persist`, `resume`, or anything under `src/run/` or `src/storage/`.
 
-- [ ] T004 [US1] Add the first three assertions to `src/routes/Run.test.tsx`, inside the existing `describe` that defines `window.speechSynthesis` — outside it `PronounceButton` renders `null` and there is nothing to press. Reuse the file's existing `renderRun`, `shownCard` and `FIRST_RUN` / `FIRST_RUNG_CARDS` helpers; do not add new ones beyond a local reader for the attribute.
+- [X] T004 [US1] Add the first three assertions to `src/routes/Run.test.tsx`, inside the existing `describe` that defines `window.speechSynthesis` — outside it `PronounceButton` renders `null` and there is nothing to press. Reuse the file's existing `renderRun`, `shownCard` and `FIRST_RUN` / `FIRST_RUNG_CARDS` helpers; do not add new ones beyond a local reader for the attribute.
 
   The observable is `data-variant`, set by `src/components/ui/button.tsx:59`. Read as a pair it is unambiguous: green never accompanies `secondary`. Assert **no** class name and **no** colour — jsdom does not resolve Tailwind utilities, so a `toHaveStyle` check there would pass while checking nothing ([research.md § Decision 3](./research.md#decision-3-what-the-tests-can-honestly-assert)).
 
