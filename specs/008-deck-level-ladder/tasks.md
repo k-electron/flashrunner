@@ -417,7 +417,9 @@ whatever the code does.
 
 - [ ] T018 [US5] **Add the deck-screen case (red) and the URL-entry guard (green)**, in
   `src/routes/DeckLadder.test.tsx` and `src/routes/Run.test.tsx` (FR-006, FR-007, FR-008).
-  **Depends on T006.**
+  **Depends on T006 and T014** — T006 for the level names this queries by, and T014 for the
+  completion mark, which the `Level 5` assertion below reads. T014 is in Phase 4, so running the
+  phases in order satisfies both.
 
   **In `DeckLadder.test.tsx`** — seed Pre-K with `['r5']` and nothing else, then assert:
 
@@ -535,10 +537,9 @@ Phase 6  Polish                  T021/T022 → T023 → T024 → T025 → T026
   writes those assertions twice.
 - **US2 before US3 before US4.** All three edit the same JSX in `DeckLadder.tsx`. This is a
   file-level dependency, not a logical one — but it is absolute.
-- **US5 last, and it could equally be first.** `isStartable` is a different file and depends on
-  nothing here. It is last only because its screen-level assertion (T018) queries level names, so it
-  wants US1 done. If you needed to parallelise, T017 and T019 could be lifted out to their own
-  branch.
+- **US5 last, and it is only half-liftable.** `isStartable` is a different file and depends on
+  nothing here, so T017 and T019 could be lifted out to their own branch. T018 cannot: it queries
+  level names (US1) and reads the completion mark (US4), so it needs Phases 1 and 4 behind it.
 - **Phase 3 has no green gate in its middle.** T011 removes what T012's predecessors assert. Do not
   "fix" the red by reordering — commit them together.
 
