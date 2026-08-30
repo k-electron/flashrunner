@@ -58,6 +58,7 @@ cards, then navigate back to the deck screen.
 | 1b | Open `/deck/dolch-k-5` | **Ten** levels: `Full deck`, `Level 9` … `Level 1`. There is no `Level 10`. | FR-020 |
 | 2 | Same screen | Only `Level 1` is tappable. Everything above is greyed. | FR-006 |
 | 3 | Open `/` | Each deck's line reads `Not started · Next run: Level 1` | FR-003 |
+| 3b | Open any level and look at the run header | It reads `<deck title> · Level 1` — the level named the same way the ladder names it. This is the third of the three screens FR-003 covers, and the only one with no automated assertion behind it. | FR-003, US1 sc.3 |
 | 4 | Play `Level 1` through to the end, return to the deck screen | `Level 1` carries a check; `Level 2` is now tappable; `Level 3` is not | FR-006, FR-015 |
 | 5 | Start `Level 2`, answer one card, go back | `Level 2` is **one row**: `Start over` on the left, a wider `Level 2` on the right. No other text in the row. | FR-009, FR-010, FR-011 |
 | 6 | Tap the `Level 2` button | The run resumes on the card you stopped on — not the first card | FR-012 |

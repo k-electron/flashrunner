@@ -129,7 +129,7 @@ still start at Level 1 and stop at the first unfinished one.
 **Acceptance Scenarios**:
 
 1. **Given** no completed levels, **When** the learner navigates directly to Level 5's run URL, **Then** the run screen plays Level 5 normally.
-2. **Given** Level 5 completed but Levels 1–4 not, **When** the learner opens the deck screen, **Then** Levels 1 and 2 are startable and Levels 3 upward — including the completed Level 5 — are not.
+2. **Given** Level 5 completed but Levels 1–4 not, **When** the learner opens the deck screen, **Then** Level 1 is startable and every level above it — including the completed Level 5, and including Level 6, which the learner has just "earned" — is not.
 3. **Given** that same state, **When** the learner looks at Level 5's button, **Then** it carries the circle-check and is not startable.
 4. **Given** a learner who completes levels in order, **When** they open the deck screen, **Then** the unlocked levels are exactly the completed ones plus the next one — the behaviour they see today.
 

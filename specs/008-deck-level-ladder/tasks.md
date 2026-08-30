@@ -13,7 +13,7 @@ description: "Task list for 008-deck-level-ladder"
 
 **Tests**: Included, and mostly *edits* to existing assertions rather than new ones — this feature
 deliberately changes strings that five existing tests pin. Three assertions are written **before**
-the code they guard and must be seen to fail (T012, T017, T018). No test file is created.
+the code they guard and must be seen to fail (T008, T017, T018). No test file is created.
 
 **Organization**: Grouped by user story, in the priority order from [spec.md](./spec.md). The order
 is also a dependency order — see [Why this order](#why-this-order).
@@ -39,7 +39,7 @@ that every other story's tests query by. Do US2–US5 first and their assertions
 first and you number eleven levels, then delete one and renumber ten. The collapse changes what the
 numbers *are*, so it goes first.
 
-**Three assertions are written red on purpose** — T012 (order), T017 (unlock, unit) and T018
+**Three assertions are written red on purpose** — T008 (order), T017 (unlock, unit) and T018
 (unlock, screen). Both are cases where a test written after the code can pass while checking
 nothing: an ordering assertion transcribed from the rendered output is tautological, and the unlock
 rule's new behaviour is invisible unless someone deliberately constructs out-of-order progress. Seen
@@ -119,14 +119,30 @@ Kindergarten has ten levels, not eleven.
 
   This file needs no other change: `DeckList.tsx` reads `rung.label` and renames for free.
 
-- [ ] T006 [P] [US1] **Fix the label strings in `src/routes/DeckLadder.test.tsx`** (FR-003).
-  **Depends on T002.** Mechanical: every `'5 words'`, `'10 words'`, `'15 words'`, `'20 words'` and
+- [ ] T006 [P] [US1] **Fix the label strings in `src/routes/DeckLadder.test.tsx`, and guard the
+  collapse** (FR-003, FR-021). **Depends on T002 and T003.**
+
+  First the mechanical part: every `'5 words'`, `'10 words'`, `'15 words'`, `'20 words'` and
   `'40 words'` becomes its `Level N` / `Full deck` equivalent. `'40 words'` is Pre-K's top rung, so
   it becomes `'Full deck'`. Also `:18`'s comment and the `queryByRole('button', { name: /words/ })`
   regex at the mastery test — that regex must become `/Level|Full deck/` or it silently matches
   nothing and asserts nothing forever after.
 
-  Change strings only in this task. The structural rewrites belong to T015, T016 and T018.
+  Then add **two assertions that pin FR-021** — the only automated proof that the T001 collapse
+  costs a learner nothing. Both are green from here on and must stay green through every later
+  phase, which is exactly what makes them useful:
+
+  - Seed `dolch-k-5` with `completedRungIds: ['r1' … 'r10']` — the top of the ladder as it was
+    *before* the collapse, including the deleted `r10`. Assert `Full deck` is startable. A learner
+    who was one level from the top is still one level from the top; the orphaned `r10` costs nothing.
+  - Seed `dolch-k-5` with `completedRungIds: ['r11']`. Assert `Deck mastered` still shows. This is
+    the assertion that would have caught keeping `r10` instead of `r11` in T001 — the mistake that
+    would silently un-master everyone who had finished the deck.
+
+  Both hold under the old unlock rule and the new one, so they do not move when Phase 5 lands.
+
+  Apart from those two, change strings only in this task. The structural rewrites belong to T012,
+  T015 and T018.
 
 - [ ] T007 [US1] **Gate**: `npm run lint && npm run typecheck && npm test`. **Depends on
   T001–T006.** Green here means the rename and the collapse are complete and nothing else moved.
@@ -221,6 +237,11 @@ existing assertions query. The tree is **red between T011 and T012, expected**. 
               {rung.label}
             </Button>
           )}
+          {/* Still here, unchanged — T014 deletes it. Keeping it means this task
+              breaks only the assertions T012 repairs. */}
+          {completedRungIds.includes(rung.id) && (
+            <span className="text-muted-foreground text-sm">Completed</span>
+          )}
         </li>
       );
     })
@@ -252,6 +273,11 @@ existing assertions query. The tree is **red between T011 and T012, expected**. 
   **Delete**: the `Resume` `<Link>`, the `Unfinished run` `<span>` (FR-011), and the wrapper `<div>`
   the two lived in. Nothing replaces the caption.
 
+  **Do not delete the `Completed` span here**, tempting as it is while this file is open. It belongs
+  to T014, and carrying it through this phase is what keeps the red gate between T011 and T012
+  explainable: exactly the `Resume` and `Unfinished run` assertions break, and T012 repairs exactly
+  those. Delete it now and two further assertions fail for a reason no task in this phase mentions.
+
   No new code is needed for FR-012. The level control already points at the same URL the `Resume`
   link did, and `resume()` in `src/routes/Run.tsx:41` reads the stored run on entry. Resuming has
   always been what that button does; the second row was duplication.
@@ -264,8 +290,10 @@ existing assertions query. The tree is **red between T011 and T012, expected**. 
   - The "puts Resume and Start over on the rung the run belongs to" test keeps its shape and its
     point: find the `<li>` by the level a learner reads, and assert `Start over` is inside *that*
     item. That is still the only assertion that pins *where* the control sits.
-  - Add: **the row holds exactly two controls and no other text** (FR-010, FR-011). Within that
-    `<li>`, `getAllByRole` across `link` and `button` returns two.
+  - Add: **the row holds exactly two controls** (FR-010). Within that `<li>`, `getAllByRole` across
+    `link` and `button` returns two. Assert the count of *controls*, not of every node — the
+    `Completed` span is still in the row until T014, and FR-011 is about a caption beside the
+    controls, not about the completion status. T015 is where "no other text" becomes assertable.
   - Add: **a locked level with a run offers no `Start over`** (FR-019). Seed a run on `r5` with no
     completed levels; `r5` is locked, so its item has one control and no `Start over`.
   - Keep the two `Start over` behaviour tests (fresh run, and progress untouched) as they are apart
@@ -360,20 +388,51 @@ whatever the code does.
 
 - [ ] T017 [US5] **Add the unit cases and confirm they FAIL**, in `src/decks/ladder.test.ts`
   (FR-006, FR-007). The existing four-rung fixture is already the right shape.
-  - New: with `['r3']` completed and nothing else, `isStartable(deck, ['r3'], 1)` is `true` (r2 is
-    next) and `isStartable(deck, ['r3'], 3)` is **`false`** — r4 must not open just because r3 is
-    done. Under the current rule that second one returns `true`. **Run it and see it fail.**
-  - New: `isStartable(deck, ['r3'], 2)` is `false` — the completed level itself is not startable when
-    the levels below it are not done (FR-007).
-  - Restate the premise of `'keeps completed rungs startable forever (FR-016)'`. It passes
-    `['r1','r2','r3','r4']`, so it still passes — but it now demonstrates something narrower, and its
-    name and comment claim something the code no longer guarantees. Rename it to say *in order*, and
-    note the supersession.
 
-- [ ] T018 [US5] **Add the deck-screen case and confirm it FAILS**, in
-  `src/routes/DeckLadder.test.tsx` (FR-006, FR-007). **Depends on T006.** Seed `['r5']` and nothing
-  else, then assert: `Level 1` startable, `Level 2` **locked**, `Level 5` locked *and* carrying its
-  mark. Under the current rule `Level 6` is startable and this fails. That is the point.
+  All four new cases use `['r3']` completed and nothing else — r3 finished, r1 and r2 not. Work out
+  what each *should* be from FR-006 ("every level below has been completed") before writing it, not
+  from what the code does:
+
+  - **The red one**: `isStartable(deck, ['r3'], 3)` is **`false`**. r4 must not open just because r3
+    is done — r1 and r2 are unfinished. The current rule looks only at the immediate predecessor,
+    finds r3 completed, and returns `true`. **Run it and see it fail.** This single case is the whole
+    behavioural difference between the two rules; if it does not go red, the fixture or the seed is
+    wrong.
+  - `isStartable(deck, ['r3'], 2)` is `false` — the completed level itself is not startable while r1
+    and r2 are unfinished (FR-007).
+  - `isStartable(deck, ['r3'], 1)` is `false` — r2 does **not** open. r1 is unfinished, and finishing
+    r3 out of order does not change that. It is tempting to write `true` here on the reasoning that
+    "r2 is next"; it is not, and the rule has no such clause.
+  - `isStartable(deck, ['r1', 'r2', 'r3'], 3)` is `true` — with the run below unbroken, the next
+    level still opens. Without this one the suite would pass with an `isStartable` that returns
+    `false` for everything above index 0.
+
+  The last three are green under both rules. They are correctness assertions pinning FR-006 and
+  FR-007, not red-first ones, and only the first is expected to fail now.
+
+  Finally, **restate the premise** of the existing `'keeps completed rungs startable forever
+  (FR-016)'` test. It passes `['r1','r2','r3','r4']`, so it still passes — but it now demonstrates
+  something narrower, and its name and comment claim a guarantee the code no longer makes. Rename it
+  to say *in order*, and note the supersession of `001-deck-runs` FR-016.
+
+- [ ] T018 [US5] **Add the deck-screen case (red) and the URL-entry guard (green)**, in
+  `src/routes/DeckLadder.test.tsx` and `src/routes/Run.test.tsx` (FR-006, FR-007, FR-008).
+  **Depends on T006.**
+
+  **In `DeckLadder.test.tsx`** — seed Pre-K with `['r5']` and nothing else, then assert:
+
+  - **`Level 6` is locked. This is the red one.** Under the current rule r5 is completed, so the
+    level above it opens — the exact gap FR-006 exists to close. Every other assertion below passes
+    under both rules, so **without this one the test is green before the change and proves nothing.**
+  - `Level 1` startable, `Level 2` locked, `Level 5` locked *and* carrying its mark (FR-007).
+
+  **In `Run.test.tsx`** — one assertion that FR-008 still holds: render the run route directly at a
+  rung the deck screen would not offer (Pre-K `r5` with no completed levels) and confirm a card face
+  is on screen. This is green today and must stay green forever; it is the only thing standing
+  between FR-008 and a future "helpful" redirect added by someone who reads FR-006 as a gate.
+
+  It is the one file this feature touches outside the deck screen and the deck data — see
+  [plan.md](./plan.md) § Source Code. Add the assertion; change nothing else in that file.
 
 - [ ] T019 [US5] **Change the rule** in `src/decks/ladder.ts` (FR-006). **Depends on T017 and T018
   being red.** `isStartable`'s body becomes a check that *every* level below `index` is completed.
@@ -421,14 +480,17 @@ whatever the code does.
 - [ ] T023 **Full gate**: `npm run lint && npm run typecheck && npm test && npm run build` — the same
   sequence CI runs. **Depends on T020.**
 
-- [ ] T024 **Browser verification.** `npm run dev`, then walk all fifteen rows of
-  [quickstart.md](./quickstart.md) § What to look for. The five that jsdom cannot judge and that
+- [ ] T024 **Browser verification.** `npm run dev`, then walk all sixteen rows of
+  [quickstart.md](./quickstart.md) § What to look for. The six that jsdom cannot judge and that
   therefore matter most here:
   - **Row 5 / 11** — the two controls stay on one line at ~360px. `flex-1` plus a natural-width
     button should do it; if `Start over` wraps, that is a real failure of FR-009.
   - **Row 9** — the check on a *locked* level. Confirm it reads as "you did this, but not from here"
     rather than as a glitch. This is the state the maintainer chose in clarification, and the only
     one nobody has seen yet.
+  - **Row 3b** — the run header. `Run.tsx` renames for free from `rung.label`, so nothing asserts
+    it; an assertion there would pin a string with no logic behind it. This row is FR-003's only
+    coverage of that screen, so do not skip it.
   - **Row 12** — tab order matches reading order. The check T008 cannot make.
   - **Rows 13/14** — Kindergarten seeded with pre-collapse progress (`r1`…`r10`, and `r11`). Nobody
     loses a level and a mastered deck stays mastered (FR-021).

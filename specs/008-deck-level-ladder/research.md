@@ -212,6 +212,12 @@ sequence asserts what the learner reads, with no class names and no snapshot. Th
 also the assertion that fails if someone later "simplifies" D3 into `flex-col-reverse`,
 which is the outcome D3 exists to prevent.
 
+**One assertion is added rather than updated**: FR-008 ("URL entry keeps working") is a negative
+requirement, and the plausible way it regresses is someone later reading FR-006 as a gate and adding
+a redirect. Nothing in the existing suite would catch that, so `src/routes/Run.test.tsx` gains one
+assertion that a run entered directly at a level the deck screen would not offer still plays. It is
+the only file this feature touches outside the deck screen and the deck data.
+
 **Tests that must be updated, not just re-run** — these assert strings that this
 feature deliberately changes, so they fail loudly rather than silently:
 `DeckLadder.test.tsx` (every `'5 words'`-style label, `'Completed'`, `'Unfinished run'`,

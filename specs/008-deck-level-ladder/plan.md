@@ -59,7 +59,7 @@ levels.
 **Constraints**: The deck screen must stay usable at phone width — the single-row
 requirement (FR-009/FR-010) is what this constraint is about.
 
-**Scale/Scope**: 2 built-in decks, 18 levels after the collapse (was 19), 3 screens, ~9 files touched. Shipping as one PR.
+**Scale/Scope**: 2 built-in decks, 18 levels after the collapse (was 19), 3 screens, 10 files touched. Shipping as one PR.
 
 No NEEDS CLARIFICATION items. Every open reading is settled in the spec's
 Clarifications section (session 2026-08-29), including the remainder collapse added
@@ -130,7 +130,8 @@ src/
 │   ├── DeckLadder.test.tsx # CHANGED — labels, order, row shape, resume, mark
 │   ├── DeckList.tsx        # unchanged — reads label, so it renames for free
 │   ├── DeckList.test.tsx   # CHANGED — three label assertions
-│   └── Run.tsx             # unchanged — prints rung.label; already resumes on entry
+│   ├── Run.tsx             # unchanged — prints rung.label; already resumes on entry
+│   └── Run.test.tsx        # CHANGED — one assertion: FR-008's URL entry still works
 ├── components/
 │   ├── OutcomeButtons.tsx  # unchanged — the CircleCheck precedent
 │   └── ui/button.tsx       # unchanged
@@ -154,7 +155,9 @@ assumed:
   and `startOver()` already have. No `schemaVersion` bump is owed.
 - **Principle IV** — research.md D7 pins the one assertion that could have gone through
   internals: FR-005's ordering is asserted from `getAllByRole('listitem')` in DOM order,
-  by accessible name, with no class names and no snapshot.
+  by accessible name, with no class names and no snapshot. FR-008 also gets a guard, in
+  `src/routes/Run.test.tsx` — it is a negative requirement ("do not add a gate"), and the
+  plausible way it regresses is a future redirect that only a test catches.
 - **Principle V** — confirmed against `src/components/ui/button.tsx`: the check mark is
   an already-installed `lucide-react` icon inside the existing `Button`, with no new
   component and no variant added. Centre-justification needs no code — the base class
