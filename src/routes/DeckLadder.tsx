@@ -42,31 +42,38 @@ export function DeckLadder() {
       </header>
 
       <ul className="flex flex-col gap-3">
-        {deck.rungs.map((rung, index) => (
-          <li key={rung.id} className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              {isStartable(deck, completedRungIds, index) ? (
-                // Completed rungs land here too — they stay startable forever (FR-016).
-                <Button asChild className="h-12 flex-1 text-base" size="lg">
-                  <Link to={`/deck/${deck.id}/rung/${rung.id}`}>{rung.label}</Link>
-                </Button>
-              ) : (
-                // Visible, so the whole ladder is legible from the start, but not
-                // startable until the rung below it has been completed (FR-015).
-                <Button className="h-12 flex-1 text-base" size="lg" variant="secondary" disabled>
-                  {rung.label}
-                </Button>
-              )}
-              {/* Outside the control, so its accessible name stays the rung label. */}
-              {completedRungIds.includes(rung.id) && (
-                <span className="text-muted-foreground text-sm">Completed</span>
-              )}
-            </div>
-            {/* On the rung it belongs to, so resuming is the obvious next tap
+        {/* Highest level first, so the ladder reads as a climb (FR-005). Reversed
+            after the map, never in `deck.rungs`: the config is ordered smallest →
+            largest and read by isStartable, isMastered, nextRung and validation.
+            Reversed in the DOM rather than with flex-col-reverse, so tab order
+            and screen-reader order match what is on screen. */}
+        {deck.rungs
+          .map((rung, index) => (
+            <li key={rung.id} className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                {isStartable(deck, completedRungIds, index) ? (
+                  // Completed rungs land here too — they stay startable forever (FR-016).
+                  <Button asChild className="h-12 flex-1 text-base" size="lg">
+                    <Link to={`/deck/${deck.id}/rung/${rung.id}`}>{rung.label}</Link>
+                  </Button>
+                ) : (
+                  // Visible, so the whole ladder is legible from the start, but not
+                  // startable until the rung below it has been completed (FR-015).
+                  <Button className="h-12 flex-1 text-base" size="lg" variant="secondary" disabled>
+                    {rung.label}
+                  </Button>
+                )}
+                {/* Outside the control, so its accessible name stays the rung label. */}
+                {completedRungIds.includes(rung.id) && (
+                  <span className="text-muted-foreground text-sm">Completed</span>
+                )}
+              </div>
+              {/* On the rung it belongs to, so resuming is the obvious next tap
                 rather than something to hunt for (FR-035). */}
-            {run?.rungId === rung.id && <UnfinishedRun deck={deck} rungId={rung.id} />}
-          </li>
-        ))}
+              {run?.rungId === rung.id && <UnfinishedRun deck={deck} rungId={rung.id} />}
+            </li>
+          ))
+          .reverse()}
       </ul>
 
       {/* Leaving a deck returns to the deck list (FR-034). */}

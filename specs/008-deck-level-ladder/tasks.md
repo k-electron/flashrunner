@@ -164,7 +164,7 @@ those are Phases 2–4.
 **Independent Test**: Open a deck screen and read top to bottom — the numbers descend and `Full deck`
 is first.
 
-- [ ] T008 [US2] **Write the order assertion first, and confirm it FAILS**, in
+- [X] T008 [US2] **Write the order assertion first, and confirm it FAILS**, in
   `src/routes/DeckLadder.test.tsx` (FR-005). **Depends on T006.** Read the accessible names out of
   `screen.getAllByRole('listitem')` — which returns items in DOM order — and compare the whole
   sequence to `['Full deck', 'Level 7', … 'Level 1']`.
@@ -175,7 +175,7 @@ is first.
   Run it. It must fail before T009 exists. An ordering assertion written after the change is
   usually transcribed from the output it is supposed to be judging.
 
-- [ ] T009 [US2] **Invert the render order** in `src/routes/DeckLadder.tsx` (FR-005). **Depends on
+- [X] T009 [US2] **Invert the render order** in `src/routes/DeckLadder.tsx` (FR-005). **Depends on
   T008 being red.** Reverse the *mapped array*, keeping the index that `map` supplies:
 
   ```tsx
@@ -199,7 +199,7 @@ is first.
   unlock rule. If oxlint objects to mutating with `.reverse()`, use `.toReversed()` — the array is
   fresh from `map` either way.
 
-- [ ] T010 [US2] **Gate**: `npm test`. T008 goes green; everything from Phase 1 stays green.
+- [X] T010 [US2] **Gate**: `npm test`. T008 goes green; everything from Phase 1 stays green.
 
 **Checkpoint**: the ladder climbs upward, and tabbing through it moves in the same order you read.
 

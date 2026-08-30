@@ -96,6 +96,24 @@ describe('DeckLadder', () => {
     }
   });
 
+  // The whole sequence, not just the first item: a single-element check passes on
+  // a list that is otherwise still ascending. Literal rather than derived from
+  // deck.rungs — reversing the config here would only restate the render.
+  it('lists the levels highest first, so the ladder climbs upward (FR-005)', () => {
+    renderLadder([]);
+
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Full deck',
+      'Level 7',
+      'Level 6',
+      'Level 5',
+      'Level 4',
+      'Level 3',
+      'Level 2',
+      'Level 1',
+    ]);
+  });
+
   it('offers only the smallest rung when nothing has been completed', () => {
     renderLadder([]);
 
