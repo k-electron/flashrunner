@@ -390,7 +390,7 @@ screen: the startable levels still start at `Level 1` and stop at the first unfi
 progress, which nobody constructs by accident. A test written after the change would be built from
 whatever the code does.
 
-- [ ] T017 [US5] **Add the unit cases and confirm they FAIL**, in `src/decks/ladder.test.ts`
+- [X] T017 [US5] **Add the unit cases and confirm they FAIL**, in `src/decks/ladder.test.ts`
   (FR-006, FR-007). The existing four-rung fixture is already the right shape.
 
   All four new cases use `['r3']` completed and nothing else — r3 finished, r1 and r2 not. Work out
@@ -419,7 +419,7 @@ whatever the code does.
   something narrower, and its name and comment claim a guarantee the code no longer makes. Rename it
   to say *in order*, and note the supersession of `001-deck-runs` FR-016.
 
-- [ ] T018 [US5] **Add the deck-screen case (red) and the URL-entry guard (green)**, in
+- [X] T018 [US5] **Add the deck-screen case (red) and the URL-entry guard (green)**, in
   `src/routes/DeckLadder.test.tsx` and `src/routes/Run.test.tsx` (FR-006, FR-007, FR-008).
   **Depends on T006 and T014** — T006 for the level names this queries by, and T014 for the
   completion mark, which the `Level 5` assertion below reads. T014 is in Phase 4, so running the
@@ -440,7 +440,7 @@ whatever the code does.
   It is the one file this feature touches outside the deck screen and the deck data — see
   [plan.md](./plan.md) § Source Code. Add the assertion; change nothing else in that file.
 
-- [ ] T019 [US5] **Change the rule** in `src/decks/ladder.ts` (FR-006). **Depends on T017 and T018
+- [X] T019 [US5] **Change the rule** in `src/decks/ladder.ts` (FR-006). **Depends on T017 and T018
   being red.** `isStartable`'s body becomes a check that *every* level below `index` is completed.
   Keep the range guard. Do not re-add an `index === 0` special case: `[].every(…)` is `true`, so
   "the smallest level is always startable" falls out of the expression rather than being written
@@ -457,7 +457,7 @@ whatever the code does.
   Nothing else changes. `highestCompletedRung`, `isMastered` and `nextRung` are correct under either
   rule, and `DeckLadder.tsx` derives nothing — it needs no edit for this.
 
-- [ ] T020 [US5] **Confirm nothing else moved.** `npm run lint && npm run typecheck && npm test`.
+- [X] T020 [US5] **Confirm nothing else moved.** `npm run lint && npm run typecheck && npm test`.
   **Depends on T019.** T017 and T018 go green. Every Phase 1–4 test must stay green: they all seed
   progress in order, where the two rules agree exactly. A failure here means a test was seeding
   out-of-order progress without meaning to.

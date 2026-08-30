@@ -222,6 +222,20 @@ describe('DeckLadder', () => {
     expect(screen.getByText('Deck mastered')).toBeInTheDocument();
   });
 
+  // Out-of-order progress is the only shape in which the two unlock rules differ,
+  // and nobody constructs it by accident — a run entered by URL (FR-008) is how it
+  // arises. `Level 6` locked is the assertion that fails under the old rule; every
+  // other line here passes under both.
+  it('never leaves a gap in the startable levels (FR-006, FR-007)', () => {
+    renderLadder(['r5']);
+
+    expectLocked('Level 6');
+    expectStartable('Level 1', 'r1');
+    expectLocked('Level 2');
+    expectLocked('Level 5');
+    expect(markOn('Level 5')).not.toBeNull();
+  });
+
   it('links back to the deck list (FR-034)', () => {
     renderLadder([]);
 

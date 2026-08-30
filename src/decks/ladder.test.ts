@@ -47,7 +47,35 @@ describe('isStartable', () => {
     expect(isStartable(deck, ['r1', 'r2', 'r3'], 3)).toBe(true);
   });
 
-  it('keeps completed rungs startable forever (FR-016)', () => {
+  // All four of these seed r3 alone: finished out of order, with r1 and r2 still
+  // unfinished. That is the only shape in which the two candidate rules disagree.
+  it('opens nothing above a level completed out of order (FR-006)', () => {
+    // Not startable even though its immediate predecessor r3 is done — the run
+    // below it is broken, so the ladder would show a gap.
+    expect(isStartable(deck, ['r3'], 3)).toBe(false);
+  });
+
+  it('shuts a level completed out of order until the run below it is unbroken (FR-007)', () => {
+    expect(isStartable(deck, ['r3'], 2)).toBe(false);
+  });
+
+  it('does not treat out-of-order progress as reaching the level below it', () => {
+    // Tempting to read r2 as "next"; it is not. r1 is unfinished and the rule has
+    // no clause that says otherwise.
+    expect(isStartable(deck, ['r3'], 1)).toBe(false);
+  });
+
+  it('still opens the next level when the run below it is unbroken', () => {
+    // Without this the suite would pass for an isStartable that locks everything
+    // above the smallest level.
+    expect(isStartable(deck, ['r1', 'r2', 'r3'], 3)).toBe(true);
+  });
+
+  // Narrower than it was: 001-deck-runs FR-016 promised a completed rung stayed
+  // startable unconditionally. It stays startable when it was completed *in
+  // order*, which is every rung reachable from the deck screen. 008 FR-007
+  // supersedes the rest.
+  it('keeps rungs completed in order startable forever (001 FR-016, 008 FR-007)', () => {
     const completed = ['r1', 'r2', 'r3', 'r4'];
 
     expect(isStartable(deck, completed, 0)).toBe(true);

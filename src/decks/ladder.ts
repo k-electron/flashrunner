@@ -6,21 +6,29 @@
 import type { DeckConfig, RungConfig, RungId } from '@/decks/types';
 
 /**
- * A rung is startable exactly when its immediate predecessor has been completed.
- * The smallest rung is always startable (FR-015).
+ * A rung is startable exactly when every rung below it has been completed.
  *
- * Deliberately *not* "above the highest completed rung": completing rung 1 makes
- * rung 1 the highest completed one, so that formulation would report rung 2 as
- * locked and leave the deck unfinishable.
+ * The point is an unbroken ladder: an early reader should see the levels they can
+ * start run from the bottom up to the first one they have not finished, with no
+ * gap in the middle to explain (008 FR-006). Progress can be out of order — a run
+ * entered by URL is never gated (008 FR-008) — and the weaker "immediate
+ * predecessor" rule would open a level above a gap while the levels below it
+ * stayed shut.
  *
- * Completed rungs therefore stay startable forever (FR-016) — completing a rung
- * required its predecessor, which is the same condition read back.
+ * No `index === 0` case: `[].every(…)` is true, so the smallest rung falls out of
+ * the expression rather than being written twice.
+ *
+ * This supersedes 001-deck-runs FR-016 for out-of-order progress only. A rung
+ * completed in order — every rung the deck screen can reach — stays startable
+ * forever, because the same condition that let it be started reads back the same.
+ * A rung completed out of order shuts again until the run below it is unbroken
+ * (008 FR-007).
  */
 export function isStartable(deck: DeckConfig, completedRungIds: RungId[], index: number): boolean {
   if (index < 0 || index >= deck.rungs.length) {
     return false;
   }
-  return index === 0 || completedRungIds.includes(deck.rungs[index - 1].id);
+  return deck.rungs.slice(0, index).every((rung) => completedRungIds.includes(rung.id));
 }
 
 /** The top rung is the whole deck, so completing it is mastery (FR-017). */

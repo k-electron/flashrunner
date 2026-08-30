@@ -1,7 +1,7 @@
 // A deck's rung ladder: /deck/:deckId.
 // Progress is read from storage and every judgement about it — what is startable,
 // what is mastered — comes from src/decks/ladder.ts. This file derives nothing
-// itself, which is what keeps the FR-015 unlocking rule in exactly one place.
+// itself, which is what keeps the unlocking rule (008 FR-006) in exactly one place.
 import { CircleCheck } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';

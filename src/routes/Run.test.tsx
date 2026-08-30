@@ -166,6 +166,18 @@ describe('Run', () => {
     expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
   });
 
+  // The one thing standing between FR-008 and a future "helpful" redirect added by
+  // someone who reads the FR-006 unlock rule as a gate. The deck screen would not
+  // offer r5 here; the URL still works.
+  it('runs a level the deck screen would not offer (FR-008)', () => {
+    // beforeEach seeds nothing completed, so r5 is locked on the deck screen.
+    const fifthRungCards = dolchPreK5.rungs[4].cardIds;
+    renderRun('/deck/dolch-prek-5/rung/r5');
+
+    // shownCard throws unless exactly one of them is being presented.
+    expect(fifthRungCards).toContain(shownCard(fifthRungCards));
+  });
+
   it('offers both outcomes by their accessible names', () => {
     renderRun(FIRST_RUN);
     expect(screen.getByRole('button', { name: 'Got it' })).toBeInTheDocument();
