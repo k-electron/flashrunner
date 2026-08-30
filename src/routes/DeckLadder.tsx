@@ -70,7 +70,14 @@ export function DeckLadder() {
               <li key={rung.id} className="flex items-center gap-3">
                 {/* Only on a startable level: a locked one must not offer a way in
                     (FR-019). The level control itself resumes — it points at the
-                    same path the old Resume link did (FR-012). */}
+                    same path the old Resume link did (FR-012).
+
+                    ponytail: nothing on screen says this button resumes rather than
+                    restarts; the old "Resume" link said it and was deleted as
+                    duplication. Judged not-obvious-but-acceptable at UAT
+                    (2026-08-30) and deliberately left. If a learner ever restarts a
+                    run by accident, the fix is a word on the row, not a second
+                    control — the two-row layout is what FR-009 removed. */}
                 {startable && run?.rungId === rung.id && (
                   <StartOverButton deck={deck} rungId={rung.id} />
                 )}
