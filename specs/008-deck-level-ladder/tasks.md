@@ -579,7 +579,8 @@ whatever the code does.
      (`r9` → `r11`), covered only by the browser walk. Added the ten-label order assertion, which
      also pins that there is no `Level 10`.
 
-- [ ] T026 **Open the PR** against `main` with `Closes #209` in the body. **Depends on T023, T025.**
+- [X] T026 **Open the PR** against `main` with `Closes #209` in the body. **Depends on T023, T025.**
+  Opened as [#236](https://github.com/k-electron/flashrunner/pull/236). Await a green Pages preview before merge.
   State what was asked for, so Principle VI can be checked against it, and name the two things a
   reviewer should not have to discover: the `001-deck-runs` FR-016 supersession, and that `r10` was
   deleted from shipped deck data. Wait for a green Pages preview before merge.
