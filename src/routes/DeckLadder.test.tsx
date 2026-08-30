@@ -201,6 +201,9 @@ describe('DeckLadder', () => {
     renderLadder(EVERY_RUNG);
 
     expect(screen.getByText('Deck mastered')).toBeInTheDocument();
+    // The top level drives two pieces of UI at once, and carries the mark like any
+    // other level in addition to the mastery line.
+    expect(markOn('Full deck')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /Level|Full deck/ })).not.toBeInTheDocument();
     for (const rung of dolchPreK5.rungs) {
       expectStartable(rung.label, rung.id);

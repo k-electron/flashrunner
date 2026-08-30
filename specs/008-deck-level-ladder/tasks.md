@@ -675,3 +675,35 @@ describes. There is no checkbox cleanup pass at the end.
   [research.md § D8](./research.md#d8--the-remainder-collapse-is-an-edit-to-the-authored-deck-not-runtime-logic).
 - **Do not guard the run screen** on `isStartable`. FR-008 keeps URL entry working, deliberately.
 - `cd` and `ls` are aliased in this shell (zoxide, eza). Use absolute paths; a failed `cd` is silent.
+
+---
+
+## Phase 7: Convergence
+
+- [X] T027 Enforce the FR-020 top-step rule for decks not yet written, or record that authoring
+  alone enforces it, per FR-020 / SC-008 (partial). Today `dolch-k-5` satisfies the rule because
+  it was hand-edited; nothing stops a future deck from shipping a remainder top level green.
+  `src/decks/validate.ts` already runs V1–V8 over every built-in deck via `validate.test.ts:184`
+  and its own header calls the rules "checks only", so a rule there is the natural home — it is
+  a *check*, not the runtime collapse function research.md § D8 rejected.
+
+  **Weigh this against Principle VI before building it.** SC-008 is a stated measurable outcome,
+  which is why converge surfaces it; but the requirement is satisfied for every deck that exists,
+  and "present and future" may be intended as an authoring convention rather than something the
+  code polices. If it is a convention, close this task by saying so in `research.md § D8` — the
+  gap is that the artifacts do not currently say which it is.
+
+  **Closed as recorded, not built** (maintainer, 2026-08-30): the rule is applied to the two
+  decks that ship today and no check is added. Enforcement for decks not yet written belongs to
+  a deck intake process in a future release — writing the check before knowing what intake looks
+  like is the wrong order. Written up in [research.md § D8](./research.md#d8--the-remainder-collapse-is-an-edit-to-the-authored-deck-not-runtime-logic).
+
+- [X] T028 Assert that a mastered deck's `Full deck` level carries its completion mark, per spec
+  § Edge Cases (partial). The behaviour is correct — confirmed in the browser, `svgs: 1` on a
+  fully-completed Pre-K alongside the `Deck mastered` line — but nothing asserts it, and this is
+  the one level whose completion also drives a second piece of UI. The existing test at
+  `src/routes/DeckLadder.test.tsx:201` already seeds `EVERY_RUNG` and renders exactly this state,
+  so this is one line: `expect(markOn('Full deck')).not.toBeNull()`.
+
+  Added at `src/routes/DeckLadder.test.tsx:203`, inside the existing mastery test. Checked red
+  by suppressing the mark.

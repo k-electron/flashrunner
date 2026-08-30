@@ -276,6 +276,16 @@ specify, not a new one.
 The comment must say so and say why, or it becomes a false claim about the data
 beneath it.
 
+**Nothing enforces FR-020 for a deck not yet written, and that is the maintainer's call**
+(2026-08-30). The rule is applied to the two decks that ship today — `dolch-k-5` by the
+collapse above, `dolch-prek-5` by already ending on a full step of 5. A third deck
+authored with a remainder top level would ship without complaint: `validate.ts` has no
+rule for step size, and none is added here.
+
+That gap closes in a future release, as part of a deck intake process. Enforcing it now
+would mean writing the check before knowing what intake looks like, which is the wrong
+order — see Principle VI.
+
 **Alternatives considered**:
 
 - *Detect and collapse at runtime.* A function reading step sizes off `cardIds` lengths
