@@ -707,7 +707,7 @@ describe('Run — a device with no room left', () => {
     // The rung reads as completed, and the one above it has opened — the whole
     // consequence of the completion, not just a label.
     expect(screen.getAllByText('Completed')).toHaveLength(1);
-    expect(screen.getByRole('link', { name: '10 words' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Level 2' })).toBeInTheDocument();
   });
 
   // Start over on the ladder writes too, and that write is refused just the same.

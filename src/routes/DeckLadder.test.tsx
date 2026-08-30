@@ -14,7 +14,7 @@ import { deckKey } from '@/storage/keys';
 import { writeItem } from '@/storage/safeStorage';
 
 // The real registry, because the route resolves through it. The Pre-K ladder is
-// r1–r8, labelled "5 words" through "40 words".
+// r1–r8, labelled "Level 1" through "Full deck".
 const DECK_PATH = `/deck/${dolchPreK5.id}`;
 const EVERY_RUNG = dolchPreK5.rungs.map((rung) => rung.id);
 
@@ -99,9 +99,9 @@ describe('DeckLadder', () => {
   it('offers only the smallest rung when nothing has been completed', () => {
     renderLadder([]);
 
-    expectStartable('5 words', 'r1');
-    expectLocked('10 words');
-    expectLocked('15 words');
+    expectStartable('Level 1', 'r1');
+    expectLocked('Level 2');
+    expectLocked('Level 3');
     expect(screen.queryByText('Completed')).not.toBeInTheDocument();
   });
 
@@ -109,7 +109,7 @@ describe('DeckLadder', () => {
     renderLadder(['r1']);
 
     expect(screen.getAllByText('Completed')).toHaveLength(1);
-    expectStartable('5 words', 'r1');
+    expectStartable('Level 1', 'r1');
   });
 
   it('opens the rung above a completed one and no further (FR-015, US2 scenario 4)', () => {
@@ -118,40 +118,60 @@ describe('DeckLadder', () => {
     // leave the deck unfinishable.
     renderLadder(['r1']);
 
-    expectStartable('10 words', 'r2');
-    expectLocked('15 words');
-    expectLocked('20 words');
+    expectStartable('Level 2', 'r2');
+    expectLocked('Level 3');
+    expectLocked('Level 4');
   });
 
   it('opens each next rung in turn as the ladder is climbed', () => {
     renderLadder(['r1', 'r2']);
 
-    expectStartable('15 words', 'r3');
-    expectLocked('20 words');
+    expectStartable('Level 3', 'r3');
+    expectLocked('Level 4');
   });
 
   it('unlocks nothing on a stored rung id the deck does not have', () => {
     renderLadder(['r99']);
 
-    expectStartable('5 words', 'r1');
-    expectLocked('10 words');
+    expectStartable('Level 1', 'r1');
+    expectLocked('Level 2');
   });
 
   it('does not claim mastery before the top rung is completed', () => {
     renderLadder(['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7']);
 
     expect(screen.queryByText('Deck mastered')).not.toBeInTheDocument();
-    expectStartable('40 words', 'r8');
+    expectStartable('Full deck', 'r8');
   });
 
   it('shows mastery and still lets any rung be repeated (FR-017, US2 scenario 5)', () => {
     renderLadder(EVERY_RUNG);
 
     expect(screen.getByText('Deck mastered')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /words/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Level|Full deck/ })).not.toBeInTheDocument();
     for (const rung of dolchPreK5.rungs) {
       expectStartable(rung.label, rung.id);
     }
+  });
+
+  // dolch-k-5's r10 rung was deleted so the deck does not end on a two-card
+  // part-step (FR-020). These two are the only automated proof that the deletion
+  // costs a learner who climbed the old ladder nothing (FR-021).
+  it('leaves a learner who completed the deleted rung one level from the top (FR-021)', () => {
+    seedDeck(dolchK5, ['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9', 'r10']);
+    renderAt(`/deck/${dolchK5.id}`);
+
+    expect(screen.getByRole('link', { name: 'Full deck' })).toHaveAttribute(
+      'href',
+      `/deck/${dolchK5.id}/rung/r11`,
+    );
+  });
+
+  it('keeps a deck mastered before the collapse mastered after it (FR-021)', () => {
+    seedDeck(dolchK5, ['r11']);
+    renderAt(`/deck/${dolchK5.id}`);
+
+    expect(screen.getByText('Deck mastered')).toBeInTheDocument();
   });
 
   it('links back to the deck list (FR-034)', () => {
@@ -197,10 +217,10 @@ describe('DeckLadder — an unfinished run', () => {
   it('puts Resume and Start over on the rung the run belongs to (FR-031, FR-035)', () => {
     renderLadder(['r1'], { run: PRE_K_RUN });
 
-    // PRE_K_RUN is on r2, which the ladder labels "10 words".
+    // PRE_K_RUN is on r2, which the ladder labels "Level 2".
     const rung = screen
       .getAllByRole('listitem')
-      .find((item) => within(item).queryByText('10 words') !== null);
+      .find((item) => within(item).queryByText('Level 2') !== null);
     expect(rung).toBeDefined();
 
     const owner = within(rung as HTMLElement);
@@ -226,7 +246,7 @@ describe('DeckLadder — an unfinished run', () => {
     // apart from having nothing left to resume.
     renderAt(DECK_PATH);
     expect(screen.getAllByText('Completed')).toHaveLength(1);
-    expect(screen.getByRole('link', { name: '10 words' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Level 2' })).toHaveAttribute(
       'href',
       `${DECK_PATH}/rung/r2`,
     );

@@ -13,7 +13,7 @@ import { deckKey } from '@/storage/keys';
 import { writeItem } from '@/storage/safeStorage';
 
 // The real registry, because the list renders it: Dolch Pre-K (r1–r8) then Dolch
-// Kindergarten (r1–r11), both starting at a rung labelled "5 words".
+// Kindergarten (r1–r9, r11), both starting at a rung labelled "Level 1".
 const EVERY_PRE_K_RUNG = dolchPreK5.rungs.map((rung) => rung.id);
 
 /**
@@ -61,24 +61,24 @@ describe('DeckList', () => {
   it('shows a deck with no progress as not started and names its smallest run', () => {
     renderList();
 
-    // Both built-in ladders begin at five words, so both lines read the same.
-    expect(screen.getAllByText('Not started · Next run: 5 words')).toHaveLength(decks.length);
+    // Both built-in ladders begin at Level 1, so both lines read the same.
+    expect(screen.getAllByText('Not started · Next run: Level 1')).toHaveLength(decks.length);
   });
 
   it('shows the highest rung completed and offers the one above it', () => {
     seed(dolchPreK5.id, ['r1', 'r2', 'r3']);
     renderList();
 
-    expect(screen.getByText('Completed 15 words · Next run: 20 words')).toBeInTheDocument();
+    expect(screen.getByText('Completed Level 3 · Next run: Level 4')).toBeInTheDocument();
     // Untouched decks are unaffected — one record per deck (FR-036).
-    expect(screen.getByText('Not started · Next run: 5 words')).toBeInTheDocument();
+    expect(screen.getByText('Not started · Next run: Level 1')).toBeInTheDocument();
   });
 
   it('ignores a stored rung id the deck does not have', () => {
     seed(dolchPreK5.id, ['r99']);
     renderList();
 
-    expect(screen.getAllByText('Not started · Next run: 5 words')).toHaveLength(decks.length);
+    expect(screen.getAllByText('Not started · Next run: Level 1')).toHaveLength(decks.length);
   });
 
   it('marks a mastered deck and offers it no larger run', () => {
@@ -100,6 +100,6 @@ describe('DeckList', () => {
 
     // The list looks up one key per known deck, so the orphan is never read.
     expect(screen.getAllByRole('link')).toHaveLength(decks.length);
-    expect(screen.getByText('Completed 5 words · Next run: 10 words')).toBeInTheDocument();
+    expect(screen.getByText('Completed Level 1 · Next run: Level 2')).toBeInTheDocument();
   });
 });

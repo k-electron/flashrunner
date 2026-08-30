@@ -14,7 +14,7 @@ export type CardConfig = {
 
 export type RungConfig = {
   id: RungId; // stable — appears in stored progress
-  label: string; // "5 words"
+  label: string; // "Level 3", "Full deck"
   cardIds: CardId[]; // EXPLICIT membership, in presentation order. Never computed.
 };
 

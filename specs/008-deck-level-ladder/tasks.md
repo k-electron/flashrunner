@@ -62,7 +62,7 @@ deck's top level adds only a part-step.
 **Independent Test**: Open both decks and the deck list. Nothing anywhere is named `N words`.
 Kindergarten has ten levels, not eleven.
 
-- [ ] T001 [US1] **Collapse the remainder level** in `src/decks/dolch-k-5.ts` (FR-020, FR-021).
+- [X] T001 [US1] **Collapse the remainder level** in `src/decks/dolch-k-5.ts` (FR-020, FR-021).
   Delete the entire `r10` rung object — the one with `label: '50 words'` and 50 `cardIds`. Leave
   `r9` and `r11` exactly as they are; in particular **do not touch `r11`'s `cardIds`**, which
   already lists all 52. The `rungs` array goes from 11 entries to 10, ending `r9`, `r11`.
@@ -84,7 +84,7 @@ Kindergarten has ten levels, not eleven.
   Do not touch `src/decks/dolch-prek-5.ts` here — it ends 35 → 40, a full step of 5, and FR-020 does
   not apply to it.
 
-- [ ] T002 [P] [US1] **Relabel `src/decks/dolch-prek-5.ts`** (FR-001, FR-002). Eight rungs, in order:
+- [X] T002 [P] [US1] **Relabel `src/decks/dolch-prek-5.ts`** (FR-001, FR-002). Eight rungs, in order:
 
   | Rung | Was | Now |
   |---|---|---|
@@ -94,7 +94,7 @@ Kindergarten has ten levels, not eleven.
   `label` only. Every `id` and every `cardIds` array is untouched — `id` is what stored progress
   refers to, so touching one would reset a learner's ladder (FR-004).
 
-- [ ] T003 [P] [US1] **Relabel `src/decks/dolch-k-5.ts`** (FR-001, FR-002). **Depends on T001**: the
+- [X] T003 [P] [US1] **Relabel `src/decks/dolch-k-5.ts`** (FR-001, FR-002). **Depends on T001**: the
   numbering is over the *collapsed* ladder, so this cannot be done correctly until `r10` is gone.
   Ten rungs, in order:
 
@@ -106,10 +106,10 @@ Kindergarten has ten levels, not eleven.
   Note the id jump: `r9` is `Level 9` and `r11` is `Full deck`. There is no `Level 10`. The ids are
   not renumbered and must not be.
 
-- [ ] T004 [P] [US1] **Update the convention comment** at `src/decks/types.ts:17`, which reads
+- [X] T004 [P] [US1] **Update the convention comment** at `src/decks/types.ts:17`, which reads
   `label: string; // "5 words"`. It is the only place left in the repo teaching the old scheme.
 
-- [ ] T005 [P] [US1] **Fix `src/routes/DeckList.test.tsx`** (FR-003). **Depends on T002 and T003.**
+- [X] T005 [P] [US1] **Fix `src/routes/DeckList.test.tsx`** (FR-003). **Depends on T002 and T003.**
   Three places:
   - `:16` — the comment `Kindergarten (r1–r11), both starting at a rung labelled "5 words"` is wrong
     twice over after T001 and T003.
@@ -119,7 +119,7 @@ Kindergarten has ten levels, not eleven.
 
   This file needs no other change: `DeckList.tsx` reads `rung.label` and renames for free.
 
-- [ ] T006 [P] [US1] **Fix the label strings in `src/routes/DeckLadder.test.tsx`, and guard the
+- [X] T006 [P] [US1] **Fix the label strings in `src/routes/DeckLadder.test.tsx`, and guard the
   collapse** (FR-003, FR-021). **Depends on T002 and T003.**
 
   First the mechanical part: every `'5 words'`, `'10 words'`, `'15 words'`, `'20 words'` and
@@ -144,8 +144,12 @@ Kindergarten has ten levels, not eleven.
   Apart from those two, change strings only in this task. The structural rewrites belong to T012,
   T015 and T018.
 
-- [ ] T007 [US1] **Gate**: `npm run lint && npm run typecheck && npm test`. **Depends on
+- [X] T007 [US1] **Gate**: `npm run lint && npm run typecheck && npm test`. **Depends on
   T001–T006.** Green here means the rename and the collapse are complete and nothing else moved.
+
+  *Found by the gate*: a sixth assertion pinned a label — `src/routes/Run.test.tsx:710`
+  (`link, name: '10 words'`, after leaving a completed run). Renamed to `'Level 2'`. T018 was
+  already going to touch this file; nothing else in it changed.
 
 **Checkpoint**: both decks read as levels on all three screens. Kindergarten has ten. The deck screen
 still lists lowest-first, still spreads an unfinished run over two rows, and still says "Completed" —
