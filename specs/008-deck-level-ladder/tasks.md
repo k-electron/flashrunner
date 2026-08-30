@@ -468,7 +468,7 @@ whatever the code does.
 
 ## Phase 6: Polish & Verification
 
-- [ ] T021 [P] **Sweep for leftovers.** Four greps over `src/`, each of which must return nothing:
+- [X] T021 [P] **Sweep for leftovers.** Four greps over `src/`, each of which must return nothing:
   - `label: '[0-9]` — a deck rung still named by its card count
   - `Unfinished run` — the deleted caption
   - `>Completed<`, and `'Completed'` in `DeckLadder.test.tsx` — the deleted status text
@@ -477,16 +477,16 @@ whatever the code does.
   Fixture labels in `ladder.test.ts`, `validate.test.ts` and `deckRecord.test.ts` belong to synthetic
   decks, carry no meaning, and are **out of scope** — the first grep is scoped to `src/decks/dolch-*`.
 
-- [ ] T022 [P] **Confirm the untouched-file guarantees.** `git diff --stat main` must show **no**
+- [X] T022 [P] **Confirm the untouched-file guarantees.** `git diff --stat main` must show **no**
   change under `src/storage/` or `src/run/`, and none to `package.json` or `package-lock.json`. This
   feature adds no dependency and no stored shape. If either moved, the design was misread — see
   [data-model.md](./data-model.md) and
   [research.md § D8](./research.md#d8--the-remainder-collapse-is-an-edit-to-the-authored-deck-not-runtime-logic).
 
-- [ ] T023 **Full gate**: `npm run lint && npm run typecheck && npm test && npm run build` — the same
+- [X] T023 **Full gate**: `npm run lint && npm run typecheck && npm test && npm run build` — the same
   sequence CI runs. **Depends on T020.**
 
-- [ ] T024 **Browser verification.** `npm run dev`, then walk all sixteen rows of
+- [X] T024 **Browser verification.** `npm run dev`, then walk all sixteen rows of
   [quickstart.md](./quickstart.md) § What to look for. The six that jsdom cannot judge and that
   therefore matter most here:
   - **Row 5 / 11** — the two controls stay on one line at ~360px. `flex-1` plus a natural-width
@@ -502,8 +502,47 @@ whatever the code does.
     loses a level and a mastered deck stays mastered (FR-021).
   - The mark itself, by eye, at `size-5` next to `text-base` — light and dark.
 
-- [ ] T025 **Record what the browser checks actually showed** in this file, under T024. Not "done" —
+- [X] T025 **Record what the browser checks actually showed** in this file, under T024. Not "done" —
   what was seen, and at which widths. **Depends on T024.**
+
+  **What the browser actually showed** (Chromium via Playwright against `npm run dev`,
+  viewport 390×844 unless stated). All sixteen rows walked; every one passed.
+
+  - **1** Pre-K, no progress, top to bottom: `Full deck, Level 7, Level 6, Level 5, Level 4,
+    Level 3, Level 2, Level 1`. No "words" anywhere.
+  - **1b** Kindergarten: **ten** rows, `Full deck, Level 9 … Level 1`. No `Level 10`.
+  - **2** Only `Level 1` enabled; the other seven disabled.
+  - **3** Deck list: both lines read `Not started · Next run: Level 1`.
+  - **3b** Run header: `Dolch Pre-K · Steps of 5 · Level 1`.
+  - **4** Played `Level 1` to `Run complete`, left the run: `Level 1` open with its mark,
+    `Level 2` open unmarked, `Level 3` locked.
+  - **5** One row, text exactly `Start overLevel 2`, two controls and nothing else.
+  - **6** Seeded a run stopped at `queue[3]` (`and`) and tapped the `Level 2` button: landed on
+    `/rung/r2` showing **`and`**, not the first card. The level control resumes.
+  - **7** `Start over` navigated to `/rung/r2`; back on the deck screen `Level 1` still marked,
+    `Level 2` still open, and no `Start over` anywhere — the run was discarded.
+  - **8** Replayed the completed `Level 1`, answered `Not yet`, left mid-run: `Level 1` still
+    carries its mark, and the row is `Start overLevel 1`.
+  - **9** Seeded `['r5']`: `Level 5` **locked and marked**, `Level 1` the only open level,
+    `Level 2`–`Full deck` locked. No gap. By eye the mark on the greyed row reads as "you did
+    this, but not from here" — it is dimmed with the rest of the disabled button, not a glitch.
+  - **10** `/deck/dolch-prek-5/rung/r5` from that state played normally (`Level 5` header, a card
+    face, both outcome buttons).
+  - **11** Measured at **390px, 360px and 320px**: `Start over` 97px, the level control 233/203/163px,
+    both on the same line (identical `getBoundingClientRect().top`) at every width. No wrap even at
+    320px, which is narrower than the row the spec asks about.
+  - **12** Tab order with every level unlocked: `Full deck → Level 7 → … → Level 1 → All decks`.
+    Focus moves in reading order. (With no progress there is only one focusable level, so this
+    check needs a mastered deck to mean anything.)
+  - **13** Kindergarten seeded `['r1'…'r10']`: `Level 1`–`Level 9` all open and marked, `Full deck`
+    open and unmarked. The deleted `r10` costs nothing.
+  - **14** Kindergarten seeded `['r11']`: header reads `Deck mastered`.
+  - **The mark itself**: `size-5` beside `text-base`, centred with the name rather than pressed
+    against `Start over`. Legible in light and in dark (`.dark` on `<html>`; the app uses a class,
+    not `prefers-color-scheme`, so emulating the media query alone shows no change).
+
+  Screen-reader verification not run — waived by the maintainer.
+
 
 - [ ] T026 **Open the PR** against `main` with `Closes #209` in the body. **Depends on T023, T025.**
   State what was asked for, so Principle VI can be checked against it, and name the two things a

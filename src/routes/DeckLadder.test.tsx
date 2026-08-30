@@ -254,7 +254,6 @@ describe('DeckLadder — an unfinished run', () => {
   it('offers nothing to resume when there is no unfinished run', () => {
     renderLadder(['r1']);
 
-    expect(screen.queryByText('Unfinished run')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start over' })).not.toBeInTheDocument();
   });
 
