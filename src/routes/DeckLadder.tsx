@@ -2,6 +2,7 @@
 // Progress is read from storage and every judgement about it — what is startable,
 // what is mastered — comes from src/decks/ladder.ts. This file derives nothing
 // itself, which is what keeps the FR-015 unlocking rule in exactly one place.
+import { CircleCheck } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { isMastered, isStartable } from '@/decks/ladder';
@@ -51,6 +52,20 @@ export function DeckLadder() {
           .map((rung, index) => {
             const startable = isStartable(deck, completedRungIds, index);
             const path = `/deck/${deck.id}/rung/${rung.id}`;
+            // Built once for both branches, so a completed level that is locked
+            // cannot drift from a completed one that is startable (FR-007).
+            // aria-hidden keeps the accessible name exactly the level name
+            // (FR-016) — the same reason the old "Completed" text sat outside the
+            // control. The explicit size-5 is required: Button forces an unsized
+            // svg to 16px.
+            const name = (
+              <>
+                {completedRungIds.includes(rung.id) && (
+                  <CircleCheck className="size-5" aria-hidden="true" />
+                )}
+                {rung.label}
+              </>
+            );
             return (
               <li key={rung.id} className="flex items-center gap-3">
                 {/* Only on a startable level: a locked one must not offer a way in
@@ -60,20 +75,17 @@ export function DeckLadder() {
                   <StartOverButton deck={deck} rungId={rung.id} />
                 )}
                 {startable ? (
-                  // Completed rungs land here too — they stay startable forever (FR-016).
+                  // The mark goes inside the Link, not beside it: Button asChild is
+                  // a Radix Slot and takes exactly one child element.
                   <Button asChild className="h-12 flex-1 text-base" size="lg">
-                    <Link to={path}>{rung.label}</Link>
+                    <Link to={path}>{name}</Link>
                   </Button>
                 ) : (
                   // Visible, so the whole ladder is legible from the start, but not
-                  // startable until the rung below it has been completed (FR-015).
+                  // startable until every level below it has been completed (FR-006).
                   <Button className="h-12 flex-1 text-base" size="lg" variant="secondary" disabled>
-                    {rung.label}
+                    {name}
                   </Button>
-                )}
-                {/* Outside the control, so its accessible name stays the rung label. */}
-                {completedRungIds.includes(rung.id) && (
-                  <span className="text-muted-foreground text-sm">Completed</span>
                 )}
               </li>
             );

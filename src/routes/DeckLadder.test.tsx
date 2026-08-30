@@ -81,6 +81,15 @@ function expectStartable(label: string, rungId: string) {
   );
 }
 
+/**
+ * The completion mark, or null. Queried structurally on purpose: the mark is
+ * aria-hidden by design (FR-016) so it has no accessible name, and on this screen
+ * it is the only svg rendered. See tasks.md § Notes.
+ */
+function markOn(label: string): Element | null {
+  return levelItem(label).querySelector('svg');
+}
+
 /** The row a learner would read as this level, found by the name they read. */
 function levelItem(label: string): HTMLElement {
   const item = screen
@@ -129,14 +138,26 @@ describe('DeckLadder', () => {
     expectStartable('Level 1', 'r1');
     expectLocked('Level 2');
     expectLocked('Level 3');
+    expect(markOn('Level 1')).toBeNull();
+  });
+
+  it('marks a completed level without changing what it is called (FR-015, FR-016)', () => {
+    renderLadder(['r1']);
+
+    expect(markOn('Level 1')).not.toBeNull();
+    expect(markOn('Level 2')).toBeNull();
+    // The mark is inside the control, so this is also the guard that it did not
+    // join the accessible name: getByRole matches the full normalised name.
+    expectStartable('Level 1', 'r1');
     expect(screen.queryByText('Completed')).not.toBeInTheDocument();
   });
 
-  it('marks a completed rung and keeps it startable (FR-016)', () => {
-    renderLadder(['r1']);
+  // The state that regresses silently if the mark is ever made to depend on the
+  // run instead of on completedRungIds: a completed level being replayed.
+  it('keeps the mark through a replay of the same level (FR-016)', () => {
+    renderLadder(['r1', 'r2'], { run: { ...PRE_K_RUN, rungId: 'r1' } });
 
-    expect(screen.getAllByText('Completed')).toHaveLength(1);
-    expectStartable('Level 1', 'r1');
+    expect(markOn('Level 1')).not.toBeNull();
   });
 
   it('opens the rung above a completed one and no further (FR-015, US2 scenario 4)', () => {
@@ -247,8 +268,9 @@ describe('DeckLadder — an unfinished run', () => {
     const owner = within(levelItem('Level 2'));
     expect(owner.getByRole('button', { name: 'Start over' })).toBeInTheDocument();
 
-    // Exactly two controls in the row — Start over and the level itself. Counting
-    // controls rather than nodes: the Completed status is still in the row here.
+    // Exactly two controls in the row — Start over and the level itself, and no
+    // caption beside them (FR-010, FR-011).
+    expect(owner.getByRole('link', { name: 'Level 2' })).toBeInTheDocument();
     expect([...owner.queryAllByRole('link'), ...owner.queryAllByRole('button')]).toHaveLength(2);
   });
 
@@ -277,7 +299,7 @@ describe('DeckLadder — an unfinished run', () => {
     // Read back from storage, without reseeding: the ladder is exactly as it was
     // apart from having nothing left to resume.
     renderAt(DECK_PATH);
-    expect(screen.getAllByText('Completed')).toHaveLength(1);
+    expect(markOn('Level 1')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'Level 2' })).toHaveAttribute(
       'href',
       `${DECK_PATH}/rung/r2`,

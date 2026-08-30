@@ -317,7 +317,7 @@ permanently.
 
 **Independent Test**: Complete a level, see the check, replay it, see the check still there.
 
-- [ ] T014 [US4] **Add the mark and delete the caption** in `src/routes/DeckLadder.tsx` (FR-015,
+- [X] T014 [US4] **Add the mark and delete the caption** in `src/routes/DeckLadder.tsx` (FR-015,
   FR-017, FR-018). **Depends on T011** — same JSX, and it needs the shape T011 leaves behind.
 
   Build the control's content **once** and use it in both branches, so a completed-but-locked level
@@ -359,7 +359,7 @@ permanently.
   **Delete** the `{completedRungIds.includes(rung.id) && <span>Completed</span>}` block and the
   comment above it (FR-018).
 
-- [ ] T015 [US4] **Assert the mark** in `src/routes/DeckLadder.test.tsx` (FR-015, FR-016, FR-018).
+- [X] T015 [US4] **Assert the mark** in `src/routes/DeckLadder.test.tsx` (FR-015, FR-016, FR-018).
   **Depends on T014.**
   - The accessible name is **unchanged** by the mark: `expectStartable('Level 1', 'r1')` on a
     completed level still passes. This is the FR-016 guard and it already exists — `getByRole` with a
@@ -372,7 +372,7 @@ permanently.
     the mark is still there. That is the replay-in-progress case, and it is the one that would
     regress if anyone ever made the mark depend on the run instead of on `completedRungIds`.
 
-- [ ] T016 [US4] **Gate**: `npm run lint && npm run typecheck && npm test`. **Depends on T014, T015.**
+- [X] T016 [US4] **Gate**: `npm run lint && npm run typecheck && npm test`. **Depends on T014, T015.**
 
 **Checkpoint**: every level ever finished carries its check, and nothing announces it.
 
