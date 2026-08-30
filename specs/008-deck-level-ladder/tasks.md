@@ -216,7 +216,7 @@ is one row holding exactly two controls and no other text.
 **Note on the gate**: T011 deletes the `Resume` link and the `Unfinished run` caption, which five
 existing assertions query. The tree is **red between T011 and T012, expected**. They are one commit.
 
-- [ ] T011 [US3] **Collapse the row** in `src/routes/DeckLadder.tsx` (FR-009 – FR-014, FR-019).
+- [X] T011 [US3] **Collapse the row** in `src/routes/DeckLadder.tsx` (FR-009 – FR-014, FR-019).
   **Depends on T009** — same JSX region, so it cannot be done in parallel with it.
 
   The `<li>` becomes the row itself; the inner wrapper `<div>` goes away:
@@ -286,7 +286,7 @@ existing assertions query. The tree is **red between T011 and T012, expected**. 
   link did, and `resume()` in `src/routes/Run.tsx:41` reads the stored run on entry. Resuming has
   always been what that button does; the second row was duplication.
 
-- [ ] T012 [US3] **Rewrite the unfinished-run assertions** in `src/routes/DeckLadder.test.tsx`
+- [X] T012 [US3] **Rewrite the unfinished-run assertions** in `src/routes/DeckLadder.test.tsx`
   (FR-009 – FR-013, FR-019). **Depends on T011.** In the `DeckLadder — an unfinished run` block:
   - `Resume` no longer exists. Assert instead that the level's own link is present and points at the
     run path, and that `queryByRole('link', { name: 'Resume' })` finds nothing.
@@ -303,7 +303,7 @@ existing assertions query. The tree is **red between T011 and T012, expected**. 
   - Keep the two `Start over` behaviour tests (fresh run, and progress untouched) as they are apart
     from the label strings — they already cover FR-013.
 
-- [ ] T013 [US3] **Gate**: `npm run lint && npm run typecheck && npm test`. **Depends on T011 and
+- [X] T013 [US3] **Gate**: `npm run lint && npm run typecheck && npm test`. **Depends on T011 and
   T012.** This is the first green since T010.
 
 **Checkpoint**: one row per level, `Start over` on the left, the level button resumes.

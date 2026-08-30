@@ -81,6 +81,15 @@ function expectStartable(label: string, rungId: string) {
   );
 }
 
+/** The row a learner would read as this level, found by the name they read. */
+function levelItem(label: string): HTMLElement {
+  const item = screen
+    .getAllByRole('listitem')
+    .find((candidate) => within(candidate).queryByText(label) !== null);
+  expect(item).toBeDefined();
+  return item as HTMLElement;
+}
+
 function expectLocked(label: string) {
   expect(screen.queryByRole('link', { name: label })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: label })).toBeDisabled();
@@ -211,40 +220,45 @@ describe('DeckLadder — an unfinished run', () => {
     renderLadder(['r1']);
 
     expect(screen.queryByText('Unfinished run')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Resume' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start over' })).not.toBeInTheDocument();
   });
 
-  it('surfaces it on its own rung, with Resume and Start over together (FR-031, FR-035)', () => {
+  it('resumes from the level itself, with no second row (FR-011, FR-012)', () => {
     renderLadder(['r1'], { run: PRE_K_RUN });
 
-    // One rung carries it, and both ways out of it are on screen at once —
-    // neither is behind the other.
-    expect(screen.getAllByText('Unfinished run')).toHaveLength(1);
-    expect(screen.getByRole('link', { name: 'Resume' })).toHaveAttribute(
+    // The level control is the way back in; there is no separate Resume link and
+    // no caption beside it.
+    expect(screen.getByRole('link', { name: 'Level 2' })).toHaveAttribute(
       'href',
       `${DECK_PATH}/rung/r2`,
     );
+    expect(screen.queryByRole('link', { name: 'Resume' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Unfinished run')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start over' })).toBeEnabled();
   });
 
-  // Counting the block and reading its href says nothing about *where* it sits:
-  // pinning it to the first rung regardless of which rung the run belongs to
-  // leaves both of those assertions green. FR-035 is about the rung it is on, so
-  // that is what this asserts — the rung is found by the label a learner reads.
-  it('puts Resume and Start over on the rung the run belongs to (FR-031, FR-035)', () => {
+  // Counting the control and reading its href says nothing about *where* it sits:
+  // pinning it to the first level regardless of which one the run belongs to
+  // leaves both of those assertions green. FR-009 is about the level it is on, so
+  // that is what this asserts — the level is found by the label a learner reads.
+  it('puts Start over on the level the run belongs to, in one row (FR-009, FR-010)', () => {
     renderLadder(['r1'], { run: PRE_K_RUN });
 
-    // PRE_K_RUN is on r2, which the ladder labels "Level 2".
-    const rung = screen
-      .getAllByRole('listitem')
-      .find((item) => within(item).queryByText('Level 2') !== null);
-    expect(rung).toBeDefined();
-
-    const owner = within(rung as HTMLElement);
-    expect(owner.getByText('Unfinished run')).toBeInTheDocument();
-    expect(owner.getByRole('link', { name: 'Resume' })).toBeInTheDocument();
+    const owner = within(levelItem('Level 2'));
     expect(owner.getByRole('button', { name: 'Start over' })).toBeInTheDocument();
+
+    // Exactly two controls in the row — Start over and the level itself. Counting
+    // controls rather than nodes: the Completed status is still in the row here.
+    expect([...owner.queryAllByRole('link'), ...owner.queryAllByRole('button')]).toHaveLength(2);
+  });
+
+  it('offers no way in on a locked level carrying a run (FR-019)', () => {
+    renderLadder([], { run: PRE_K_RUN });
+
+    // r2 is locked with nothing completed, so its row is the disabled level alone.
+    const owner = within(levelItem('Level 2'));
+    expect(owner.queryByRole('button', { name: 'Start over' })).not.toBeInTheDocument();
+    expect(owner.getByRole('button', { name: 'Level 2' })).toBeDisabled();
   });
 
   it('goes to a fresh run of the same rung when Start over is used', async () => {
@@ -268,25 +282,19 @@ describe('DeckLadder — an unfinished run', () => {
       'href',
       `${DECK_PATH}/rung/r2`,
     );
-    expect(screen.queryByText('Unfinished run')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start over' })).not.toBeInTheDocument();
   });
 
   it('keeps each deck to its own run across a switch (FR-036, SC-013)', async () => {
     seedDeck(dolchK5, [], K_RUN);
     renderLadder(['r1'], { run: PRE_K_RUN });
 
-    expect(screen.getByRole('link', { name: 'Resume' })).toHaveAttribute(
-      'href',
-      `${DECK_PATH}/rung/r2`,
-    );
+    expect(within(levelItem('Level 2')).getByRole('button', { name: 'Start over' })).toBeEnabled();
     cleanup();
 
     // The other deck is on its own rung, at its own position.
     const user = renderAt(`/deck/${dolchK5.id}`);
-    expect(screen.getByRole('link', { name: 'Resume' })).toHaveAttribute(
-      'href',
-      `/deck/${dolchK5.id}/rung/r1`,
-    );
+    expect(within(levelItem('Level 1')).getByRole('button', { name: 'Start over' })).toBeEnabled();
 
     // And starting that one over disturbs nothing of the first deck's.
     await user.click(screen.getByRole('button', { name: 'Start over' }));

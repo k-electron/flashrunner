@@ -48,13 +48,21 @@ export function DeckLadder() {
             Reversed in the DOM rather than with flex-col-reverse, so tab order
             and screen-reader order match what is on screen. */}
         {deck.rungs
-          .map((rung, index) => (
-            <li key={rung.id} className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                {isStartable(deck, completedRungIds, index) ? (
+          .map((rung, index) => {
+            const startable = isStartable(deck, completedRungIds, index);
+            const path = `/deck/${deck.id}/rung/${rung.id}`;
+            return (
+              <li key={rung.id} className="flex items-center gap-3">
+                {/* Only on a startable level: a locked one must not offer a way in
+                    (FR-019). The level control itself resumes — it points at the
+                    same path the old Resume link did (FR-012). */}
+                {startable && run?.rungId === rung.id && (
+                  <StartOverButton deck={deck} rungId={rung.id} />
+                )}
+                {startable ? (
                   // Completed rungs land here too — they stay startable forever (FR-016).
                   <Button asChild className="h-12 flex-1 text-base" size="lg">
-                    <Link to={`/deck/${deck.id}/rung/${rung.id}`}>{rung.label}</Link>
+                    <Link to={path}>{rung.label}</Link>
                   </Button>
                 ) : (
                   // Visible, so the whole ladder is legible from the start, but not
@@ -67,12 +75,9 @@ export function DeckLadder() {
                 {completedRungIds.includes(rung.id) && (
                   <span className="text-muted-foreground text-sm">Completed</span>
                 )}
-              </div>
-              {/* On the rung it belongs to, so resuming is the obvious next tap
-                rather than something to hunt for (FR-035). */}
-              {run?.rungId === rung.id && <UnfinishedRun deck={deck} rungId={rung.id} />}
-            </li>
-          ))
+              </li>
+            );
+          })
           .reverse()}
       </ul>
 
@@ -85,13 +90,12 @@ export function DeckLadder() {
 }
 
 /**
- * The run left unfinished on this rung, offered both ways at once.
+ * Discards the run left unfinished on this level.
  *
- * Resume and Start over are rendered together, side by side, and neither is
- * behind the other: a learner who has forgotten where they were must not have to
- * resume in order to find the way to start over (FR-031).
+ * A component rather than an inline handler only because it calls `useNavigate`,
+ * which cannot be called conditionally inside the map.
  */
-function UnfinishedRun({ deck, rungId }: { deck: DeckConfig; rungId: RungId }) {
+function StartOverButton({ deck, rungId }: { deck: DeckConfig; rungId: RungId }) {
   const navigate = useNavigate();
   const path = `/deck/${deck.id}/rung/${rungId}`;
 
@@ -116,14 +120,8 @@ function UnfinishedRun({ deck, rungId }: { deck: DeckConfig; rungId: RungId }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="text-muted-foreground text-sm">Unfinished run</span>
-      <Button asChild className="h-12 text-base" size="lg">
-        <Link to={path}>Resume</Link>
-      </Button>
-      <Button className="h-12 text-base" size="lg" variant="secondary" onClick={startOver}>
-        Start over
-      </Button>
-    </div>
+    <Button className="h-12 text-base" size="lg" variant="secondary" onClick={startOver}>
+      Start over
+    </Button>
   );
 }
