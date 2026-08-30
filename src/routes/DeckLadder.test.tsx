@@ -83,8 +83,8 @@ function expectStartable(label: string, rungId: string) {
 
 /**
  * The completion mark, or null. Queried structurally on purpose: the mark is
- * aria-hidden by design (FR-016) so it has no accessible name, and on this screen
- * it is the only svg rendered. See tasks.md § Notes.
+ * aria-hidden by design (008 FR-017) so it has no accessible name, and on this
+ * screen it is the only svg rendered. See tasks.md § Notes.
  */
 function markOn(label: string): Element | null {
   return levelItem(label).querySelector('svg');
@@ -105,7 +105,7 @@ function expectLocked(label: string) {
 }
 
 describe('DeckLadder', () => {
-  it('lists every rung of the deck, in order', () => {
+  it('lists every level of the deck', () => {
     renderLadder([]);
 
     expect(screen.getByRole('heading', { name: dolchPreK5.title })).toBeInTheDocument();
@@ -141,26 +141,31 @@ describe('DeckLadder', () => {
     expect(markOn('Level 1')).toBeNull();
   });
 
-  it('marks a completed level without changing what it is called (FR-015, FR-016)', () => {
+  it('marks a completed level without changing what it is called (008 FR-015, FR-017)', () => {
     renderLadder(['r1']);
 
     expect(markOn('Level 1')).not.toBeNull();
     expect(markOn('Level 2')).toBeNull();
-    // The mark is inside the control, so this is also the guard that it did not
-    // join the accessible name: getByRole matches the full normalised name.
     expectStartable('Level 1', 'r1');
     expect(screen.queryByText('Completed')).not.toBeInTheDocument();
+
+    // FR-017 is about what is announced, not about our JSX, and neither is free:
+    // an svg with no <title> adds nothing to an accessible name, and lucide sets
+    // aria-hidden itself unless an a11y prop is present. So the name queries above
+    // cannot catch a mark that starts announcing itself — this can, by going red
+    // the moment anyone gives it a label.
+    expect(markOn('Level 1')).toHaveAttribute('aria-hidden', 'true');
   });
 
   // The state that regresses silently if the mark is ever made to depend on the
   // run instead of on completedRungIds: a completed level being replayed.
-  it('keeps the mark through a replay of the same level (FR-016)', () => {
+  it('keeps the mark through a replay of the same level (008 FR-016)', () => {
     renderLadder(['r1', 'r2'], { run: { ...PRE_K_RUN, rungId: 'r1' } });
 
     expect(markOn('Level 1')).not.toBeNull();
   });
 
-  it('opens the rung above a completed one and no further (FR-015, US2 scenario 4)', () => {
+  it('opens the rung above a completed one and no further (001 FR-015, US2 sc.4)', () => {
     // The case that separates "immediate predecessor completed" from "above the
     // highest completed rung": the latter would lock the rung just unlocked and
     // leave the deck unfinishable.
@@ -192,7 +197,7 @@ describe('DeckLadder', () => {
     expectStartable('Full deck', 'r8');
   });
 
-  it('shows mastery and still lets any rung be repeated (FR-017, US2 scenario 5)', () => {
+  it('shows mastery and still lets any rung be repeated (001 FR-017, US2 sc.5)', () => {
     renderLadder(EVERY_RUNG);
 
     expect(screen.getByText('Deck mastered')).toBeInTheDocument();
@@ -213,6 +218,27 @@ describe('DeckLadder', () => {
       'href',
       `/deck/${dolchK5.id}/rung/r11`,
     );
+  });
+
+  // Ten hand-edited labels with an id jump in the middle (r9 → r11), and nothing
+  // else in the suite reads them. Literal, so it is the labels being checked and
+  // not deck.rungs restating itself.
+  it('names all ten Kindergarten levels, with no Level 10 (FR-001, FR-020)', () => {
+    seedDeck(dolchK5, []);
+    renderAt(`/deck/${dolchK5.id}`);
+
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Full deck',
+      'Level 9',
+      'Level 8',
+      'Level 7',
+      'Level 6',
+      'Level 5',
+      'Level 4',
+      'Level 3',
+      'Level 2',
+      'Level 1',
+    ]);
   });
 
   it('keeps a deck mastered before the collapse mastered after it (FR-021)', () => {
@@ -278,8 +304,12 @@ describe('DeckLadder — an unfinished run', () => {
   it('puts Start over on the level the run belongs to, in one row (FR-009, FR-010)', () => {
     renderLadder(['r1'], { run: PRE_K_RUN });
 
-    const owner = within(levelItem('Level 2'));
-    expect(owner.getByRole('button', { name: 'Start over' })).toBeInTheDocument();
+    const item = levelItem('Level 2');
+    const owner = within(item);
+
+    // Which side, not just which row: concatenating the two roles and counting
+    // them stays green with the branches swapped, and FR-010 names the side.
+    expect(item.firstElementChild).toHaveTextContent('Start over');
 
     // Exactly two controls in the row — Start over and the level itself, and no
     // caption beside them (FR-010, FR-011).

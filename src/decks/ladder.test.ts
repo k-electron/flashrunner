@@ -33,7 +33,7 @@ describe('isStartable', () => {
     expect(isStartable(deck, [], 3)).toBe(false);
   });
 
-  it('opens the rung directly above a completed one and no further (FR-015)', () => {
+  it('opens the rung directly above a completed one and no further (001 FR-015)', () => {
     // The case a plausible-but-wrong "above the highest completed rung" rule
     // fails: it would lock r2 the moment r1 was completed.
     expect(isStartable(deck, ['r1'], 1)).toBe(true);
@@ -65,12 +65,6 @@ describe('isStartable', () => {
     expect(isStartable(deck, ['r3'], 1)).toBe(false);
   });
 
-  it('still opens the next level when the run below it is unbroken', () => {
-    // Without this the suite would pass for an isStartable that locks everything
-    // above the smallest level.
-    expect(isStartable(deck, ['r1', 'r2', 'r3'], 3)).toBe(true);
-  });
-
   // Narrower than it was: 001-deck-runs FR-016 promised a completed rung stayed
   // startable unconditionally. It stays startable when it was completed *in
   // order*, which is every rung reachable from the deck screen. 008 FR-007
@@ -93,9 +87,15 @@ describe('isStartable', () => {
     expect(isStartable(deck, ['r1', 'r99'], 2)).toBe(false);
   });
 
-  it('reports false rather than throwing for an index outside the ladder', () => {
-    expect(isStartable(deck, ['r1'], -1)).toBe(false);
-    expect(isStartable(deck, ['r1'], 4)).toBe(false);
+  it('reports false for an index outside the ladder', () => {
+    // Seeded complete on purpose: with anything unfinished below, the range check
+    // and the every() both say false and the guard could be deleted unnoticed.
+    // On a finished deck every() over the whole ladder is true, so only the guard
+    // keeps an out-of-range index from reporting startable.
+    const completed = ['r1', 'r2', 'r3', 'r4'];
+
+    expect(isStartable(deck, completed, -1)).toBe(false);
+    expect(isStartable(deck, completed, 4)).toBe(false);
   });
 });
 

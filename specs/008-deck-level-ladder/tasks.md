@@ -477,6 +477,12 @@ whatever the code does.
   Fixture labels in `ladder.test.ts`, `validate.test.ts` and `deckRecord.test.ts` belong to synthetic
   decks, carry no meaning, and are **out of scope** — the first grep is scoped to `src/decks/dolch-*`.
 
+  **Amended while running it.** Greps 2–4 as written contradict T012 and T015, which ask for
+  `queryByText('Unfinished run')`, `queryByRole('link', { name: 'Resume' })` and
+  `queryByText('Completed')` as *absence* assertions. The criterion is that nothing **renders**
+  those strings, so the sweep is scoped to non-test `.tsx`. So scoped, all four return nothing. The
+  surviving hits are `DeckLadder.test.tsx:152, :269, :270`, all `not.toBeInTheDocument()`.
+
 - [X] T022 [P] **Confirm the untouched-file guarantees.** `git diff --stat main` must show **no**
   change under `src/storage/` or `src/run/`, and none to `package.json` or `package-lock.json`. This
   feature adds no dependency and no stored shape. If either moved, the design was misread — see
@@ -543,6 +549,35 @@ whatever the code does.
 
   Screen-reader verification not run — waived by the maintainer.
 
+
+- [X] **Review pass** (separate subagent, fresh context, `git diff main -- src/`). No correctness
+  bugs: the `index` passed to `isStartable` comes from `map` and is unaffected by the `.reverse()`
+  after it, and `Button asChild` receives exactly one child. Eight findings, all test-strength or
+  comment accuracy; all acted on:
+
+  1. **The FR-017 accessible-name guard did not exist.** T015's comment claimed `expectStartable`
+     pinned it; it does not — an svg with no `<title>` adds nothing to an accessible name whether or
+     not it is hidden, and lucide sets `aria-hidden` itself (`Icon.mjs:36`), so the explicit
+     attribute is redundant too. Replaced with a direct assertion on the rendered mark, checked red
+     by giving it an `aria-label`.
+  2. **FR-010's "on the left" was unasserted.** Counting the two controls by role stays green with
+     the branches swapped. Added `item.firstElementChild` has text `Start over`; checked red by
+     moving the button to the right.
+  3. **FR-016 cited where FR-017 was meant** in three places, propagated from T014/T015.
+  4. **Bare `FR-015` / `FR-017` collide across 001 and 008** — `DeckLadder.test.tsx` used bare
+     `FR-015` for 008's mark and for 001's unlock rule nineteen lines apart. Prefixed the ambiguous
+     ones with their feature.
+  5. **`isStartable`'s range guard was uncovered**: seeded with `['r1']` the `every()` is false
+     either way, so the guard could have been deleted unnoticed. The test now seeds a completed
+     deck, where only the guard keeps an out-of-range index from reporting startable. Checked red.
+  6. **T017's fourth case was already asserted verbatim twice** (`ladder.test.ts:47` and `:84`).
+     Deleted rather than triplicated — a deliberate deviation from T017 as written.
+  7. **Two stale comments**: `dolch-k-5.ts`'s header said the deleted rung's "52 cards" (it had 50;
+     the 52 are the deck's), and a test titled "in order" asserted presence only, after T008 took
+     the order check into a test of its own.
+  8. **The k-5 relabel had no automated assertion at all** — ten hand-edited labels with an id jump
+     (`r9` → `r11`), covered only by the browser walk. Added the ten-label order assertion, which
+     also pins that there is no `Level 10`.
 
 - [ ] T026 **Open the PR** against `main` with `Closes #209` in the body. **Depends on T023, T025.**
   State what was asked for, so Principle VI can be checked against it, and name the two things a

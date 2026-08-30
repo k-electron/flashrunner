@@ -3,7 +3,7 @@ import type { DeckConfig } from '@/decks/types';
 // Word list transcribed verbatim from the dolch-k-5 table in
 // specs/001-deck-runs/research.md §4. The rung boundaries no longer match that
 // table: the 50-word rung was deleted so the deck does not end on a two-card
-// part-step, and its 52 cards belong to the top rung alone (008 FR-020).
+// part-step, and all 52 cards belong to the top rung alone (008 FR-020).
 // Rungs are cumulative: each lists every card literally, in presentation order.
 
 export const dolchK5: DeckConfig = {

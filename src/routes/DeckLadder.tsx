@@ -55,7 +55,7 @@ export function DeckLadder() {
             // Built once for both branches, so a completed level that is locked
             // cannot drift from a completed one that is startable (FR-007).
             // aria-hidden keeps the accessible name exactly the level name
-            // (FR-016) — the same reason the old "Completed" text sat outside the
+            // (FR-017) — the same reason the old "Completed" text sat outside the
             // control. The explicit size-5 is required: Button forces an unsized
             // svg to 16px.
             const name = (
