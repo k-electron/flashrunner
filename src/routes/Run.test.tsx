@@ -166,6 +166,18 @@ describe('Run', () => {
     expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
   });
 
+  // The one thing standing between FR-008 and a future "helpful" redirect added by
+  // someone who reads the FR-006 unlock rule as a gate. The deck screen would not
+  // offer r5 here; the URL still works.
+  it('runs a level the deck screen would not offer (FR-008)', () => {
+    // beforeEach seeds nothing completed, so r5 is locked on the deck screen.
+    const fifthRungCards = dolchPreK5.rungs[4].cardIds;
+    renderRun('/deck/dolch-prek-5/rung/r5');
+
+    // shownCard throws unless exactly one of them is being presented.
+    expect(fifthRungCards).toContain(shownCard(fifthRungCards));
+  });
+
   it('offers both outcomes by their accessible names', () => {
     renderRun(FIRST_RUN);
     expect(screen.getByRole('button', { name: 'Got it' })).toBeInTheDocument();
@@ -307,10 +319,10 @@ describe('Run', () => {
     await user.click(screen.getByRole('link', { name: 'Leave this run' }));
 
     // Nothing joined the list mastery and unlocking read, and the ladder the
-    // learner lands on shows the rung unmarked rather than climbed.
+    // learner lands on shows the level unmarked rather than climbed.
     expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual([]);
     expect(screen.getByRole('link', { name: 'All decks' })).toBeInTheDocument();
-    expect(screen.queryByText('Completed')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Level 1' }).querySelector('svg')).toBeNull();
   });
 
   it('reports success once every card has been cleared', async () => {
@@ -704,10 +716,10 @@ describe('Run — a device with no room left', () => {
 
     await user.click(screen.getByRole('link', { name: 'Leave this run' }));
 
-    // The rung reads as completed, and the one above it has opened — the whole
-    // consequence of the completion, not just a label.
-    expect(screen.getAllByText('Completed')).toHaveLength(1);
-    expect(screen.getByRole('link', { name: '10 words' })).toBeInTheDocument();
+    // The level carries its completion mark, and the one above it has opened —
+    // the whole consequence of the completion, not just a label.
+    expect(screen.getByRole('link', { name: 'Level 1' }).querySelector('svg')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Level 2' })).toBeInTheDocument();
   });
 
   // Start over on the ladder writes too, and that write is refused just the same.

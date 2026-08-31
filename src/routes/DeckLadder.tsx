@@ -1,7 +1,8 @@
 // A deck's rung ladder: /deck/:deckId.
 // Progress is read from storage and every judgement about it — what is startable,
 // what is mastered — comes from src/decks/ladder.ts. This file derives nothing
-// itself, which is what keeps the FR-015 unlocking rule in exactly one place.
+// itself, which is what keeps the unlocking rule (008 FR-006) in exactly one place.
+import { CircleCheck } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { isMastered, isStartable } from '@/decks/ladder';
@@ -42,31 +43,61 @@ export function DeckLadder() {
       </header>
 
       <ul className="flex flex-col gap-3">
-        {deck.rungs.map((rung, index) => (
-          <li key={rung.id} className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              {isStartable(deck, completedRungIds, index) ? (
-                // Completed rungs land here too — they stay startable forever (FR-016).
-                <Button asChild className="h-12 flex-1 text-base" size="lg">
-                  <Link to={`/deck/${deck.id}/rung/${rung.id}`}>{rung.label}</Link>
-                </Button>
-              ) : (
-                // Visible, so the whole ladder is legible from the start, but not
-                // startable until the rung below it has been completed (FR-015).
-                <Button className="h-12 flex-1 text-base" size="lg" variant="secondary" disabled>
-                  {rung.label}
-                </Button>
-              )}
-              {/* Outside the control, so its accessible name stays the rung label. */}
-              {completedRungIds.includes(rung.id) && (
-                <span className="text-muted-foreground text-sm">Completed</span>
-              )}
-            </div>
-            {/* On the rung it belongs to, so resuming is the obvious next tap
-                rather than something to hunt for (FR-035). */}
-            {run?.rungId === rung.id && <UnfinishedRun deck={deck} rungId={rung.id} />}
-          </li>
-        ))}
+        {/* Highest level first, so the ladder reads as a climb (FR-005). Reversed
+            after the map, never in `deck.rungs`: the config is ordered smallest →
+            largest and read by isStartable, isMastered, nextRung and validation.
+            Reversed in the DOM rather than with flex-col-reverse, so tab order
+            and screen-reader order match what is on screen. */}
+        {deck.rungs
+          .map((rung, index) => {
+            const startable = isStartable(deck, completedRungIds, index);
+            const path = `/deck/${deck.id}/rung/${rung.id}`;
+            // Built once for both branches, so a completed level that is locked
+            // cannot drift from a completed one that is startable (FR-007).
+            // aria-hidden keeps the accessible name exactly the level name
+            // (FR-017) — the same reason the old "Completed" text sat outside the
+            // control. The explicit size-5 is required: Button forces an unsized
+            // svg to 16px.
+            const name = (
+              <>
+                {completedRungIds.includes(rung.id) && (
+                  <CircleCheck className="size-5" aria-hidden="true" />
+                )}
+                {rung.label}
+              </>
+            );
+            return (
+              <li key={rung.id} className="flex items-center gap-3">
+                {/* Only on a startable level: a locked one must not offer a way in
+                    (FR-019). The level control itself resumes — it points at the
+                    same path the old Resume link did (FR-012).
+
+                    ponytail: nothing on screen says this button resumes rather than
+                    restarts; the old "Resume" link said it and was deleted as
+                    duplication. Judged not-obvious-but-acceptable at UAT
+                    (2026-08-30) and deliberately left. If a learner ever restarts a
+                    run by accident, the fix is a word on the row, not a second
+                    control — the two-row layout is what FR-009 removed. */}
+                {startable && run?.rungId === rung.id && (
+                  <StartOverButton deck={deck} rungId={rung.id} />
+                )}
+                {startable ? (
+                  // The mark goes inside the Link, not beside it: Button asChild is
+                  // a Radix Slot and takes exactly one child element.
+                  <Button asChild className="h-12 flex-1 text-base" size="lg">
+                    <Link to={path}>{name}</Link>
+                  </Button>
+                ) : (
+                  // Visible, so the whole ladder is legible from the start, but not
+                  // startable until every level below it has been completed (FR-006).
+                  <Button className="h-12 flex-1 text-base" size="lg" variant="secondary" disabled>
+                    {name}
+                  </Button>
+                )}
+              </li>
+            );
+          })
+          .reverse()}
       </ul>
 
       {/* Leaving a deck returns to the deck list (FR-034). */}
@@ -78,13 +109,12 @@ export function DeckLadder() {
 }
 
 /**
- * The run left unfinished on this rung, offered both ways at once.
+ * Discards the run left unfinished on this level.
  *
- * Resume and Start over are rendered together, side by side, and neither is
- * behind the other: a learner who has forgotten where they were must not have to
- * resume in order to find the way to start over (FR-031).
+ * A component rather than an inline handler only because it calls `useNavigate`,
+ * which cannot be called conditionally inside the map.
  */
-function UnfinishedRun({ deck, rungId }: { deck: DeckConfig; rungId: RungId }) {
+function StartOverButton({ deck, rungId }: { deck: DeckConfig; rungId: RungId }) {
   const navigate = useNavigate();
   const path = `/deck/${deck.id}/rung/${rungId}`;
 
@@ -109,14 +139,8 @@ function UnfinishedRun({ deck, rungId }: { deck: DeckConfig; rungId: RungId }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="text-muted-foreground text-sm">Unfinished run</span>
-      <Button asChild className="h-12 text-base" size="lg">
-        <Link to={path}>Resume</Link>
-      </Button>
-      <Button className="h-12 text-base" size="lg" variant="secondary" onClick={startOver}>
-        Start over
-      </Button>
-    </div>
+    <Button className="h-12 text-base" size="lg" variant="secondary" onClick={startOver}>
+      Start over
+    </Button>
   );
 }

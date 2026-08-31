@@ -52,17 +52,17 @@ export const dolchPreK5: DeckConfig = {
   rungs: [
     {
       id: 'r1',
-      label: '5 words',
+      label: 'Level 1',
       cardIds: ['a', 'i', 'the', 'and', 'to'],
     },
     {
       id: 'r2',
-      label: '10 words',
+      label: 'Level 2',
       cardIds: ['a', 'i', 'the', 'and', 'to', 'is', 'it', 'in', 'up', 'me'],
     },
     {
       id: 'r3',
-      label: '15 words',
+      label: 'Level 3',
       cardIds: [
         'a',
         'i',
@@ -83,7 +83,7 @@ export const dolchPreK5: DeckConfig = {
     },
     {
       id: 'r4',
-      label: '20 words',
+      label: 'Level 4',
       cardIds: [
         'a',
         'i',
@@ -109,7 +109,7 @@ export const dolchPreK5: DeckConfig = {
     },
     {
       id: 'r5',
-      label: '25 words',
+      label: 'Level 5',
       cardIds: [
         'a',
         'i',
@@ -140,7 +140,7 @@ export const dolchPreK5: DeckConfig = {
     },
     {
       id: 'r6',
-      label: '30 words',
+      label: 'Level 6',
       cardIds: [
         'a',
         'i',
@@ -176,7 +176,7 @@ export const dolchPreK5: DeckConfig = {
     },
     {
       id: 'r7',
-      label: '35 words',
+      label: 'Level 7',
       cardIds: [
         'a',
         'i',
@@ -217,7 +217,7 @@ export const dolchPreK5: DeckConfig = {
     },
     {
       id: 'r8',
-      label: '40 words',
+      label: 'Full deck',
       cardIds: [
         'a',
         'i',

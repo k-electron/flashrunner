@@ -1,7 +1,9 @@
 import type { DeckConfig } from '@/decks/types';
 
-// Word list and rung boundaries transcribed verbatim from the dolch-k-5 table in
-// specs/001-deck-runs/research.md §4.
+// Word list transcribed verbatim from the dolch-k-5 table in
+// specs/001-deck-runs/research.md §4. The rung boundaries no longer match that
+// table: the 50-word rung was deleted so the deck does not end on a two-card
+// part-step, and all 52 cards belong to the top rung alone (008 FR-020).
 // Rungs are cumulative: each lists every card literally, in presentation order.
 
 export const dolchK5: DeckConfig = {
@@ -64,17 +66,17 @@ export const dolchK5: DeckConfig = {
   rungs: [
     {
       id: 'r1',
-      label: '5 words',
+      label: 'Level 1',
       cardIds: ['am', 'at', 'on', 'so', 'no'],
     },
     {
       id: 'r2',
-      label: '10 words',
+      label: 'Level 2',
       cardIds: ['am', 'at', 'on', 'so', 'no', 'be', 'do', 'he', 'all', 'get'],
     },
     {
       id: 'r3',
-      label: '15 words',
+      label: 'Level 3',
       cardIds: [
         'am',
         'at',
@@ -95,7 +97,7 @@ export const dolchK5: DeckConfig = {
     },
     {
       id: 'r4',
-      label: '20 words',
+      label: 'Level 4',
       cardIds: [
         'am',
         'at',
@@ -121,7 +123,7 @@ export const dolchK5: DeckConfig = {
     },
     {
       id: 'r5',
-      label: '25 words',
+      label: 'Level 5',
       cardIds: [
         'am',
         'at',
@@ -152,7 +154,7 @@ export const dolchK5: DeckConfig = {
     },
     {
       id: 'r6',
-      label: '30 words',
+      label: 'Level 6',
       cardIds: [
         'am',
         'at',
@@ -188,7 +190,7 @@ export const dolchK5: DeckConfig = {
     },
     {
       id: 'r7',
-      label: '35 words',
+      label: 'Level 7',
       cardIds: [
         'am',
         'at',
@@ -229,7 +231,7 @@ export const dolchK5: DeckConfig = {
     },
     {
       id: 'r8',
-      label: '40 words',
+      label: 'Level 8',
       cardIds: [
         'am',
         'at',
@@ -275,7 +277,7 @@ export const dolchK5: DeckConfig = {
     },
     {
       id: 'r9',
-      label: '45 words',
+      label: 'Level 9',
       cardIds: [
         'am',
         'at',
@@ -322,67 +324,11 @@ export const dolchK5: DeckConfig = {
         'soon',
         'four',
         'what',
-      ],
-    },
-    {
-      id: 'r10',
-      label: '50 words',
-      cardIds: [
-        'am',
-        'at',
-        'on',
-        'so',
-        'no',
-        'be',
-        'do',
-        'he',
-        'all',
-        'get',
-        'did',
-        'but',
-        'yes',
-        'ran',
-        'out',
-        'are',
-        'ate',
-        'eat',
-        'new',
-        'now',
-        'our',
-        'saw',
-        'say',
-        'she',
-        'too',
-        'was',
-        'who',
-        'will',
-        'with',
-        'that',
-        'this',
-        'they',
-        'want',
-        'well',
-        'went',
-        'came',
-        'good',
-        'have',
-        'into',
-        'like',
-        'must',
-        'ride',
-        'soon',
-        'four',
-        'what',
-        'black',
-        'brown',
-        'there',
-        'under',
-        'white',
       ],
     },
     {
       id: 'r11',
-      label: '52 words',
+      label: 'Full deck',
       cardIds: [
         'am',
         'at',
