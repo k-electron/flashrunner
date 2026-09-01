@@ -80,3 +80,8 @@ Thumbs.db
 # Local agent/tooling state
 .claude/settings.local.json
 .claude/local/
+
+# Spec Kit catalog fetches. Re-downloaded on demand and time-stamped, so sharing
+# them only produces churn. Kept here rather than in .specify/.gitignore, which
+# Spec Kit manages and overwrites on upgrade.
+.specify/integrations/.cache/
