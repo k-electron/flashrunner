@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { dolchPreK5 } from '@/decks/dolch-prek-5';
 import { DeckLadder } from '@/routes/DeckLadder';
 import { Run } from '@/routes/Run';
+import { CARD_ENTRY_MS, CARD_EXIT_MS } from '@/run/advance';
 import { readDeckRecord, type PersistedRun } from '@/storage/deckRecord';
 import { deckKey } from '@/storage/keys';
 import { writeItem } from '@/storage/safeStorage';
@@ -63,13 +64,27 @@ function seed(record: StoredRecord = {}): void {
  */
 const FILE_SEED = 20260213;
 
+/**
+ * `@testing-library/react` drains its microtask queue with a `setTimeout(0)` that
+ * it only pumps when it can see Jest's fake timers (`asyncWrapper`, in
+ * @testing-library/react/dist/pure.js) — under Vitest's clock it looks for a
+ * `jest` global, finds none, and every user-event interaction hangs forever. The
+ * shim its docs prescribe is to give it one.
+ */
+Object.defineProperty(globalThis, 'jest', {
+  configurable: true,
+  value: { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) },
+});
+
 beforeEach(() => {
+  vi.useFakeTimers();
   seed();
   vi.spyOn(Math, 'random').mockImplementation(seededRng(FILE_SEED));
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 /** A card's visible face, which is all the screen ever shows of it. */
@@ -118,7 +133,7 @@ function renderRunWithRouter(path: string) {
     initialEntries: [path],
   });
   const { unmount } = render(<RouterProvider router={router} />);
-  return { user: userEvent.setup(), router, unmount };
+  return { user: userEvent.setup({ advanceTimers: vi.advanceTimersByTime }), router, unmount };
 }
 
 function renderRun(path: string) {
@@ -138,13 +153,51 @@ function renderJourney(path: string) {
     { initialEntries: [path] },
   );
   render(<RouterProvider router={router} />);
-  return userEvent.setup();
+  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+}
+
+/**
+ * Waits out the card transition a mark starts, so the card the next assertion
+ * reads is the settled one. Inert until that transition exists.
+ */
+function settle(): void {
+  act(() => {
+    vi.advanceTimersByTime(CARD_EXIT_MS + CARD_ENTRY_MS);
+    // The entry timer is armed from inside the exit timer's own callback, and
+    // `@sinonjs/fake-timers` clamps a timer scheduled during a tick to at least
+    // the next millisecond. At a duration of `0` that puts the entry one tick
+    // beyond a window of zero, so advancing by the window alone can never reach
+    // it and the guard would latch on for the rest of the run. A real
+    // `setTimeout(fn, 0)` has no such floor — this flushes what the fake clock
+    // held back, and is what keeps FR-008 checkable here at all. It is a no-op
+    // at any nonzero duration, where the window has already run both timers.
+    vi.runOnlyPendingTimers();
+  });
+}
+
+/**
+ * Advances to the next phase boundary and no further, whatever the durations
+ * are: the exit's end when a transition has just started, the entry's when it is
+ * half run. Expressed as "the next timer" rather than as the exit's own constant
+ * because of the same one-millisecond floor `settle` works around — at a
+ * duration of zero, advancing by the constant would not reach the boundary at
+ * all, and the test would assert against a screen mid-exit.
+ */
+function advanceToBoundary(): void {
+  act(() => {
+    vi.advanceTimersToNextTimer();
+  });
+}
+
+async function press(user: ReturnType<typeof userEvent.setup>, name: string): Promise<void> {
+  await user.click(screen.getByRole('button', { name }));
+  settle();
 }
 
 /** Marks every card of the current cycle "Got it", which clears the run. */
 async function clearRun(user: ReturnType<typeof userEvent.setup>, cards: number) {
   for (let card = 0; card < cards; card += 1) {
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
   }
 }
 
@@ -200,11 +253,11 @@ describe('Run', () => {
     expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
     expect(progressOf('Cards got right')).toBe('0 of 5 cards');
 
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
     expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
     expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
-    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    await press(user, 'Not yet');
     expect(progressOf('Cards done in this round')).toBe('2 of 5 cards');
     expect(progressOf('Cards got right')).toBe('1 of 5 cards');
   });
@@ -214,11 +267,11 @@ describe('Run', () => {
   // learner has been busy.
   it('grows the run bar on "Got it" and leaves it where it was on "Not yet" (FR-003)', async () => {
     const user = renderRun(FIRST_RUN);
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
+    await press(user, 'Got it');
     expect(progressOf('Cards got right')).toBe('2 of 5 cards');
 
-    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    await press(user, 'Not yet');
     expect(progressOf('Cards got right')).toBe('2 of 5 cards');
   });
 
@@ -237,12 +290,12 @@ describe('Run', () => {
   it("resets the cycle bar to the new cycle's own size when a cycle closes", async () => {
     const user = renderRun(FIRST_RUN);
     await clearRun(user, 4);
-    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    await press(user, 'Not yet');
 
     expect(progressOf('Cards done in this round')).toBe('0 of 1 cards');
     expect(progressOf('Cards got right')).toBe('4 of 5 cards');
 
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
 
     expect(progressOf('Cards done in this round')).toBe('1 of 1 cards');
     expect(progressOf('Cards got right')).toBe('5 of 5 cards');
@@ -253,7 +306,7 @@ describe('Run', () => {
     // Which card was on top is whatever the shuffle dealt; what matters is that
     // marking it moves the run on to a different one and retires it.
     const first = shownCard(FIRST_RUNG_CARDS);
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
 
     expect(shownCard(FIRST_RUNG_CARDS)).not.toBe(first);
     expect(screen.queryByText(frontOf(first))).not.toBeInTheDocument();
@@ -262,12 +315,12 @@ describe('Run', () => {
   it('brings a failed card back in the next round', async () => {
     const user = renderRun(FIRST_RUN);
     for (let card = 0; card < 4; card += 1) {
-      await user.click(screen.getByRole('button', { name: 'Got it' }));
+      await press(user, 'Got it');
     }
     // Whichever word the shuffle left last is the only one failed, and it is that
     // card by identity that has to come back — not a card in a known position.
     const failed = shownCard(FIRST_RUNG_CARDS);
-    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    await press(user, 'Not yet');
 
     // A new cycle of one, measured against itself.
     expect(progressOf('Cards done in this round')).toBe('0 of 1 cards');
@@ -276,12 +329,12 @@ describe('Run', () => {
 
   it('returns to the start of a full first round when Start over is used', async () => {
     const user = renderRun(FIRST_RUN);
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
-    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    await press(user, 'Got it');
+    await press(user, 'Not yet');
     expect(progressOf('Cards done in this round')).toBe('2 of 5 cards');
     expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
-    await user.click(screen.getByRole('button', { name: 'Start over' }));
+    await press(user, 'Start over');
 
     // Cycle 0 again with nothing behind it, and a card of the rung on screen. Which
     // word leads is not the claim: a restart shuffles anew (FR-017), so naming one
@@ -310,8 +363,8 @@ describe('Run', () => {
   // nothing may join the list mastery and unlocking are derived from (FR-012).
   it('records no completion when a run in progress is abandoned (FR-012)', async () => {
     const user = renderJourney(FIRST_RUN);
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
-    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    await press(user, 'Got it');
+    await press(user, 'Not yet');
     // Mid-run, whatever this rung's length: cards are still being asked for, so
     // the run being left really is unfinished and not one that quietly ended.
     expect(screen.getByRole('button', { name: 'Got it' })).toBeInTheDocument();
@@ -335,7 +388,7 @@ describe('Run', () => {
 
   it('starts a new run when the route moves to another rung', async () => {
     const { user, router } = renderRunWithRouter(FIRST_RUN);
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
     expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
     expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
@@ -365,7 +418,7 @@ describe('Run', () => {
   it('begins the same rung again when the run is repeated', async () => {
     const user = renderRun(FIRST_RUN);
     await clearRun(user, 5);
-    await user.click(screen.getByRole('button', { name: 'Repeat this run' }));
+    await press(user, 'Repeat this run');
 
     // The same five words, all of them to do again, in whatever order the repeat
     // drew (FR-018).
@@ -380,7 +433,7 @@ describe('Run', () => {
     await clearRun(user, 5);
     expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual(['r1']);
 
-    await user.click(screen.getByRole('button', { name: 'Repeat this run' }));
+    await press(user, 'Repeat this run');
     await clearRun(user, 5);
     expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual(['r1']);
   });
@@ -427,7 +480,7 @@ describe('Run', () => {
     // rung is five cards from a standing start, but once resume lands the seeded
     // run is hydrated mid-cycle and only the remaining three are shown.
     while (screen.queryByRole('button', { name: 'Got it' }) !== null) {
-      await user.click(screen.getByRole('button', { name: 'Got it' }));
+      await press(user, 'Got it');
     }
 
     expect(readDeckRecord(dolchPreK5).run).toBeUndefined();
@@ -513,7 +566,7 @@ describe('Run — persistence and resume', () => {
     });
 
     const { user, unmount } = renderRunWithRouter(FIRST_RUN);
-    await user.click(screen.getByRole('button', { name: 'Start over' }));
+    await press(user, 'Start over');
     const restarted = storedRun().queue;
 
     unmount();
@@ -531,7 +584,7 @@ describe('Run — persistence and resume', () => {
     // Read off the screen rather than assumed from the config: the run is shuffled,
     // so the only thing that says which card is being answered is the card shown.
     const passed = shownCard(FIRST_RUNG_CARDS);
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
     expect(readDeckRecord(dolchPreK5).run).toMatchObject({
       position: 1,
       passedThisRun: [passed],
@@ -539,7 +592,7 @@ describe('Run — persistence and resume', () => {
     });
 
     const failed = shownCard(FIRST_RUNG_CARDS);
-    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    await press(user, 'Not yet');
     expect(readDeckRecord(dolchPreK5).run).toMatchObject({
       position: 2,
       passedThisRun: [passed],
@@ -568,9 +621,9 @@ describe('Run — persistence and resume', () => {
 
     // Clearing the three that are left ends the run on the one still failed,
     // never on a card passed before the interruption.
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
+    await press(user, 'Got it');
+    await press(user, 'Got it');
     expect(screen.getByText('I')).toBeInTheDocument();
     expect(progressOf('Cards done in this round')).toBe('0 of 1 cards');
     expect(progressOf('Cards got right')).toBe('4 of 5 cards');
@@ -618,7 +671,7 @@ describe('Run — persistence and resume', () => {
       },
     });
     const user = renderRun(FIRST_RUN);
-    await user.click(screen.getByRole('button', { name: 'Start over' }));
+    await press(user, 'Start over');
 
     // The rung stays completed, so it stays unlocked and mastery is unaffected.
     expect(readDeckRecord(dolchPreK5).completedRungIds).toEqual(['r1']);
@@ -690,13 +743,13 @@ describe('Run — a device with no room left', () => {
     // Told rather than silently lied to — and the run is still usable: each mark
     // moves it on to a card it has not shown yet, refused write or not.
     const first = shownCard(FIRST_RUNG_CARDS);
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
     const second = shownCard(FIRST_RUNG_CARDS);
     expect(second).not.toBe(first);
     expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
     expect(progressOf('Cards got right')).toBe('1 of 5 cards');
 
-    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    await press(user, 'Not yet');
     expect([first, second]).not.toContain(shownCard(FIRST_RUNG_CARDS));
     expect(progressOf('Cards done in this round')).toBe('2 of 5 cards');
     expect(progressOf('Cards got right')).toBe('1 of 5 cards');
@@ -710,7 +763,7 @@ describe('Run — a device with no room left', () => {
     fillStorage();
     const user = renderJourney(FIRST_RUN);
     while (screen.queryByRole('button', { name: 'Got it' }) !== null) {
-      await user.click(screen.getByRole('button', { name: 'Got it' }));
+      await press(user, 'Got it');
     }
     expect(screen.getByText('Run complete')).toBeInTheDocument();
 
@@ -726,7 +779,7 @@ describe('Run — a device with no room left', () => {
   it('reaches a fresh run and says so when Start over is used on a full device', async () => {
     fillStorage({ completedRungIds: ['r1'], run: SECOND_RUNG_RUN });
     const user = renderJourney(`/deck/${dolchPreK5.id}`);
-    await user.click(screen.getByRole('button', { name: 'Start over' }));
+    await press(user, 'Start over');
 
     // The discarded run does not come back: the store still holds it, but this
     // session reads its own write back and finds nothing to resume. Both bars
@@ -778,7 +831,7 @@ describe('Run — the order stored is the order presented (FR-011, FR-015, FR-01
     // Cycle 0, answered by card identity: everything but "a" comes back.
     for (let card = 0; card < FIRST_RUNG_CARDS.length; card += 1) {
       const outcome = FAILED_CARDS.includes(shownCard(FIRST_RUNG_CARDS)) ? 'Not yet' : 'Got it';
-      await user.click(screen.getByRole('button', { name: outcome }));
+      await press(user, outcome);
     }
 
     // The boundary is behind us — the only transition that draws randomness. This
@@ -790,7 +843,7 @@ describe('Run — the order stored is the order presented (FR-011, FR-015, FR-01
     const presented: string[] = [];
     for (let card = 0; card < FAILED_CARDS.length; card += 1) {
       presented.push(shownCard(FAILED_CARDS));
-      await user.click(screen.getByRole('button', { name: 'Got it' }));
+      await press(user, 'Got it');
     }
 
     expect(
@@ -868,7 +921,7 @@ describe('Run — an interrupted run resumes into the run it already was (SC-005
         FAIL_ON_FIRST_SIGHT.includes(card) && !seen.has(card) ? 'Not yet' : 'Got it';
       seen.add(card);
       marked.push({ card, outcome });
-      await mounted.user.click(screen.getByRole('button', { name: outcome }));
+      await press(mounted.user, outcome);
 
       if (interruptAfter.includes(marked.length)) {
         mounted.unmount();
@@ -1076,7 +1129,7 @@ describe('Run — hearing the word (US1)', () => {
     for (let card = 0; card < FIRST_RUNG_CARDS.length; card += 1) {
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
       speech.end();
-      await user.click(screen.getByRole('button', { name: 'Not yet' }));
+      await press(user, 'Not yet');
     }
 
     expect(speech.words()).toHaveLength(FIRST_RUNG_CARDS.length);
@@ -1094,7 +1147,7 @@ describe('Run — hearing the word (US1)', () => {
     expect(speech.words()).toEqual([frontOf(first).toLowerCase()]);
 
     speech.end();
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await press(user, 'Got it');
 
     // The card has moved on, and so has what is said.
     const second = shownCard(FIRST_RUNG_CARDS);
@@ -1168,7 +1221,7 @@ describe('Run — hearing the word (US1)', () => {
     it('presents the next card with the default emphasis (007 FR-007)', async () => {
       const user = renderRun(FIRST_RUN);
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
-      await user.click(screen.getByRole('button', { name: 'Not yet' }));
+      await press(user, 'Not yet');
 
       expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
     });
@@ -1176,7 +1229,7 @@ describe('Run — hearing the word (US1)', () => {
     it('presents a started-over run with the default emphasis (007 FR-007)', async () => {
       const user = renderRun(FIRST_RUN);
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
-      await user.click(screen.getByRole('button', { name: 'Start over' }));
+      await press(user, 'Start over');
 
       expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
     });
@@ -1195,33 +1248,45 @@ describe('Run — hearing the word (US1)', () => {
       expect(emphasis()).toEqual(afterFirst);
     });
 
-    // The one path where it matters that the press is reported *above* the
-    // already-speaking guard rather than below it, and the only one a test can
-    // reach: fail the last card of a cycle as its only failure and the engine
-    // re-presents that same card at once (src/run/reducer.ts). The word has not
-    // changed, so nothing cancelled the speech and the control is still
-    // speaking — a press here starts no sound at all. It must still point the
-    // learner at "Not yet", because what the learner did was ask to hear the
-    // word (007 FR-002). Move `onHeard()` below the guard and this is the test
-    // that goes red.
-    it('swaps on a press that starts no sound (007 FR-002)', async () => {
+    // The one card change that leaves the word unchanged: fail the last card of
+    // a cycle as its only failure and the engine re-presents that same card at
+    // once (src/run/reducer.ts).
+    //
+    // What is being said belongs to the *presentation*, not to the word, so the
+    // speech stops here too. An action that takes the card out of scope stops
+    // the sound whether or not the same word happens to come back — one rule
+    // rather than a rule with an exception, and the one that keeps working when
+    // a card's pronunciation is long enough that carrying it over would be
+    // wrong. 009's card block is rebuilt on every presentation, which is what
+    // enforces it (FR-011 of 009).
+    //
+    // This replaces a test that reached the opposite case. Before 009 the same
+    // word came back mid-utterance and the control was still latched
+    // "speaking", which was the only path where `onHeard()` sitting *above*
+    // that latch rather than below it was observable (007 FR-002). The rebuild
+    // resets the latch, so that ordering is now unreachable and no test can
+    // hold it — see the note in src/components/PronounceButton.tsx.
+    it('stops talking when the same card is presented again (FR-011 of 009)', async () => {
       const user = renderRun(FIRST_RUN);
       for (let card = 0; card < FIRST_RUNG_CARDS.length - 1; card += 1) {
-        await user.click(screen.getByRole('button', { name: 'Got it' }));
+        await press(user, 'Got it');
       }
       const last = shownCard(FIRST_RUNG_CARDS);
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
-      await user.click(screen.getByRole('button', { name: 'Not yet' }));
-
-      // The same word came straight back, so this is a new presentation of a
-      // card that is still being spoken — the reset ran, and the speech did not.
-      expect(shownCard(FIRST_RUNG_CARDS)).toBe(last);
-      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
       const spokenSoFar = speech.words().length;
+      const cancelledSoFar = speech.cancelled;
 
+      await press(user, 'Not yet');
+
+      expect(shownCard(FIRST_RUNG_CARDS)).toBe(last);
+      expect(speech.cancelled).toBe(cancelledSoFar + 1);
+      expect(emphasis()).toEqual({ gotIt: 'default', notYet: 'secondary' });
+
+      // Live for the new presentation rather than latched on the utterance that
+      // was cut off — the failure this component was built to avoid.
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
 
-      expect(speech.words()).toHaveLength(spokenSoFar);
+      expect(speech.words()).toHaveLength(spokenSoFar + 1);
       expect(emphasis()).toEqual({ gotIt: 'secondary', notYet: 'default' });
     });
   });
@@ -1281,7 +1346,7 @@ describe('Run — hearing the word (US1)', () => {
       expect(speech.words()).toEqual([frontOf(first).toLowerCase()]);
 
       // Marked while it is still talking, which is what a child does.
-      await user.click(screen.getByRole('button', { name: 'Got it' }));
+      await press(user, 'Got it');
 
       // The device was told to stop, and the run moved on exactly as it does
       // when nothing is speaking: a new card, and both bars a card further on.
@@ -1315,7 +1380,7 @@ describe('Run — hearing the word (US1)', () => {
       const first = shownCard(FIRST_RUNG_CARDS);
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
 
-      await user.click(screen.getByRole('button', { name: 'Got it' }));
+      await press(user, 'Got it');
       const second = shownCard(FIRST_RUNG_CARDS);
       await user.click(screen.getByRole('button', { name: 'Hear the word' }));
 
@@ -1340,5 +1405,300 @@ describe('Run — where nothing can speak (US3)', () => {
     expect(screen.getByRole('button', { name: 'Not yet' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start over' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Leave this run' })).toBeInTheDocument();
+  });
+});
+
+describe('Run — a bounced press does not mark two cards (US1)', () => {
+  // The reported defect (issue #237). The outcome buttons never move, so a finger
+  // bouncing on one sends a second press that lands on a card the learner has not
+  // seen yet — and marks it.
+  it('marks one card when a second press lands inside the guard window (FR-001)', async () => {
+    const user = renderRun(FIRST_RUN);
+    const first = shownCard(FIRST_RUNG_CARDS);
+
+    // Deliberately not `press`: no timer advance between the two, which is what
+    // makes the second one a bounce rather than a second deliberate mark.
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    settle();
+
+    expect(storedRun().passedThisRun).toEqual([first]);
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    // The card the bounce would have marked is still there, waiting to be answered.
+    expect(shownCard(FIRST_RUNG_CARDS)).not.toBe(first);
+  });
+  // A stutter across the pair is the same accident as a bounce on one button, and
+  // the more dangerous half of it: a duplicate "Got it" at least agrees with what
+  // the learner meant, whereas this records an outcome they never chose. A guard
+  // kept per control rather than over the block would let exactly this through.
+  it('ignores a press on the other outcome inside the window (FR-002)', async () => {
+    const user = renderRun(FIRST_RUN);
+    const first = shownCard(FIRST_RUNG_CARDS);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await user.click(screen.getByRole('button', { name: 'Not yet' }));
+    settle();
+
+    // One card marked, and marked got it: the refused press added no outcome of
+    // its own and did not overwrite the one that landed.
+    expect(storedRun().passedThisRun).toEqual([first]);
+    expect(storedRun().failedThisCycle).toEqual([]);
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    expect(shownCard(FIRST_RUNG_CARDS)).not.toBe(first);
+  });
+
+  // "No effect whatsoever" is wider than "no second card marked", so this holds
+  // the whole stored run either side of the refused press rather than the two
+  // fields a mark happens to touch. A write that moved something the bars do not
+  // show — a position bumped without an outcome, a queue reordered — would be
+  // invisible to every other test in this file and fatal on the next resume.
+  it('records nothing at all for a refused press (FR-003)', async () => {
+    const user = renderRun(FIRST_RUN);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    // Read inside the window: the bars and the write follow the engine, so both
+    // have already moved for the press that landed. What must not move is
+    // anything after this point.
+    const applied = storedRun();
+    const bars = [progressOf('Cards done in this round'), progressOf('Cards got right')];
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    expect(storedRun()).toEqual(applied);
+    expect([progressOf('Cards done in this round'), progressOf('Cards got right')]).toEqual(bars);
+  });
+
+  // A held key auto-repeats, so one deliberate keypress reaches the button as a
+  // stream of activations — the keyboard's version of the reported defect, and
+  // the one a `pointer-events: none` guard would miss entirely.
+  it('marks one card for a held key that auto-repeats (FR-004)', async () => {
+    const user = renderRun(FIRST_RUN);
+    const first = shownCard(FIRST_RUNG_CARDS);
+
+    screen.getByRole('button', { name: 'Got it' }).focus();
+    // What a browser sends for a key held down: three keydowns, the second and
+    // third flagged as repeats, then one keyup. Each of them activates the
+    // focused button, so the first must mark and the rest must not.
+    await user.keyboard('{Enter>3/}');
+    settle();
+
+    expect(storedRun().passedThisRun).toEqual([first]);
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    expect(shownCard(FIRST_RUNG_CARDS)).not.toBe(first);
+  });
+});
+
+describe('Run — where the guard is not (FR-009, FR-010, FR-012)', () => {
+  // The guard is read at the outcome handler and nowhere else, so a screen with
+  // no outcome buttons is unguarded for free. Pressed while the window the last
+  // mark opened is still running, "Repeat this run" must still restart — a guard
+  // moved inside `apply` would leave it dead for a window with nothing to
+  // protect, on the one screen where the learner has no card to look at.
+  it('repeats the run from the frame the completion screen appears (FR-009)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await clearRun(user, 4);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    // The exit alone. The last card has left, so the completion screen is up,
+    // and its own entry is still to come — the only moment at which FR-009 says
+    // anything. Settling first instead would assert nothing: the window would
+    // already be shut.
+    advanceToBoundary();
+    expect(screen.getByText('Run complete')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Repeat this run' }));
+    settle();
+
+    expect(screen.queryByText('Run complete')).not.toBeInTheDocument();
+    expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
+  });
+
+  // The guard is screen state and is never written down, so a run coming back off
+  // the device arrives with nothing pending. There was no earlier press to bounce
+  // from, and a window here would only hold the learner up on the card they came
+  // back for — so this presses with no advance at all.
+  it('marks the first card of a resumed run on arrival (FR-010)', async () => {
+    seed({ run: SECOND_RUNG_RUN });
+    const user = renderRun(SECOND_RUN);
+    const resumed = shownCard(SECOND_RUNG_CARDS);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    settle();
+
+    // The seeded run had three cleared, so the press landing takes it to four.
+    expect(storedRun().passedThisRun).toContain(resumed);
+    expect(progressOf('Cards got right')).toBe('4 of 10 cards');
+    expect(shownCard(SECOND_RUNG_CARDS)).not.toBe(resumed);
+  });
+
+  // "Start over" sits below the block and is never blocked, so a learner who has
+  // just marked a card and changed their mind is not made to wait out an
+  // animation to act on it.
+  it('restarts from inside a window opened by a mark (FR-012)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
+    settle();
+
+    expect(storedRun()).toMatchObject({
+      cycleIndex: 0,
+      position: 0,
+      failedThisCycle: [],
+      passedThisRun: [],
+    });
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
+  });
+
+  // The other half of FR-012: unguarded itself, but it changes the card, so it
+  // opens a window like any other card change. Otherwise the restarted card
+  // arrives unprotected under the finger that asked for the restart.
+  it('opens a window of its own when it restarts (FR-012)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
+
+    // No advance: the restarted card is still arriving.
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(storedRun().passedThisRun).toEqual([]);
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+
+    // And the same press once the window has closed, so the refusal above was
+    // the window rather than a button left dead by the restart.
+    settle();
+    const arrived = shownCard(FIRST_RUNG_CARDS);
+    await press(user, 'Got it');
+    expect(storedRun().passedThisRun).toEqual([arrived]);
+  });
+});
+
+describe('Run — the mark lands on the press; only the picture lags (FR-005d, FR-014)', () => {
+  // Nothing about the outcome waits on the animation. With not a single timer
+  // advanced, the mark is in storage and both bars have already moved — which is
+  // what makes every interruption below survivable rather than a race.
+  it('applies and records the outcome before any of the transition runs (FR-005d)', async () => {
+    const user = renderRun(FIRST_RUN);
+    const marked = shownCard(FIRST_RUNG_CARDS);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    expect(storedRun()).toMatchObject({ position: 1, passedThisRun: [marked] });
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
+  });
+
+  // The visible half of the same requirement, and the only test that pins
+  // `leaving`: the engine has moved on, the bars have moved on, and the card the
+  // learner just marked is still the one on screen. Without it the word would
+  // change under the finger that marked it and the exit would carry away a card
+  // nobody had answered.
+  it('keeps the marked card on screen while its outcome is already stored (FR-005d)', async () => {
+    const user = renderRun(FIRST_RUN);
+    const marked = shownCard(FIRST_RUNG_CARDS);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    // `shownCard` throws unless exactly one card of the rung is being presented,
+    // so this also rules out the outgoing and incoming cards being painted at
+    // once.
+    expect(shownCard(FIRST_RUNG_CARDS)).toBe(marked);
+    expect(storedRun().passedThisRun).toEqual([marked]);
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+  });
+
+  // SC-003b: the tab closing one frame after the press. Unmounting with the exit
+  // still on screen and rendering again is that, and the run must come back on
+  // the *next* card — a mark deferred to the end of an animation would be gone
+  // and the learner would be asked the same card twice.
+  it('comes back on the next card after an interruption mid-exit (FR-014, SC-003b)', async () => {
+    const { user, unmount } = renderRunWithRouter(FIRST_RUN);
+    const marked = shownCard(FIRST_RUNG_CARDS);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    // Deliberately unsettled: the marked card is still painted, playing its exit.
+    expect(shownCard(FIRST_RUNG_CARDS)).toBe(marked);
+    unmount();
+
+    renderRun(FIRST_RUN);
+    expect(storedRun().passedThisRun).toEqual([marked]);
+    expect(shownCard(FIRST_RUNG_CARDS)).not.toBe(marked);
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+  });
+});
+
+describe('Run — a card change replaces the one in flight (FR-013)', () => {
+  // A "Start over" landing mid-exit is the interruption FR-013 is about. It does
+  // not preserve the mark and is not meant to: `restart` builds a fresh run, so
+  // the mark is discarded with the rest of the run the same way pressing it at
+  // any other moment discards one. What must not survive is the replaced
+  // transition — a stale boundary timer would drop the new window part-way
+  // through or fire the boundary a second time, and both leave the restarted
+  // card markable before the learner has read it.
+  it('leaves one coherent run and one intact window (FR-013)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
+
+    // One run, freshly built: a whole cycle again, both bars back at zero, and
+    // no remnant of the run the restart replaced.
+    const restarted = storedRun();
+    expect(restarted).toMatchObject({
+      rungId: 'r1',
+      cycleIndex: 0,
+      position: 0,
+      failedThisCycle: [],
+      passedThisRun: [],
+    });
+    expect(members(restarted.queue)).toEqual(members(FIRST_RUNG_CARDS));
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
+
+    // One window, still running: the restart's own, not the mark's.
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(storedRun().passedThisRun).toEqual([]);
+
+    // And it closes once, on time. Exactly one card is marked by the press after
+    // it, on the run the restart built.
+    settle();
+    const arrived = shownCard(FIRST_RUNG_CARDS);
+    await press(user, 'Got it');
+    expect(storedRun()).toMatchObject({ position: 1, passedThisRun: [arrived] });
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+  });
+  // The test above says what a Start over mid-exit leaves behind, but it cannot
+  // see a transition left in flight: both changes begin at the same instant, so
+  // the stale boundary and the live one fall on the same frame. Staggering them
+  // by one phase separates the two. The mark's window is due to close one exit
+  // plus one entry after the press; the restart's, one exit later than that. A
+  // transition that queued instead of being replaced would close the window at
+  // the earlier of the two, and the restarted card would be markable while it
+  // was still arriving. Both advances below are whole phases read off the two
+  // constants, never a fraction of either.
+  it('does not let a replaced transition close the new window (FR-013)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    act(() => {
+      vi.advanceTimersByTime(CARD_EXIT_MS);
+    });
+
+    // Landing here rather than on the press means the mark's window is already
+    // counting down its entry when the restart replaces it.
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
+    act(() => {
+      vi.advanceTimersByTime(CARD_ENTRY_MS);
+    });
+
+    // Exactly the moment the replaced transition would have dropped the guard.
+    // The restart's own window runs an exit longer than that, so this press is
+    // still refused.
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(storedRun().passedThisRun).toEqual([]);
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+
+    // And it does close, on its own schedule rather than not at all.
+    settle();
+    const arrived = shownCard(FIRST_RUNG_CARDS);
+    await press(user, 'Got it');
+    expect(storedRun().passedThisRun).toEqual([arrived]);
   });
 });

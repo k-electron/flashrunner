@@ -6,7 +6,7 @@
 // Run state is written after every transition and read back on entry, so the
 // run survives the tab closing and resumes on the exact card it stopped on
 // (FR-028, FR-029, SC-009).
-import { useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { CardFace } from '@/components/CardFace';
 import { OutcomeButtons } from '@/components/OutcomeButtons';
@@ -15,7 +15,9 @@ import { RunProgress } from '@/components/RunProgress';
 import { Button } from '@/components/ui/button';
 import { nextRung } from '@/decks/ladder';
 import { deckById } from '@/decks/registry';
-import type { DeckConfig, RungConfig } from '@/decks/types';
+import type { CardId, DeckConfig, RungConfig } from '@/decks/types';
+import { cn } from '@/lib/utils';
+import { CARD_ENTRY_CLASSES, CARD_ENTRY_MS, CARD_EXIT_CLASSES, CARD_EXIT_MS } from '@/run/advance';
 import { mark, restart, start } from '@/run/reducer';
 import { currentCard, isComplete } from '@/run/selectors';
 import type { Outcome, RunState } from '@/run/types';
@@ -160,10 +162,91 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
   // Purely visual guidance, never persisted (FR-008 of 007), so it is component
   // state rather than a field on the run.
   const [heard, setHeard] = useState(false);
-  const card = deck.cards.find((entry) => entry.id === currentCard(state));
-  const complete = isComplete(state);
+  // Which half of a card change is running. Two phases rather than one timer
+  // because they paint different cards, and because a single timer split later
+  // would take the guard apart with it.
+  const [phase, setPhase] = useState<'exiting' | 'entering' | 'idle'>('entering');
+  // The card block's key, and the reason it is a counter rather than anything
+  // read off the run: the same card is legitimately presented twice running (a
+  // failed last card is re-queued), `position` resets when a cycle closes, and a
+  // "Start over" from the first card of the first cycle changes no field at all.
+  const [presentation, setPresentation] = useState(0);
+  // Mounting is an entry with nothing before it, so there is no earlier press to
+  // bounce from and the first card of a run — or of a resume — is markable on
+  // arrival (FR-010). Only a press sets this.
+  const [guarded, setGuarded] = useState(false);
+  const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // The id of the card that was on screen when a press landed, held for the
+  // length of that card's exit. The engine and the storage write move on the
+  // press; this is what keeps the card the learner actually marked painted while
+  // it leaves (FR-005d).
+  const [leaving, setLeaving] = useState<CardId | null>(null);
+
+  // These two lines are the entire divergence between what is true and what is
+  // painted, and nothing else may read `leaving`: the progress bars, the storage
+  // write, and what a resume comes back to all follow the engine. Nothing derived
+  // from it is ever stored or compared against the queue.
+  const shownId = leaving ?? currentCard(state);
+  const complete = isComplete(state) && leaving === null;
+
+  const card = deck.cards.find((entry) => entry.id === shownId);
   // Undefined only at the top of the ladder — the whole deck (FR-014).
   const next = nextRung(deck, rung.id);
+
+  // A timer that outlives the screen would clear the guard on a component that is
+  // gone, and React would warn about it. The mark it followed is already stored,
+  // so nothing else is at stake here (FR-013, FR-014).
+  useEffect(() => () => clearTimeout(pending.current), []);
+
+  /**
+   * The second phase: the incoming card arrives, and the controls become live
+   * again as it settles.
+   */
+  function enter(): void {
+    setLeaving(null);
+    setPresentation((count) => count + 1);
+    setPhase('entering');
+    // Every presentation of a card begins either here or at this component's
+    // mount, so clearing it here is the whole of FR-007 of 007 — marking, "Start
+    // over", a resumed run, and a move to another rung, since `RunLoop` is keyed
+    // by rung. Deliberately not keyed on the word: a failed last card is
+    // re-queued and a "Start over" can reshuffle onto the card already showing,
+    // so the same word can be a genuinely new presentation.
+    //
+    // Here rather than in `apply` because the outgoing card is still painted for
+    // the whole of its exit, and whether its word was heard belongs to it right
+    // up to the boundary.
+    setHeard(false);
+    pending.current = setTimeout(() => {
+      setPhase('idle');
+      setGuarded(false);
+    }, CARD_ENTRY_MS);
+  }
+
+  /**
+   * Opens the guard window and plays the card change out. The window is exactly
+   * the two phases end to end — there is no duration of its own that could come
+   * to disagree with the animation (FR-006).
+   *
+   * Clearing `pending` first is what makes a card change starting mid-transition
+   * replace the one in flight rather than queue behind it (FR-013). A stale timer
+   * would otherwise drop the guard early, part-way through the new window.
+   */
+  function beginTransition(): void {
+    clearTimeout(pending.current);
+    setGuarded(true);
+    // "Repeat this run" is pressed on the run-complete screen, which holds no
+    // card to play out. That is the same absence as the first card of a run, so
+    // it goes straight to the entry — otherwise the *incoming* card would be the
+    // thing animated away.
+    if (shownId === undefined) {
+      enter();
+      return;
+    }
+    setLeaving(shownId);
+    setPhase('exiting');
+    pending.current = setTimeout(enter, CARD_EXIT_MS);
+  }
 
   /**
    * Applies an action to the engine and records the state it produces — one
@@ -185,17 +268,26 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
     const nextState = transition(state, action);
     setState(nextState);
     setStorageFull(persist(deck, nextState));
-    // Every presentation of a card begins either here or at this component's
-    // mount, so clearing it here is the whole of FR-007 of 007 — marking, "Start
-    // over", a resumed run, and a move to another rung, since `RunLoop` is keyed
-    // by rung. Deliberately not keyed on the word: a failed last card is
-    // re-queued and a "Start over" can reshuffle onto the card already showing,
-    // so the same word can be a genuinely new presentation.
-    setHeard(false);
+    // Every caller of `apply` changes the card, so the transition belongs here
+    // rather than at each of the three call sites. It carries nothing: the
+    // outcome above is already applied and written before it starts (FR-005d).
+    beginTransition();
   }
 
   return (
-    <>
+    // A plain wrapper carrying the one clock. Both are unregistered custom
+    // properties, so they inherit to everything below — the card block's two
+    // animations read them and name no duration of their own (FR-007). No
+    // classes: `RunProgress` is fixed and <main> keeps its own column, so this
+    // element must not be allowed to affect either.
+    <div
+      style={
+        {
+          '--card-exit': `${CARD_EXIT_MS}ms`,
+          '--card-entry': `${CARD_ENTRY_MS}ms`,
+        } as CSSProperties
+      }
+    >
       {/* Before <main> rather than inside it, so a screen reader meets the two
           indicators before the card they describe (FR-025) and <main>'s gap-8
           spacing is left untouched. No zero guard — validate.ts rule V8 forbids
@@ -225,7 +317,11 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
         )}
 
         {complete ? (
-          <div className="flex flex-col items-center gap-6">
+          // The entry that pairs with the last card's exit, so the run ends on a
+          // transition rather than a hard cut (FR-005e). It is unguarded for
+          // free: the guard is only ever read at the outcome handler, and there
+          // are no outcome buttons here (FR-009).
+          <div className={cn('flex flex-col items-center gap-6', CARD_ENTRY_CLASSES)}>
             <p className="text-2xl font-semibold tracking-tight">Run complete</p>
             {next === undefined && <p className="text-base">Deck mastered</p>}
             <div className="flex flex-wrap items-center justify-center gap-4">
@@ -246,7 +342,26 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
             </div>
           </div>
         ) : (
-          <>
+          // The card block: one element, so "the card and its buttons move as one
+          // group, on one timing and one curve" is structural rather than a rule
+          // anyone has to remember (FR-005). Nothing inside carries an animation
+          // of its own.
+          //
+          // Keyed by the counter so the entry replays on every presentation, and
+          // the counter only advances at the boundary — advancing it on the press
+          // would unmount the outgoing card mid-exit, leaving nothing to animate
+          // away.
+          //
+          // `gap-8` here because <main> now spaces three children where it spaced
+          // four, and this element spaces the two that moved inside it, so the
+          // rendered gaps are unchanged (contract § 8).
+          <div
+            key={presentation}
+            className={cn(
+              'flex w-full flex-col items-center gap-8',
+              phase === 'exiting' ? CARD_EXIT_CLASSES : CARD_ENTRY_CLASSES,
+            )}
+          >
             {card !== undefined && <CardFace front={card.front} />}
             {/* Two columns, so the pronounce button lines up with "Not yet" without
                 anyone writing a width by hand, and nothing sits above "Got it"
@@ -261,17 +376,36 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
                 only here, so the run-complete screen — which has no word — never
                 has one (FR-010). */}
             <div className="grid w-full max-w-md grid-cols-2 gap-x-4 gap-y-2">
+              {/* The word is the painted card's, not the engine's, so the
+                  component's word-keyed cleanup matches what is on screen
+                  through the exit. `guarded` stops it speaking the same word the
+                  block is carrying away (FR-011). */}
               {card !== undefined && (
-                <PronounceButton word={card.front} onHeard={() => setHeard(true)} />
+                <PronounceButton
+                  word={card.front}
+                  guarded={guarded}
+                  onHeard={() => setHeard(true)}
+                />
               )}
               <div className="col-span-2">
                 <OutcomeButtons
                   heard={heard}
-                  onMark={(outcome) => apply({ type: 'mark', outcome })}
+                  onMark={(outcome) => {
+                    // The guard is read here and nowhere else. `apply` also
+                    // serves "Start over" and "Repeat this run", which must stay
+                    // live — checking it at this one call site is what leaves
+                    // both of them unguarded with no condition written for
+                    // either (FR-009, FR-012). A blocked press does nothing at
+                    // all: it is discarded, never queued (FR-003).
+                    if (guarded) {
+                      return;
+                    }
+                    apply({ type: 'mark', outcome });
+                  }}
                 />
               </div>
             </div>
-          </>
+          </div>
         )}
 
         <div className="flex items-center gap-6">
@@ -295,6 +429,6 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
           </Link>
         </div>
       </main>
-    </>
+    </div>
   );
 }
