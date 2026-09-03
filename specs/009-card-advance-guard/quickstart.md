@@ -20,9 +20,9 @@ Same sequence CI runs, and the same build command Pages runs.
 npm run lint && npm run typecheck && npm test && npm run build
 ```
 
-**Expected**: all green. `npm test` includes the rewritten `Run.test.tsx` — 46
-existing mark sites now route through the `mark()` helper, plus the new guard
-tests.
+**Expected**: all green. `npm test` includes the rewritten `Run.test.tsx` — 53
+existing press sites now route through the `mark()` / `restart()` helpers, plus the
+new guard tests.
 
 ## 2. What the unit tests prove
 

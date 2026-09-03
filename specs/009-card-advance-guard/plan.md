@@ -34,10 +34,13 @@ than an effect confined to the second half.
 uses. Every class in this plan was compiled against the installed Tailwind 4.3.3
 to confirm it generates what is claimed — [research.md](./research.md) §§ 3, 4.
 
-**Largest cost, planned rather than discovered**: 46 outcome clicks in
-`src/routes/Run.test.tsx`. The outcome now applies at the boundary, so **a click
-with no timer advance changes nothing at all** — not just the second click, every
-click. That file moves to fake timers behind a `mark()` helper.
+**Largest cost, planned rather than discovered**: **53** button presses in
+`src/routes/Run.test.tsx` now start a transition — 46 outcome presses, 5
+`Start over`, 2 `Repeat this run`. A press with no timer advance leaves the screen
+mid-transition, so that file moves to fake timers behind helpers that advance by
+the imported durations. The migration is inert against the current code, so it is
+done **first**, while the suite is still green
+([tasks.md](./tasks.md) Phase 2).
 
 ## Technical Context
 
@@ -212,8 +215,8 @@ that renders two buttons should not learn about timers.
    return at the top of `speak()`. Two lines. Untestable in jsdom, as above.
 
 4. **`src/routes/Run.test.tsx`**. `vi.useFakeTimers()`,
-   `userEvent.setup({ advanceTimers })`, and a `mark()` helper replacing 46 direct
-   clicks. The helper advances by the **imported** `CARD_EXIT_MS + CARD_ENTRY_MS`.
+   `userEvent.setup({ advanceTimers })`, and helpers replacing all **53** direct
+   presses. They advance by the **imported** `CARD_EXIT_MS + CARD_ENTRY_MS`.
    A literal there would be the second copy of the number FR-007 exists to
    prevent, and would break SC-004. Then the new tests, including two the
    model makes necessary: the outcome is *already* stored with no timer advance at

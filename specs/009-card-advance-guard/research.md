@@ -283,22 +283,31 @@ still leaving. If that reads badly, couple it then — one token,
 ## Decision 7 — Fake timers in `Run.test.tsx`, advancing by the imported constant
 
 **Decision**: `Run.test.tsx` switches to `vi.useFakeTimers()`, `userEvent.setup`
-gains `advanceTimers`, and a `mark(user, name)` helper replaces the 46 direct
-outcome clicks. The helper advances by `CARD_EXIT_MS + CARD_ENTRY_MS`,
-**imported**, never written as a literal.
+gains `advanceTimers`, and `mark` / `restart` helpers replace all **53** direct
+button presses. They advance by `CARD_EXIT_MS + CARD_ENTRY_MS`, **imported**,
+never written as a literal.
 
 **The two-phase model makes this strictly necessary, where before it was merely
 likely.** Under enter-only, a single click still marked the card synchronously and
 only a *second* click was blocked. Now the outcome is applied at the boundary, so
 **a click with no timer advance changes nothing at all** — the assertion after it
-sees the old card. Every one of the 46 sites needs the helper, not just the
+sees the old card. Every one of the 53 sites needs a helper, not just the
 consecutive ones.
 
+**And the migration goes first.** Advancing fake timers with none pending is a
+no-op, so the conversion is inert against today's code: green before, green after.
+Doing it after the feature lands means ~50 failures with no way to separate
+harness bugs from feature bugs.
+
 **Rationale**: This is the largest single cost of the feature and it is
-unavoidable, so it is planned rather than discovered. 46 call sites in
-`src/routes/Run.test.tsx` click "Got it" or "Not yet". With real timers, the
-guard's `setTimeout(280)` has not fired by the time `userEvent`'s own `delay: 0`
-resolves, so **every test that marks two cards in a row would fail.**
+unavoidable, so it is planned rather than discovered. Counted precisely: 46
+outcome presses, 5 `Start over` and 2 `Repeat this run` — **53** sites, since
+`Start over` and `Repeat this run` now animate too. With real timers the phase
+timeouts have not fired by the time `userEvent`'s own `delay: 0` resolves, so
+**every one of those tests would fail.**
+
+The file uses no `waitFor` or `findBy` — checked — so fake timers carry none of
+the usual React Testing Library async risk.
 
 Advancing by the imported constant is what makes SC-004 true: retiming the
 feature changes one value and no test expectation. A literal `280` in the test
