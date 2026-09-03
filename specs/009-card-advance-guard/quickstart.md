@@ -223,3 +223,39 @@ position rather than from scratch:
 
 This is a judgement, not a measurement, and it is a one-line edit in
 `src/run/advance.ts` if it reads wrong on a real device.
+
+---
+
+## 8. Maintainer UAT on the branch preview
+
+Run by the maintainer against the Cloudflare branch preview on a touch device,
+2026-09-03. **All thirteen rows accepted.** Recorded because two rows he could
+not close by hand were closed by measurement afterwards, and one requirement was
+declined outright.
+
+| Row | Outcome |
+|---|---|
+| 1-7, 9, 10 | Confirmed by hand, including the reported defect itself: a real finger bouncing on "Got it" advances one card |
+| 3, 4, 5 | **The judgement rows, accepted.** 140 / 180 reads as a transition rather than lag, the motion reads as restrained, and the dim does not read as switched off. This was the only open question in T030 |
+| 8 | Reported as "if Start over was pressed really close, it doesn't do anything". **Measured afterwards: it does restart, at every delay from +0ms to +70ms** — bars to `0 of 5`, stored queue back to 5, `passedThisRun` empty. At +0ms the reshuffle dealt the same word back, so a correct restart is indistinguishable from nothing happening on a five-card rung one in five times |
+| 11 | Could not be pressed fast enough by hand. **Measured afterwards: the mark survives a hard reload at +0ms, +35ms and +70ms** — stored `passedThisRun` holds the marked card and the run comes back on the next one (FR-014, SC-003b) |
+| 12 | Skipped. Held-key auto-repeat is already unit-tested (`{Enter>3/}`) |
+| 13 | **`prefers-reduced-motion` declined.** Verified as unhandled: under `reduce` the card animates identically — same 8px travel, same `0.40` floor, `animation-name` still `enter`/`exit`. Not addressed, by decision |
+
+### Why the controls below the card stay live, since the maintainer offered to give it up
+
+He said he would accept every control being dead during a transition. The code
+deliberately does not do that, and the reason is worth keeping: "Leave this run"
+would trap someone mid-transition, and "Repeat this run" would make the
+completion screen feel broken on the frame it appears. Because the guard is read
+at the outcome handler and nowhere else, all of them stay live with no condition
+written for any of them — so the safer behaviour is also the cheaper one.
+
+### On reduced motion, if it is ever wanted
+
+`motion-safe:` on the two class strings is **not** the fix on its own. The guard
+is closed by `setTimeout` rather than by the animation
+([research.md](./research.md) § 5), so suppressing the animation would leave the
+controls unpressable for the whole window with no feedback at all — precisely the
+screen this feature exists to prevent. A reduced-motion path has to keep a
+signal, most likely the opacity dim without the slide.
