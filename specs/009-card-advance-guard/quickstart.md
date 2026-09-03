@@ -160,3 +160,66 @@ git diff main -- src/storage/ && echo "storage untouched"
 ```
 
 **Expected**: empty. No `schemaVersion` bump, no migration (FR-010).
+
+---
+
+## 6. What the browser checks showed
+
+Recorded per the repo's habit: what was observed, not that it ran. Chromium
+via Playwright 1.62.1 from the scratchpad, `reducedMotion: 'no-preference'`,
+against `npm run dev` at `140` / `180` (window `320ms`). Durations were read off
+the page's own `--card-exit` / `--card-entry` rather than written into the
+script, so the script retimes with the app.
+
+**All twelve passed.** Measured values:
+
+| # | Requirement | What was measured |
+|---|---|---|
+| 1 | FR-005 | Wrapper `animation-name` ran `exit` → `enter`; descendants carrying an animation of their own: **0** at every frame. The group moves as one because it is one element |
+| 2 | FR-005d | The marked word stayed on screen for **all 14** mid-exit frames. Both words appear across the window, never together |
+| 3 | FR-005a | Peak `translateY` **8.00px** over 43 frames. Nothing slides across the screen |
+| 4 | FR-005a | "Got it" and "Not yet" both returned to **0.000px** on x, y, width and height. The card's y and height also 0.000 (its width tracks the word, which changes) |
+| 5 | FR-005b, SC-003a | Opacity `1.00` → floor **`0.40` at 155ms** → `1.00`. Step across the boundary **0.051** against a largest step elsewhere of **0.102** — the boundary is not an outlier, so there is no frame where the two halves meet. **0** non-monotonic frames falling, **0** recovering |
+| 6 | FR-005b | No button carried `disabled` at any frame; **0** countdown, timer, spinner or progressbar elements inside `<main>`. Floor opacity `0.40`, clear of shadcn's static `0.5` disabled look |
+| 7 | FR-005c | **19** distinct run-bar transforms across the window, **15** of them while the card was still leaving. It grows, and it starts growing under the departing card |
+| 8 | FR-006 | Second press at window **−45ms** → `1 of 5 cards` (refused). At window **+45ms** → `2 of 5 cards` (accepted). The window closes where the animation ends, with no third number involved |
+| 9 | FR-011 | Utterances: 1 before the mark, **1** after a press mid-transition (unchanged), **2** after a press once settled. This is the requirement no unit test can reach |
+| 10 | FR-012, FR-013 | "Start over" mid-exit ran `exit` → `enter` and dipped to `0.40`, then left `0 of 5` / `0 of 5`. It animates like a mark and restarts cleanly |
+| 11 | FR-010 | On arrival the block carries `animation-name: enter`, running. A press with no wait at all gave `1 of 5 cards` — an entry, unguarded |
+| 12 | FR-005e, FR-009 | The last card played `exit`; the completion screen mounted carrying `animation-name: enter`; "Repeat this run" pressed on the frame it appeared gave `0 of 5 cards` |
+
+### Two traps in driving this with Playwright
+
+Both produced confident false results before being caught, so they are written
+down rather than left to be rediscovered:
+
+- **`click()` waits for a stable bounding box.** Every "press mid-transition"
+  was silently deferred until the animation finished, so checks 8, 9 and 10
+  passed against a settled screen and check 9 read as a **failure** of the
+  pronounce guard that was not one. Every press must be `click({ force: true })`.
+- **`localStorage` survives `page.goto`.** Runs leaked between scenarios and the
+  counts drifted. Clear it, then navigate again, before each check.
+
+### The one thing measured and deliberately left
+
+Each phase ends on the first paint after its `setTimeout`, so the opacity floor
+lands at **155ms** against a nominal 140ms boundary — about one frame late, as
+[research.md](./research.md) § 5 predicted. No knob corrects it: a correction
+would be a third number that could disagree with the other two, and 15ms is far
+below the ~100ms floor of perception.
+
+## 7. Tuning, as actually judged
+
+`140` / `180` was kept. The reasoning, so the next person retunes from a
+position rather than from scratch:
+
+- **320ms total** against a 50-100ms finger bounce — roughly 3× the thing it
+  exists to stop, and well inside the ~450ms ceiling at which an adult marking
+  quickly starts waiting on the app (SC-002).
+- **8px of travel** is displacement rather than relocation. At `-4` (16px) the
+  block starts to read as sliding rather than settling.
+- **The exit quicker than the entry** does what the contract predicted: the card
+  leaves briskly and the next settles.
+
+This is a judgement, not a measurement, and it is a one-line edit in
+`src/run/advance.ts` if it reads wrong on a real device.

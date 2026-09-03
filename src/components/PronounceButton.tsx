@@ -12,7 +12,23 @@ import { Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { pickVoice } from '@/speech/voice';
 
-export function PronounceButton({ word, onHeard }: { word: string; onHeard: () => void }) {
+export function PronounceButton({
+  word,
+  guarded,
+  onHeard,
+}: {
+  word: string;
+  // Set while the card block is moving, so the speaker cannot say the word the
+  // block is carrying away (FR-011 of 009). It moves with the card and becomes
+  // live again at the same moment the outcome buttons do.
+  //
+  // No unit test can reach this: the component returns null without
+  // `speechSynthesis`, which is the path jsdom takes, so the run screen's tests
+  // never meet the control. Verified in a real browser instead — see
+  // specs/009-card-advance-guard/quickstart.md § 3, check 9.
+  guarded?: boolean;
+  onHeard: () => void;
+}) {
   // The whole of the state machine (contract § 4): idle or speaking, and no
   // queue, because nothing is ever enqueued. What is stored is the word being
   // said rather than a bare flag, so that "is it speaking?" is derived at render
@@ -61,9 +77,20 @@ export function PronounceButton({ word, onHeard }: { word: string; onHeard: () =
   }
 
   function speak(): void {
+    // Above `onHeard` rather than below it: a press the guard refuses produces
+    // nothing at all, and nothing was heard.
+    if (guarded === true) {
+      return;
+    }
     // The press is the signal, not the word finishing (FR-002 of 007). Above the
     // guard below, so a press during speech — which starts nothing — still
     // reports. The receiver sets an already-set flag, so repeating is free.
+    //
+    // No test holds this ordering any more. It was observable only when the same
+    // word came back mid-utterance with the latch still set, and 009 rebuilds
+    // this component on every card presentation, which clears the latch. Moving
+    // `onHeard()` below the guard would now break nothing — so do not, and do
+    // not read the silence as permission.
     onHeard();
     // A press while the word is still being said does nothing at all: no second
     // utterance, and nothing held back to play afterwards (FR-007).

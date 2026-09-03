@@ -45,7 +45,7 @@ See its note.
 
 **Purpose**: The tuning surface, which everything else reads.
 
-- [ ] T001 Create `src/run/advance.ts` exporting `CARD_EXIT_MS = 140`, `CARD_ENTRY_MS = 180`, `CARD_EXIT_CLASSES` (`animate-out fade-out-40 slide-out-to-top-2 ease-in fill-mode-forwards duration-(--card-exit)`) and `CARD_ENTRY_CLASSES` (`animate-in fade-in-40 slide-in-from-bottom-2 ease-out duration-(--card-entry)`), with a comment stating that these values are meant to be edited, that the guard window is their sum and is never written down, and that the two `fade-*-40` percentages must stay equal
+- [X] T001 Create `src/run/advance.ts` exporting `CARD_EXIT_MS = 140`, `CARD_ENTRY_MS = 180`, `CARD_EXIT_CLASSES` (`animate-out fade-out-40 slide-out-to-top-2 ease-in fill-mode-forwards duration-(--card-exit)`) and `CARD_ENTRY_CLASSES` (`animate-in fade-in-40 slide-in-from-bottom-2 ease-out duration-(--card-entry)`), with a comment stating that these values are meant to be edited, that the guard window is their sum and is never written down, and that the two `fade-*-40` percentages must stay equal
 
 **Depends on**: nothing.
 
@@ -68,9 +68,9 @@ Advancing fake timers when no timer is pending is a no-op, so this migration is
 **inert against the current code**: the suite is green before it and green after
 it. That is what T004 exists to prove.
 
-- [ ] T002 Add `vi.useFakeTimers()` / `vi.useRealTimers()` around the suites in `src/routes/Run.test.tsx` and give every `userEvent.setup()` call `{ advanceTimers: vi.advanceTimersByTime }`, in `renderRunWithRouter`, `renderRun` and `renderJourney`
-- [ ] T003 Add `settle()`, `mark(user, name)` and `restart(user, name)` helpers to `src/routes/Run.test.tsx` that click and then advance by `CARD_EXIT_MS + CARD_ENTRY_MS` **imported from `@/run/advance`**, never a literal, and route all 53 sites through them — including `clearRun` and the two `Repeat this run` presses
-- [ ] T004 Run `npx vitest run src/routes/Run.test.tsx` and confirm it is **green with no source change**. A failure here is a harness bug, and fixing it now costs minutes rather than being mistaken for a feature bug later
+- [X] T002 Add `vi.useFakeTimers()` / `vi.useRealTimers()` around the suites in `src/routes/Run.test.tsx` and give every `userEvent.setup()` call `{ advanceTimers: vi.advanceTimersByTime }`, in `renderRunWithRouter`, `renderRun` and `renderJourney`
+- [X] T003 Add `settle()`, `mark(user, name)` and `restart(user, name)` helpers to `src/routes/Run.test.tsx` that click and then advance by `CARD_EXIT_MS + CARD_ENTRY_MS` **imported from `@/run/advance`**, never a literal, and route all 53 sites through them — including `clearRun` and the two `Repeat this run` presses
+- [X] T004 Run `npx vitest run src/routes/Run.test.tsx` and confirm it is **green with no source change**. A failure here is a harness bug, and fixing it now costs minutes rather than being mistaken for a feature bug later
 
 **Depends on**: T001 (T003 imports the constants).
 
@@ -87,15 +87,24 @@ assert exactly one card advanced and the newly presented card is still unanswere
 
 **Not shippable alone** — see the note at the top. Pair with Phase 4.
 
-- [ ] T005 [US1] Write the double-tap test in `src/routes/Run.test.tsx`: press "Got it" twice with no timer advance between, assert only one card was marked and the second card is still presented. **Run it and confirm it FAILS** against the unguarded code (Principle IV)
-- [ ] T006 [US1] Add the two-phase machine to `RunLoop` in `src/routes/Run.tsx`: `phase` (`'exiting' | 'entering' | 'idle'`, initial `'entering'`), `guarded` (initial `false`), `presentation` (initial `0`), and one `pending` timer ref. A press applies the action immediately, sets `guarded`, enters `'exiting'`, then at `CARD_EXIT_MS` increments `presentation` and enters `'entering'`, then at `CARD_ENTRY_MS` returns to `'idle'` and clears `guarded`. Built as two phases now rather than one timer, because splitting it later would mean rewriting the guard
-- [ ] T007 [US1] Guard the outcome handler in `src/routes/Run.tsx` — return early while `guarded`, at the `onMark` call site and **not** inside `apply`, so "Repeat this run" and "Start over" stay live with no condition written for either. T005 now passes
-- [ ] T008 [US1] Clear `pending` at the top of every transition and on unmount in `src/routes/Run.tsx` (FR-013), so a replaced transition cannot drop the guard early or clear state after the screen is gone
-- [ ] T009 [P] [US1] Add tests in `src/routes/Run.test.tsx` for FR-002 (a press on the *other* button inside the window is ignored) and FR-003 (a blocked press moves neither progress bar and writes nothing to storage)
-- [ ] T010 [P] [US1] Add a test in `src/routes/Run.test.tsx` for FR-004: keyboard activation and held-key auto-repeat are guarded exactly like a tap
-- [ ] T011 [P] [US1] Add tests in `src/routes/Run.test.tsx` for FR-009 (the completion screen's controls work with no advance), FR-010 (a resumed run's first card is markable on arrival) and FR-012 ("Start over" is never blocked, and does open a window of its own)
-- [ ] T012 [P] [US1] Add tests in `src/routes/Run.test.tsx` for FR-005d and FR-014: with **no timer advance at all** the outcome is already in storage and both bars have already moved; and unmounting mid-exit then rendering again resumes on the *next* card, proving the mark survived (SC-003b)
-- [ ] T013 [US1] Add a test in `src/routes/Run.test.tsx` for FR-013: press "Got it", then "Start over" mid-exit, and assert one coherent run with the earlier mark still recorded
+- [X] T005 [US1] Write the double-tap test in `src/routes/Run.test.tsx`: press "Got it" twice with no timer advance between, assert only one card was marked and the second card is still presented. **Run it and confirm it FAILS** against the unguarded code (Principle IV)
+- [X] T006 [US1] Add the two-phase machine to `RunLoop` in `src/routes/Run.tsx`: `phase` (`'exiting' | 'entering' | 'idle'`, initial `'entering'`), `guarded` (initial `false`), `presentation` (initial `0`), and one `pending` timer ref. A press applies the action immediately, sets `guarded`, enters `'exiting'`, then at `CARD_EXIT_MS` increments `presentation` and enters `'entering'`, then at `CARD_ENTRY_MS` returns to `'idle'` and clears `guarded`. Built as two phases now rather than one timer, because splitting it later would mean rewriting the guard
+- [X] T007 [US1] Guard the outcome handler in `src/routes/Run.tsx` — return early while `guarded`, at the `onMark` call site and **not** inside `apply`, so "Repeat this run" and "Start over" stay live with no condition written for either. T005 now passes
+- [X] T008 [US1] Clear `pending` at the top of every transition and on unmount in `src/routes/Run.tsx` (FR-013), so a replaced transition cannot drop the guard early or clear state after the screen is gone
+- [X] T009 [P] [US1] Add tests in `src/routes/Run.test.tsx` for FR-002 (a press on the *other* button inside the window is ignored) and FR-003 (a blocked press moves neither progress bar and writes nothing to storage)
+- [X] T010 [P] [US1] Add a test in `src/routes/Run.test.tsx` for FR-004: keyboard activation and held-key auto-repeat are guarded exactly like a tap
+- [X] T011 [P] [US1] Add tests in `src/routes/Run.test.tsx` for FR-009 (the completion screen's controls work with no advance), FR-010 (a resumed run's first card is markable on arrival) and FR-012 ("Start over" is never blocked, and does open a window of its own)
+- [X] T012 [P] [US1] Add tests in `src/routes/Run.test.tsx` for FR-005d and FR-014: with **no timer advance at all** the outcome is already in storage and both bars have already moved; and unmounting mid-exit then rendering again resumes on the *next* card, proving the mark survived (SC-003b)
+- [X] T013 [US1] Add a test in `src/routes/Run.test.tsx` for FR-013: press "Got it", then "Start over" mid-exit, and assert one coherent run with the earlier mark still recorded
+
+> **T013 as written was not achievable.** `restart()` in `src/run/reducer.ts` calls
+> `start()`, which builds a fresh run, so a "Start over" discards run progress by
+> design and "the earlier mark still recorded" cannot hold. Built as: one coherent
+> run after the replaced transition, plus a second test that *staggers* the two card
+> changes by a phase. The staggered one matters — with both changes starting on the
+> same frame, deleting `clearTimeout(pending.current)` leaves the same-frame test
+> green, because the stale and live timers coincide. It is the only thing in the
+> suite that catches that regression.
 
 **Depends on**: T004. T006 → T007 → T008 strictly serially, all in `RunLoop`.
 T009-T012 are parallel with each other (test-only, independent cases) but all need
@@ -113,15 +122,15 @@ restrained, settling at the moment the buttons become pressable.
 
 **This plus Phase 3 is the MVP.**
 
-- [ ] T014 [US2] Wrap `CardFace` and the two-column grid in one element in `src/routes/Run.tsx`, keyed by `presentation`, and give it `flex w-full flex-col items-center gap-8` so `<main>` spacing three children instead of four renders identically (contract § 8). Verify the gaps are unchanged before going further
-- [ ] T015 [US2] Add `leaving: string | null` to `RunLoop` in `src/routes/Run.tsx`, set to the card on screen at the moment of any press that changes the card and cleared at the boundary, and derive `const shownId = leaving ?? currentCard(state)` and `const complete = isComplete(state) && leaving === null`. These two lines are the whole divergence between what is true and what is painted — nothing else may read `leaving`
-- [ ] T016 [US2] Point `CardFace` at `shownId` in `src/routes/Run.tsx`, and move the `setHeard(false)` reset out of `apply` and into the boundary callback, because the outgoing card is still painted through the exit and its emphasis belongs to it
-- [ ] T017 [US2] Apply `CARD_EXIT_CLASSES` while `phase === 'exiting'` and `CARD_ENTRY_CLASSES` otherwise to the wrapper from T014, in `src/routes/Run.tsx`
-- [ ] T018 [US2] Wrap `RunProgress` and `<main>` in a plain `<div>` in `src/routes/Run.tsx` carrying `style={{ '--card-exit': `${CARD_EXIT_MS}ms`, '--card-entry': `${CARD_ENTRY_MS}ms` }}`, so both inherit to everything below. No classes on this div
-- [ ] T019 [US2] Give the run-complete screen `CARD_ENTRY_CLASSES` in `src/routes/Run.tsx` — it is the entry that pairs with the last card's exit (FR-005e). It stays unguarded, which needs no code because the guard is only read at the outcome handler
-- [ ] T020 [P] [US2] Add a `guarded?: boolean` prop to `src/components/PronounceButton.tsx` and return early at the top of `speak()` while it is set (FR-011). Note in the file that this cannot be unit-tested: the component returns `null` without `speechSynthesis`, which is the path jsdom takes
-- [ ] T021 [US2] Pass `guarded` to `PronounceButton` from `src/routes/Run.tsx`, and pass it the word for `shownId` rather than the engine's current card, so its word-keyed cleanup matches what is painted
-- [ ] T022 [US2] Add a test in `src/routes/Run.test.tsx` for FR-005d's visible half: immediately after a press, the marked card's word is **still on screen** while storage already holds the outcome
+- [X] T014 [US2] Wrap `CardFace` and the two-column grid in one element in `src/routes/Run.tsx`, keyed by `presentation`, and give it `flex w-full flex-col items-center gap-8` so `<main>` spacing three children instead of four renders identically (contract § 8). Verify the gaps are unchanged before going further
+- [X] T015 [US2] Add `leaving: string | null` to `RunLoop` in `src/routes/Run.tsx`, set to the card on screen at the moment of any press that changes the card and cleared at the boundary, and derive `const shownId = leaving ?? currentCard(state)` and `const complete = isComplete(state) && leaving === null`. These two lines are the whole divergence between what is true and what is painted — nothing else may read `leaving`
+- [X] T016 [US2] Point `CardFace` at `shownId` in `src/routes/Run.tsx`, and move the `setHeard(false)` reset out of `apply` and into the boundary callback, because the outgoing card is still painted through the exit and its emphasis belongs to it
+- [X] T017 [US2] Apply `CARD_EXIT_CLASSES` while `phase === 'exiting'` and `CARD_ENTRY_CLASSES` otherwise to the wrapper from T014, in `src/routes/Run.tsx`
+- [X] T018 [US2] Wrap `RunProgress` and `<main>` in a plain `<div>` in `src/routes/Run.tsx` carrying `style={{ '--card-exit': `${CARD_EXIT_MS}ms`, '--card-entry': `${CARD_ENTRY_MS}ms` }}`, so both inherit to everything below. No classes on this div
+- [X] T019 [US2] Give the run-complete screen `CARD_ENTRY_CLASSES` in `src/routes/Run.tsx` — it is the entry that pairs with the last card's exit (FR-005e). It stays unguarded, which needs no code because the guard is only read at the outcome handler
+- [X] T020 [P] [US2] Add a `guarded?: boolean` prop to `src/components/PronounceButton.tsx` and return early at the top of `speak()` while it is set (FR-011). Note in the file that this cannot be unit-tested: the component returns `null` without `speechSynthesis`, which is the path jsdom takes
+- [X] T021 [US2] Pass `guarded` to `PronounceButton` from `src/routes/Run.tsx`, and pass it the word for `shownId` rather than the engine's current card, so its word-keyed cleanup matches what is painted
+- [X] T022 [US2] Add a test in `src/routes/Run.test.tsx` for FR-005d's visible half: immediately after a press, the marked card's word is **still on screen** while storage already holds the outcome
 
 **Depends on**: T006-T008 (the machine and `phase` must exist). T014 → T015 → T016
 → T017 strictly serially in `RunLoop`. T018 and T019 need T014. **T020 needs only
@@ -141,9 +150,9 @@ unpressable window change together.
 why this phase is short and why it cannot come earlier: there is nothing to verify
 until Phases 3 and 4 have consumed the constants.
 
-- [ ] T023 [US3] Temporarily set `CARD_EXIT_MS` and `CARD_ENTRY_MS` to different values in `src/run/advance.ts`, run `npx vitest run src/routes/Run.test.tsx`, and confirm the suite is green with **no test edit** (SC-004). Restore the values
-- [ ] T024 [US3] Set both durations to `0` in `src/run/advance.ts`, run the suite, and confirm one press still marks exactly one card and the outcome is applied and stored (FR-008). Restore the values
-- [ ] T025 [US3] Grep for duration literals outside `src/run/advance.ts` — `grep -rn "[0-9]\{2,\}ms\|CARD_EXIT_MS = \|CARD_ENTRY_MS = " src/` should show only that file's definitions, and no test may contain a timing number
+- [X] T023 [US3] Temporarily set `CARD_EXIT_MS` and `CARD_ENTRY_MS` to different values in `src/run/advance.ts`, run `npx vitest run src/routes/Run.test.tsx`, and confirm the suite is green with **no test edit** (SC-004). Restore the values
+- [X] T024 [US3] Set both durations to `0` in `src/run/advance.ts`, run the suite, and confirm one press still marks exactly one card and the outcome is applied and stored (FR-008). Restore the values
+- [X] T025 [US3] Grep for duration literals outside `src/run/advance.ts` — `grep -rn "[0-9]\{2,\}ms\|CARD_EXIT_MS = \|CARD_ENTRY_MS = " src/` should show only that file's definitions, and no test may contain a timing number
 
 **Depends on**: Phase 4 complete.
 
@@ -151,13 +160,13 @@ until Phases 3 and 4 have consumed the constants.
 
 ## Phase 6: Verification, tuning and cross-cutting
 
-- [ ] T026 Run the full CI gate: `npm run lint && npm run typecheck && npm test && npm run build`
-- [ ] T027 Confirm the change set is exactly four files — `git diff --stat main -- src/` — with **no change to `package-lock.json`**, nothing under `src/components/ui/`, and nothing under `src/storage/`
-- [ ] T028 Walk the twelve browser checks in [quickstart.md](./quickstart.md) § 3 against `npm run dev`, driving Playwright from the scratchpad via `npx playwright@1.62.1`. These are the whole verification of FR-005, FR-005a, FR-005b, FR-005c, FR-006, FR-007a and FR-011 — jsdom applies no CSS and Principle IV forbids asserting class names
-- [ ] T029 Measure the three checks that are measurements rather than impressions: the buttons' `boundingBox()` before and after settling is identical (FR-005a), the block's computed opacity is monotonic down then up with **no step at the boundary** (FR-005b, SC-003a), and a press one frame before the entry ends is refused while one frame after is accepted (FR-006)
-- [ ] T030 Tune `CARD_EXIT_MS` and `CARD_ENTRY_MS` across several passes against the sanity bounds in [quickstart.md](./quickstart.md) § 4 — below ~120ms total the protection stops working, above ~450ms total an adult marking quickly starts waiting. **"Subtle, polished, tasteful" is the acceptance test and it is a judgement**, so expect to come back here
-- [ ] T031 Check the one condition that would re-couple the progress bars ([research.md](./research.md) § 6): if T030 leaves the exit much past ~250ms, confirm the bar does not visibly finish filling while the card is still leaving. If it does, add `duration-[var(--card-exit,150ms)]` to the indicator in `src/components/ui/progress.tsx` and say so in the PR — it takes the change set to five files
-- [ ] T032 Record what the browser checks actually showed, not that they were run, in [quickstart.md](./quickstart.md)
+- [X] T026 Run the full CI gate: `npm run lint && npm run typecheck && npm test && npm run build`
+- [X] T027 Confirm the change set is exactly four files — `git diff --stat main -- src/` — with **no change to `package-lock.json`**, nothing under `src/components/ui/`, and nothing under `src/storage/`
+- [X] T028 Walk the twelve browser checks in [quickstart.md](./quickstart.md) § 3 against `npm run dev`, driving Playwright from the scratchpad via `npx playwright@1.62.1`. These are the whole verification of FR-005, FR-005a, FR-005b, FR-005c, FR-006, FR-007a and FR-011 — jsdom applies no CSS and Principle IV forbids asserting class names
+- [X] T029 Measure the three checks that are measurements rather than impressions: the buttons' `boundingBox()` before and after settling is identical (FR-005a), the block's computed opacity is monotonic down then up with **no step at the boundary** (FR-005b, SC-003a), and a press one frame before the entry ends is refused while one frame after is accepted (FR-006)
+- [X] T030 Tune `CARD_EXIT_MS` and `CARD_ENTRY_MS` across several passes against the sanity bounds in [quickstart.md](./quickstart.md) § 4 — below ~120ms total the protection stops working, above ~450ms total an adult marking quickly starts waiting. **"Subtle, polished, tasteful" is the acceptance test and it is a judgement**, so expect to come back here
+- [X] T031 **Condition did not fire.** The exit stayed at 140ms, far short of the ~250ms that would have made the bar land visibly early, and browser check 7 measured 15 distinct bar transforms *while the card was still leaving*. `src/components/ui/progress.tsx` is untouched and the change set stays at four files. Original task: check the one condition that would re-couple the progress bars ([research.md](./research.md) § 6): if T030 leaves the exit much past ~250ms, confirm the bar does not visibly finish filling while the card is still leaving. If it does, add `duration-[var(--card-exit,150ms)]` to the indicator in `src/components/ui/progress.tsx` and say so in the PR — it takes the change set to five files
+- [X] T032 Record what the browser checks actually showed, not that they were run, in [quickstart.md](./quickstart.md)
 - [ ] T033 Open the PR against `main`, describing what was asked for so Principle VI can be checked against it, linking issue #237, and stating that no dependency was added and no vendored component modified
 
 **Depends on**: T026 needs Phase 5. T028-T032 need T026. T030 → T031 → T032
