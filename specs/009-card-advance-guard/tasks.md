@@ -167,7 +167,7 @@ until Phases 3 and 4 have consumed the constants.
 - [X] T030 Tune `CARD_EXIT_MS` and `CARD_ENTRY_MS` across several passes against the sanity bounds in [quickstart.md](./quickstart.md) § 4 — below ~120ms total the protection stops working, above ~450ms total an adult marking quickly starts waiting. **"Subtle, polished, tasteful" is the acceptance test and it is a judgement**, so expect to come back here
 - [X] T031 **Condition did not fire.** The exit stayed at 140ms, far short of the ~250ms that would have made the bar land visibly early, and browser check 7 measured 15 distinct bar transforms *while the card was still leaving*. `src/components/ui/progress.tsx` is untouched and the change set stays at four files. Original task: check the one condition that would re-couple the progress bars ([research.md](./research.md) § 6): if T030 leaves the exit much past ~250ms, confirm the bar does not visibly finish filling while the card is still leaving. If it does, add `duration-[var(--card-exit,150ms)]` to the indicator in `src/components/ui/progress.tsx` and say so in the PR — it takes the change set to five files
 - [X] T032 Record what the browser checks actually showed, not that they were run, in [quickstart.md](./quickstart.md)
-- [ ] T033 Open the PR against `main`, describing what was asked for so Principle VI can be checked against it, linking issue #237, and stating that no dependency was added and no vendored component modified
+- [X] T033 Open the PR against `main`, describing what was asked for so Principle VI can be checked against it, linking issue #237, and stating that no dependency was added and no vendored component modified
 
 **Depends on**: T026 needs Phase 5. T028-T032 need T026. T030 → T031 → T032
 serially. T033 last.
