@@ -255,3 +255,23 @@ of writing it first.
 
 **Total: 33 tasks.** T001 (setup), T002-T004 (harness), T005-T013 (US1, 9),
 T014-T022 (US2, 9), T023-T025 (US3, 3), T026-T033 (verification and tuning, 8).
+
+---
+
+## Phase 7: Convergence
+
+- [X] T034 Reconcile the progress bars' arrival timing per US2/AC4 (partial). **Resolved: no code change.** The maintainer's intent is that the bar and the card move *in parallel at their own speeds*, not that they finish together. Measured on the shipping build: the bar moves 41ms -> 182ms and the card 49ms -> 316ms, both starting on the press, overlapping for 133ms — parallel, never sequential. So the code already satisfies the intent, and AC4's trailing clause "and arrives as the card block settles" is the stale wording, superseded by FR-005c ("not required to share its timing") and SC-003 ("the bars ease too, on their own layer and their own timing"), both of which hold.
+
+> **A coupling attempt was tried and reverted, and is worth recording so nobody
+> repeats it.** Putting the indicator on a derived `--card-window` did make the
+> two end together (both ~348ms), but it cost the bar its own speed, which is
+> the thing the maintainer actually wanted kept. Two mechanical findings survive
+> the revert: Tailwind registers `--tw-duration` as
+> `@property { inherits: false }`, so a `duration-*` on the `Progress` Root
+> never reaches the indicator by inheritance; reaching it needs a child variant
+> (`[&>*]:duration-(--card-window)`), which does work and needs no edit to the
+> vendored `ui/progress.tsx`. That is the route if the bars are ever genuinely
+> wanted on the card's clock.
+>
+> AC4's stale clause will make a future `/speckit-converge` re-raise this. Amend
+> the one line in spec.md if that matters; the behaviour is settled either way.
