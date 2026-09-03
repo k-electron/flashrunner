@@ -86,8 +86,10 @@ one, restrained, and settle together at the moment the buttons become pressable.
    buttons never take on a greyed-out or switched-off appearance, and no countdown,
    spinner, or numeric timer is shown.
 4. **Given** an outcome is pressed, **When** the transition plays, **Then** the
-   progress bars' fill grows toward its new value across the same window rather
-   than jumping to it, and arrives as the card block settles.
+   progress bars' fill grows toward its new value rather than jumping to it, and
+   moves **in parallel** with the card block — both starting from the same press,
+   never one after the other. The bars keep their own speed and are not required
+   to finish with the block (FR-005c, SC-003).
 5. **Given** the last card of a run is marked, **When** the run completes,
    **Then** that card still plays its exit, and the run-complete screen plays an
    entry — the run does not end on a hard cut.
