@@ -34,17 +34,26 @@
 - Iteration 1 flagged one leak: an Assumptions entry named a specific styling
   utility and a stored-data version field. Reworded to describe the precedent and
   the storage guarantee without naming either. Re-checked, passes.
-- `/speckit-clarify` session 2026-09-01 recorded five clarifications. Re-validated
-  against the updated spec: 16/16 still passing, no regressions.
-- Two positions were **superseded** by that session and their contradicting text
-  removed, not merely amended: the card-only transition (buttons now move with it)
-  and the never-guarded pronounce control (now guarded with the block).
+- Eight clarifications are recorded: five from the `/speckit-clarify` session on
+  2026-09-01, and three more during planning — the two-phase exit/entry model,
+  applying the outcome on the press, and decoupling the progress bars. Re-validated
+  against the spec after each: 16/16 still passing, no regressions.
+- Four positions were **superseded** and their contradicting text removed, not
+  merely amended: the card-only transition (buttons move with it); the
+  never-guarded pronounce control (guarded with the block); "Start over opens no
+  guard window of its own" (it plays both phases, so it does); and "the guard is
+  one named duration" (it is now the derived sum of two).
+- The two-phase model added FR-005d, FR-005e and FR-013, and changed FR-009 and
+  FR-010 from "no animation, no guard" to "animates, still not guarded".
 - Reduced-motion and screen-reader behaviour are out of scope by the maintainer's
   decision. The "no implementation details" and "edge cases identified" items are
   judged against that reduced scope, not against a general accessibility bar.
 - FR-007 and FR-007a sit at the edge of "no implementation details" on purpose.
   The maintainer asked for a design that is cheap to iterate on, so the
   one-place tuning surface is a requirement, not a design note.
-- Two numbers deliberately left unfixed, and correctly so: the starting duration
-  (~1/3 s) and the travel distance. Both are the subject of the tuning FR-007a
+- Three numbers deliberately left unfixed, and correctly so: the two phase
+  durations and the travel distance. All are the subject of the tuning FR-007a
   exists to enable, so pinning them here would be false precision.
+- One accepted trade is recorded in Assumptions rather than hidden: applying the
+  outcome at the exit/entry boundary means a tab closed mid-exit loses that mark.
+  It sits inside the tolerance `001-deck-runs` SC-009 already carries.
