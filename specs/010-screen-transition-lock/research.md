@@ -136,6 +136,19 @@ moment but one:
 - at mount, `phase` initialises to `'entering'` while `guarded` initialises to
   `false`.
 
+**Correction, found in implementation.** The third bullet understated the mount: not
+only did `guarded` start `false`, but *nothing armed a release at all*. `enter()` is
+reachable only from `beginTransition()`, so a freshly mounted screen sat at `'entering'`
+for its whole life. Under 009 that was invisible — the never-released phase only ever
+selected the entry animation's class, and interactivity was read off `guarded`. Derive
+the lock from `phase` and the screen locks permanently from mount, which is a dead run
+screen rather than a missing exemption.
+
+So FR-020 needs one line of addition, not only a deletion: a mount effect that arms the
+entry release. It lives in `armEntryRelease()`, which both the mount and `enter()` call,
+making the release timer's single arming site auditable for FR-010's "exactly one
+release pending". Its cleanup is the unmount clearing the same requirement asks for.
+
 That single divergence *is* 009 FR-010 — the first card of a run being pressable on
 arrival. FR-020 removes the exception, which removes the only reason the second
 variable exists. So the feature deletes state rather than adding it:

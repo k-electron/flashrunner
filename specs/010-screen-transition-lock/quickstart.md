@@ -106,7 +106,13 @@ const released = Date.now() - pressedAt;
 console.log('released after (ms):', released, '— budget 320+100, hard cap 1000');
 
 console.log('inert after settling:', await wrapper.getAttribute('inert') !== null);
-console.log('progress:', await page.getByText(/of 5 cards/).first().textContent());
+// The bars announce through `aria-valuetext`; they have no visible text to read.
+console.log(
+  'progress:',
+  await page
+    .getByRole('progressbar', { name: 'Cards done in this round' })
+    .getAttribute('aria-valuetext'),
+);
 
 // SC-005 at its stated magnitude: 100 advances, every one ending live. Ten by hand
 // (check 10 below) is a spot check; this is the figure the criterion names.

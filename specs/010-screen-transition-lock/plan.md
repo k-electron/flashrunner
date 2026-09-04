@@ -16,7 +16,16 @@ The feature is mostly subtraction. `guarded` state, the `if (guarded) return` at
 outcome call site, and `PronounceButton`'s `guarded` prop all go, because that
 variable existed only to exempt the first card of a run and FR-020 removes the
 exemption ([research](./research.md) Decision 3). What is added is one attribute, one
-interceptor, and the tests that make the lock's absence detectable.
+interceptor, a mount effect arming the first arrival's release, and the tests that make
+the lock's absence detectable.
+
+**The mount release was not anticipated.** `phase` initialised to `'entering'` but
+nothing ever armed a release there — `enter()` is reachable only from
+`beginTransition()`. Under 009 the never-released phase only selected a CSS class, so it
+was invisible; derive the lock from `phase` and every run screen locks permanently from
+mount. `armEntryRelease()` is now the single site an entry's release is armed, called by
+both the mount effect and `enter()`, which is what makes FR-010's "exactly one release
+pending" auditable. See [research](./research.md) Decision 3's correction.
 
 The one substantive finding: **jsdom enforces neither `inert` nor hit-testing** —
 measured in this repo, not assumed ([research](./research.md) Decision 2). A
@@ -98,7 +107,7 @@ specs/010-screen-transition-lock/
 ```text
 src/
 ├── routes/
-│   ├── Run.tsx                 # CHANGED: lock on RunLoop's wrapper; `guarded` deleted
+│   ├── Run.tsx                 # CHANGED: lock + mount release; `guarded` deleted
 │   └── Run.test.tsx            # CHANGED: 5 superseded cases rewritten, ~12 added
 ├── components/
 │   ├── PronounceButton.tsx     # CHANGED: `guarded` prop removed
@@ -125,6 +134,9 @@ names.
 
 Four changes, in dependency order. `/speckit-tasks` will break these down.
 
+0. **Arm the mount release** — `src/routes/Run.tsx`. A mount effect calling
+   `armEntryRelease()`, whose cleanup is also FR-010's unmount clearing. Without it the
+   derived lock never opens (see § Summary).
 1. **Lock the wrapper** — `src/routes/Run.tsx`. `const locked = phase !== 'idle'`,
    then `inert={locked}` and a **native** capture listener
    (`addEventListener(type, handler, true)` in an effect, with cleanup) on the wrapper
