@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "extensions": {
+    "lifecycle": {
+      "version": "1.0.1",
+      "source": "local",
+      "manifest_hash": "sha256:df24e99da08bb754a3f53e412e855dc5021599ae805a9f555c3b4d6c0c0e4072",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.lifecycle.status",
+          "speckit.lifecycle.overview"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-09-04T14:55:53.762426+00:00"
+    }
+  }
+}
