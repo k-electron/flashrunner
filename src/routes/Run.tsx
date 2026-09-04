@@ -164,18 +164,21 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
   const [heard, setHeard] = useState(false);
   // Which half of a card change is running. Two phases rather than one timer
   // because they paint different cards, and because a single timer split later
-  // would take the guard apart with it.
+  // would take the lock apart with it.
   const [phase, setPhase] = useState<'exiting' | 'entering' | 'idle'>('entering');
+  // The lock, derived rather than stored (FR-011). 009 kept a `guarded` boolean
+  // alongside `phase`; the two agreed at every moment but mount, where `guarded`
+  // started false so the first card of a run was markable on arrival. FR-020
+  // removed that exemption, and with it the only reason a second value existed —
+  // so there is now nothing left that can come to disagree with the phase.
+  const locked = phase !== 'idle';
   // The card block's key, and the reason it is a counter rather than anything
   // read off the run: the same card is legitimately presented twice running (a
   // failed last card is re-queued), `position` resets when a cycle closes, and a
   // "Start over" from the first card of the first cycle changes no field at all.
   const [presentation, setPresentation] = useState(0);
-  // Mounting is an entry with nothing before it, so there is no earlier press to
-  // bounce from and the first card of a run — or of a resume — is markable on
-  // arrival (FR-010). Only a press sets this.
-  const [guarded, setGuarded] = useState(false);
   const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const wrapper = useRef<HTMLDivElement>(null);
   // The id of the card that was on screen when a press landed, held for the
   // length of that card's exit. The engine and the storage write move on the
   // press; this is what keeps the card the learner actually marked painted while
@@ -193,10 +196,55 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
   // Undefined only at the top of the ladder — the whole deck (FR-014).
   const next = nextRung(deck, rung.id);
 
-  // A timer that outlives the screen would clear the guard on a component that is
-  // gone, and React would warn about it. The mark it followed is already stored,
-  // so nothing else is at stake here (FR-013, FR-014).
-  useEffect(() => () => clearTimeout(pending.current), []);
+  /**
+   * The one place an entry's release is armed, so "exactly one release pending"
+   * and "each phase locks for its own duration" are checkable in one line rather
+   * than in every arrival (FR-010, FR-011). A timeout and never an animation
+   * event: a browser that fails to report motion finishing must not be able to
+   * strand the learner on a dead screen (FR-009).
+   */
+  function armEntryRelease(): void {
+    pending.current = setTimeout(() => setPhase('idle'), CARD_ENTRY_MS);
+  }
+
+  // Mounting is an entry with nothing before it, and it locks for its own
+  // duration like any other arrival — no exemption for the first card of a run
+  // (FR-020). Nothing armed this under 009: `phase` stayed at 'entering' for the
+  // life of the screen and interactivity was read off a separate boolean, so the
+  // never-released phase only ever showed as the entry animation's class.
+  //
+  // The cleanup is also FR-010's unmount clearing: a release that outlived the
+  // screen would fire at a component that is gone, and React would warn about
+  // it. The mark it followed is already stored, so nothing else is at stake
+  // (FR-014).
+  useEffect(() => {
+    armEntryRelease();
+    return () => clearTimeout(pending.current);
+  }, []);
+
+  // `inert` above is the native semantic and what a browser actually enforces.
+  // jsdom enforces neither it nor hit-testing — measured, see research Decision
+  // 2 — so on that attribute alone the lock's absence would pass every test in
+  // the suite. This is the half CI can observe.
+  //
+  // Native capture, not React's `onClickCapture`: React collects handlers off
+  // its own fibers, so a descendant that attached its own listener would slip
+  // past it, and FR-002 promises coverage however a control is wired (research
+  // Decision 2a). A listener here fires before every descendant's, whatever
+  // attached it. Click alone covers keyboard activation too, because a button
+  // reached by Enter or Space dispatches one.
+  useEffect(() => {
+    const element = wrapper.current;
+    if (!locked || element === null) {
+      return;
+    }
+    const discard = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    element.addEventListener('click', discard, true);
+    return () => element.removeEventListener('click', discard, true);
+  }, [locked]);
 
   /**
    * The second phase: the incoming card arrives, and the controls become live
@@ -217,24 +265,24 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
     // the whole of its exit, and whether its word was heard belongs to it right
     // up to the boundary.
     setHeard(false);
-    pending.current = setTimeout(() => {
-      setPhase('idle');
-      setGuarded(false);
-    }, CARD_ENTRY_MS);
+    armEntryRelease();
   }
 
   /**
-   * Opens the guard window and plays the card change out. The window is exactly
-   * the two phases end to end — there is no duration of its own that could come
-   * to disagree with the animation (FR-006).
+   * Plays the card change out. Each phase locks for its own duration and the
+   * phases are contiguous — the exit's timer sets `phase` to `'entering'`
+   * synchronously, so `locked` is never observably false at the boundary — which
+   * is the whole of FR-011 and FR-011a, with no duration of its own to disagree
+   * with the animation.
    *
-   * Clearing `pending` first is what makes a card change starting mid-transition
-   * replace the one in flight rather than queue behind it (FR-013). A stale timer
-   * would otherwise drop the guard early, part-way through the new window.
+   * Clearing `pending` first keeps exactly one release outstanding (FR-010). No
+   * input can reach this mid-transition any more, since every action that starts
+   * one is inside the locked region; it stays because it is one line and it is
+   * what holds FR-013 if a transition is ever begun by something other than a
+   * press.
    */
   function beginTransition(): void {
     clearTimeout(pending.current);
-    setGuarded(true);
     // "Repeat this run" is pressed on the run-complete screen, which holds no
     // card to play out. That is the same absence as the first card of a run, so
     // it goes straight to the entry — otherwise the *incoming* card would be the
@@ -280,7 +328,17 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
     // animations read them and name no duration of their own (FR-007). No
     // classes: `RunProgress` is fixed and <main> keeps its own column, so this
     // element must not be allowed to affect either.
+    //
+    // It also carries the lock, and it rather than <main> because it is the only
+    // element containing every control the spec names: the card block's outcomes
+    // and speaker, "Start over" and "Leave this run" below them, and the
+    // run-complete arm's "Repeat this run" and "Next run". Coverage is by
+    // descent, so a control added inside it later needs no guard of its own
+    // (FR-001, FR-002). A control that portals out of this subtree would escape
+    // both mechanisms — see contracts/screen-lock.md § 1.
     <div
+      ref={wrapper}
+      inert={locked}
       style={
         {
           '--card-exit': `${CARD_EXIT_MS}ms`,
@@ -318,9 +376,11 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
 
         {complete ? (
           // The entry that pairs with the last card's exit, so the run ends on a
-          // transition rather than a hard cut (FR-005e). It is unguarded for
-          // free: the guard is only ever read at the outcome handler, and there
-          // are no outcome buttons here (FR-009).
+          // transition rather than a hard cut (FR-005e). It is locked while it
+          // arrives for free, by sitting inside the wrapper — no code here or
+          // above mentions this screen (FR-016, FR-017). It plays no visible
+          // exit, so it simply has no exit lock; that falls out of per-phase
+          // locking rather than being a case written for it (FR-018).
           <div className={cn('flex flex-col items-center gap-6', CARD_ENTRY_CLASSES)}>
             <p className="text-2xl font-semibold tracking-tight">Run complete</p>
             {next === undefined && <p className="text-base">Deck mastered</p>}
@@ -378,30 +438,15 @@ function RunLoop({ deck, rung }: { deck: DeckConfig; rung: RungConfig }) {
             <div className="grid w-full max-w-md grid-cols-2 gap-x-4 gap-y-2">
               {/* The word is the painted card's, not the engine's, so the
                   component's word-keyed cleanup matches what is on screen
-                  through the exit. `guarded` stops it speaking the same word the
-                  block is carrying away (FR-011). */}
+                  through the exit. Nothing here says anything about the lock:
+                  the screen refuses the press before this component sees it. */}
               {card !== undefined && (
-                <PronounceButton
-                  word={card.front}
-                  guarded={guarded}
-                  onHeard={() => setHeard(true)}
-                />
+                <PronounceButton word={card.front} onHeard={() => setHeard(true)} />
               )}
               <div className="col-span-2">
                 <OutcomeButtons
                   heard={heard}
-                  onMark={(outcome) => {
-                    // The guard is read here and nowhere else. `apply` also
-                    // serves "Start over" and "Repeat this run", which must stay
-                    // live — checking it at this one call site is what leaves
-                    // both of them unguarded with no condition written for
-                    // either (FR-009, FR-012). A blocked press does nothing at
-                    // all: it is discarded, never queued (FR-003).
-                    if (guarded) {
-                      return;
-                    }
-                    apply({ type: 'mark', outcome });
-                  }}
+                  onMark={(outcome) => apply({ type: 'mark', outcome })}
                 />
               </div>
             </div>

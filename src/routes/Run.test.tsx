@@ -13,6 +13,31 @@ import { deckKey } from '@/storage/keys';
 import { writeItem } from '@/storage/safeStorage';
 import { seededRng } from '@/test/rng';
 
+/**
+ * The two motion durations as the screen reads them, so the zero-duration case
+ * (FR-012) can answer differently from the rest of the file. Getters rather than
+ * values because `Run.tsx` reads the bindings when it renders and arms a timer,
+ * and `undefined` rather than literals because nothing here restates a constant:
+ * every other test runs at the real durations.
+ */
+const durations = vi.hoisted(() => ({
+  exit: undefined as number | undefined,
+  entry: undefined as number | undefined,
+}));
+
+vi.mock('@/run/advance', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/run/advance')>();
+  return {
+    ...actual,
+    get CARD_EXIT_MS() {
+      return durations.exit ?? actual.CARD_EXIT_MS;
+    },
+    get CARD_ENTRY_MS() {
+      return durations.entry ?? actual.CARD_ENTRY_MS;
+    },
+  };
+});
+
 // The real registry, because the route resolves through it. Rung r1 of the
 // Pre-K ladder is the five words a, I, the, and, to; r8 is the whole 40-word deck.
 const FIRST_RUN = '/deck/dolch-prek-5/rung/r1';
@@ -78,6 +103,8 @@ Object.defineProperty(globalThis, 'jest', {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  durations.exit = undefined;
+  durations.entry = undefined;
   seed();
   vi.spyOn(Math, 'random').mockImplementation(seededRng(FILE_SEED));
 });
@@ -123,17 +150,37 @@ function members(cardIds: readonly string[]): string[] {
   return [...cardIds].sort();
 }
 
-/**
- * Renders the run route and hands back the router, for tests that navigate, and
- * `unmount`, for tests that interrupt: unmounting and rendering again with the
- * store left alone is what a closed and reopened tab is.
- */
-function renderRunWithRouter(path: string) {
+/** The render itself, with the mount entry still running. */
+function mountRun(path: string) {
   const router = createMemoryRouter([{ path: '/deck/:deckId/rung/:rungId', element: <Run /> }], {
     initialEntries: [path],
   });
   const { unmount } = render(<RouterProvider router={router} />);
   return { user: userEvent.setup({ advanceTimers: vi.advanceTimersByTime }), router, unmount };
+}
+
+/**
+ * Renders the run route and hands back the router, for tests that navigate, and
+ * `unmount`, for tests that interrupt: unmounting and rendering again with the
+ * store left alone is what a closed and reopened tab is.
+ *
+ * Settled, so a test that renders and presses is pressing on a screen that has
+ * arrived. Mounting starts an entry like any other card change, and a press
+ * during one is a case a test has to ask for rather than inherit.
+ */
+function renderRunWithRouter(path: string) {
+  const mounted = mountRun(path);
+  settle();
+  return mounted;
+}
+
+/**
+ * The same screen mid-arrival, for the tests whose whole subject is a press
+ * during the mount entry — the one thing `renderRunWithRouter` has already run
+ * past by the time it hands the `user` over.
+ */
+function renderRunArriving(path: string) {
+  return mountRun(path).user;
 }
 
 function renderRun(path: string) {
@@ -153,12 +200,13 @@ function renderJourney(path: string) {
     { initialEntries: [path] },
   );
   render(<RouterProvider router={router} />);
+  settle();
   return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 }
 
 /**
  * Waits out the card transition a mark starts, so the card the next assertion
- * reads is the settled one. Inert until that transition exists.
+ * reads is the settled one. A no-op until that transition exists.
  */
 function settle(): void {
   act(() => {
@@ -166,11 +214,11 @@ function settle(): void {
     // The entry timer is armed from inside the exit timer's own callback, and
     // `@sinonjs/fake-timers` clamps a timer scheduled during a tick to at least
     // the next millisecond. At a duration of `0` that puts the entry one tick
-    // beyond a window of zero, so advancing by the window alone can never reach
-    // it and the guard would latch on for the rest of the run. A real
+    // beyond both phases, so advancing by the durations alone can never reach
+    // it and the lock would latch on for the rest of the run. A real
     // `setTimeout(fn, 0)` has no such floor — this flushes what the fake clock
     // held back, and is what keeps FR-008 checkable here at all. It is a no-op
-    // at any nonzero duration, where the window has already run both timers.
+    // at any nonzero duration, where the advance has already run both timers.
     vi.runOnlyPendingTimers();
   });
 }
@@ -209,6 +257,22 @@ async function clearRun(user: ReturnType<typeof userEvent.setup>, cards: number)
  */
 function progressOf(name: string): string | null {
   return screen.getByRole('progressbar', { name }).getAttribute('aria-valuetext');
+}
+
+/**
+ * Whether the screen is taking input. `inert` is the whole mechanism and it has
+ * no accessible handle to query — it removes the subtree from the accessibility
+ * tree rather than exposing a state — so this is the one place the attribute is
+ * named at all, and the one place Principle IV's role-and-text rule gives way
+ * (plan.md § Complexity Tracking). Reached through `main`'s parent because that
+ * wrapper is what carries the lock and what contains every control.
+ */
+function settled(): void {
+  expect(screen.getByRole('main').parentElement).not.toHaveAttribute('inert');
+}
+
+function locked(): void {
+  expect(screen.getByRole('main').parentElement).toHaveAttribute('inert');
 }
 
 describe('Run', () => {
@@ -1175,6 +1239,32 @@ describe('Run — hearing the word (US1)', () => {
     expect(readDeckRecord(dolchPreK5)).toEqual(before);
   });
 
+  // The lock from the speaker's side. `PronounceButton` no longer knows the
+  // transition exists — 009's `guarded` prop is gone — so the only thing
+  // keeping a press during a card change from reaching the device is the screen
+  // refusing it (FR-001, FR-004). `heard` is read as the default emphasis on
+  // "Got it", the observable 007 established for it and explained below.
+  it('neither speaks nor marks the word heard mid-transition (FR-001, FR-004)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+    expect(speech.words()).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Got it' })).toHaveAttribute(
+      'data-variant',
+      'default',
+    );
+
+    // And the same press speaks once the incoming card has arrived, so the
+    // silence above was the lock and not a stub that was never reached.
+    settle();
+    const arrived = shownCard(FIRST_RUNG_CARDS);
+    await user.click(screen.getByRole('button', { name: 'Hear the word' }));
+
+    expect(speech.words()).toEqual([frontOf(arrived).toLowerCase()]);
+  });
+
   // Hearing the word points the learner at "Not yet" (007). The observable is
   // `data-variant`, set by src/components/ui/button.tsx — read as a pair it is
   // unambiguous, because green never accompanies `secondary`. Deliberately not a
@@ -1412,7 +1502,7 @@ describe('Run — a bounced press does not mark two cards (US1)', () => {
   // The reported defect (issue #237). The outcome buttons never move, so a finger
   // bouncing on one sends a second press that lands on a card the learner has not
   // seen yet — and marks it.
-  it('marks one card when a second press lands inside the guard window (FR-001)', async () => {
+  it('marks one card when a second press lands inside the lock (FR-001)', async () => {
     const user = renderRun(FIRST_RUN);
     const first = shownCard(FIRST_RUNG_CARDS);
 
@@ -1431,7 +1521,7 @@ describe('Run — a bounced press does not mark two cards (US1)', () => {
   // the more dangerous half of it: a duplicate "Got it" at least agrees with what
   // the learner meant, whereas this records an outcome they never chose. A guard
   // kept per control rather than over the block would let exactly this through.
-  it('ignores a press on the other outcome inside the window (FR-002)', async () => {
+  it('ignores a press on the other outcome inside the lock (FR-002)', async () => {
     const user = renderRun(FIRST_RUN);
     const first = shownCard(FIRST_RUNG_CARDS);
 
@@ -1456,7 +1546,7 @@ describe('Run — a bounced press does not mark two cards (US1)', () => {
     const user = renderRun(FIRST_RUN);
 
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    // Read inside the window: the bars and the write follow the engine, so both
+    // Read inside the lock: the bars and the write follow the engine, so both
     // have already moved for the press that landed. What must not move is
     // anything after this point.
     const applied = storedRun();
@@ -1488,67 +1578,151 @@ describe('Run — a bounced press does not mark two cards (US1)', () => {
   });
 });
 
-describe('Run — where the guard is not (FR-009, FR-010, FR-012)', () => {
-  // The guard is read at the outcome handler and nowhere else, so a screen with
-  // no outcome buttons is unguarded for free. Pressed while the window the last
-  // mark opened is still running, "Repeat this run" must still restart — a guard
-  // moved inside `apply` would leave it dead for a window with nothing to
-  // protect, on the one screen where the learner has no card to look at.
-  it('repeats the run from the frame the completion screen appears (FR-009)', async () => {
+describe('Run — there is nowhere the lock is not (FR-001, FR-017, FR-020)', () => {
+  // The exact reversal of 009's FR-009, which had the completion screen
+  // pressable from the frame it appears — because the lock was read at the
+  // outcome handler and this screen has none. It is a card screen like every
+  // other now (FR-016), so it is locked while it arrives.
+  it('refuses "Repeat this run" while the completion screen is arriving (FR-017)', async () => {
     const user = renderRun(FIRST_RUN);
     await clearRun(user, 4);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
 
-    // The exit alone. The last card has left, so the completion screen is up,
-    // and its own entry is still to come — the only moment at which FR-009 says
-    // anything. Settling first instead would assert nothing: the window would
-    // already be shut.
+    // The exit alone. The last card has left, so the completion screen is up
+    // and its own entry is still to come — the one moment this case is about.
+    // Settling first would assert nothing.
     advanceToBoundary();
-    expect(screen.getByText('Run complete')).toBeInTheDocument();
+    locked();
 
     await user.click(screen.getByRole('button', { name: 'Repeat this run' }));
     settle();
 
-    expect(screen.queryByText('Run complete')).not.toBeInTheDocument();
-    expect(FIRST_RUNG_CARDS).toContain(shownCard(FIRST_RUNG_CARDS));
-    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
+    expect(screen.getByText('Run complete')).toBeInTheDocument();
+    expect(progressOf('Cards got right')).toBe('5 of 5 cards');
   });
 
-  // The guard is screen state and is never written down, so a run coming back off
-  // the device arrives with nothing pending. There was no earlier press to bounce
-  // from, and a window here would only hold the learner up on the card they came
-  // back for — so this presses with no advance at all.
-  it('marks the first card of a resumed run on arrival (FR-010)', async () => {
+  // A refused navigation leaves nothing in storage to read, so what says the
+  // press did not land is r1's completion screen still being here and r2 not.
+  // `renderJourney` is what makes r2 real; r2 is r1's five words plus five
+  // more, so the run bar's total is which run the learner is in.
+  it('does not navigate to the next run while the completion screen arrives (FR-017)', async () => {
+    const user = renderJourney(FIRST_RUN);
+    await clearRun(user, 4);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    advanceToBoundary();
+
+    await user.click(screen.getByRole('link', { name: 'Next run' }));
+
+    expect(screen.getByText('Run complete')).toBeInTheDocument();
+    expect(progressOf('Cards got right')).toBe('5 of 5 cards');
+
+    settle();
+    await user.click(screen.getByRole('link', { name: 'Next run' }));
+
+    expect(progressOf('Cards got right')).toBe('0 of 10 cards');
+  });
+
+  // The completion screen plays no visible exit, so a repeat asked for from a
+  // settled one locks for the incoming card's entry and nothing else (FR-018).
+  // The one boundary between the press and a live screen is what says the lock
+  // was one phase long rather than two.
+  it('locks for the entry alone when a settled completion screen repeats (FR-018)', async () => {
+    const user = renderRun(FIRST_RUN);
+    await clearRun(user, 5);
+    settled();
+
+    await user.click(screen.getByRole('button', { name: 'Repeat this run' }));
+    locked();
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(storedRun().passedThisRun).toEqual([]);
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+
+    advanceToBoundary();
+    settled();
+    const arrived = shownCard(FIRST_RUNG_CARDS);
+    await press(user, 'Got it');
+    expect(storedRun().passedThisRun).toEqual([arrived]);
+  });
+
+  // FR-020's positive half, and the one case no other test in the file can
+  // catch: every other render settles the mount, so a lock that exempted the
+  // first arrival would pass all of them.
+  it('refuses the first card of a fresh run until its entry has run (FR-020)', async () => {
+    const user = renderRunArriving(FIRST_RUN);
+    const arriving = shownCard(FIRST_RUNG_CARDS);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(storedRun().passedThisRun).toEqual([]);
+    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+
+    settle();
+    await press(user, 'Got it');
+    expect(storedRun().passedThisRun).toEqual([arriving]);
+  });
+
+  // 009 read interactivity off a boolean that started false, so a resumed run
+  // came back pressable on arrival. The lock is the phase itself and a mount is
+  // an entry, so what refuses the first press here is that entry and nothing
+  // read off the device — the lock is still never persisted (FR-015, FR-020).
+  it('refuses the first card of a resumed run until its entry has run (FR-015, FR-020)', async () => {
     seed({ run: SECOND_RUNG_RUN });
-    const user = renderRun(SECOND_RUN);
+    const user = renderRunArriving(SECOND_RUN);
     const resumed = shownCard(SECOND_RUNG_CARDS);
 
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    settle();
+    expect(storedRun().passedThisRun).toEqual(SECOND_RUNG_RUN.passedThisRun);
+    expect(progressOf('Cards got right')).toBe('3 of 10 cards');
 
+    settle();
     // The seeded run had three cleared, so the press landing takes it to four.
+    await press(user, 'Got it');
     expect(storedRun().passedThisRun).toContain(resumed);
     expect(progressOf('Cards got right')).toBe('4 of 10 cards');
     expect(shownCard(SECOND_RUNG_CARDS)).not.toBe(resumed);
   });
 
-  // "Start over" sits below the block and is never blocked, so a learner who has
-  // just marked a card and changed their mind is not made to wait out an
-  // animation to act on it.
-  it('restarts from inside a window opened by a mark (FR-012)', async () => {
+  // The exact reversal of 009's FR-012, which kept "Start over" live through a
+  // card change so a learner who had just marked could change their mind
+  // without waiting. It is inside the locked region like everything else now,
+  // and the whole stored run is held either side of the press rather than the
+  // fields a restart happens to reset.
+  it('leaves the run untouched for a "Start over" pressed mid-transition (FR-001)', async () => {
     const user = renderRun(FIRST_RUN);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    await user.click(screen.getByRole('button', { name: 'Start over' }));
-    settle();
+    const marked = storedRun();
 
-    expect(storedRun()).toMatchObject({
-      cycleIndex: 0,
-      position: 0,
-      failedThisCycle: [],
-      passedThisRun: [],
-    });
-    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
+
+    expect(storedRun()).toEqual(marked);
+    expect(progressOf('Cards got right')).toBe('1 of 5 cards');
+
+    // And it restarts once the incoming card has settled, so the refusal was
+    // the lock rather than a button the mark left dead.
+    settle();
+    await press(user, 'Start over');
+    expect(storedRun()).toMatchObject({ position: 0, passedThisRun: [] });
     expect(progressOf('Cards got right')).toBe('0 of 5 cards');
+  });
+
+  // The one control whose refusal cannot be read off the stored run: a
+  // navigation that landed would take the screen with it, so what says it did
+  // not land is the run screen still being here and the ladder not. Hence
+  // `renderJourney` — the destination has to be real for its absence to mean
+  // anything.
+  it('does not navigate for a "Leave this run" activated mid-transition (FR-001)', async () => {
+    const user = renderJourney(FIRST_RUN);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    await user.click(screen.getByRole('link', { name: 'Leave this run' }));
+
+    expect(screen.getByRole('button', { name: 'Got it' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'All decks' })).not.toBeInTheDocument();
+
+    settle();
+    await user.click(screen.getByRole('link', { name: 'Leave this run' }));
+
+    expect(screen.getByRole('link', { name: 'All decks' })).toBeInTheDocument();
   });
 
   // The other half of FR-012: unguarded itself, but it changes the card, so it
@@ -1569,6 +1743,37 @@ describe('Run — where the guard is not (FR-009, FR-010, FR-012)', () => {
     const arrived = shownCard(FIRST_RUNG_CARDS);
     await press(user, 'Got it');
     expect(storedRun().passedThisRun).toEqual([arrived]);
+  });
+});
+
+describe('Run — a control the lock has never seen (US4, FR-002)', () => {
+  // FR-002 against the strongest case rather than the convenient one. Every
+  // control on the screen today is a React `<Button>`, so a lock that only
+  // covered React's own handlers would pass every other test in this file. This
+  // one appends a plain `<button>` with a plain listener into the locked
+  // element, which is why `Run.tsx` needs no test-only control: coverage is by
+  // descent, and the wrapper's native capture listener runs before any
+  // descendant's whatever attached it (research Decision 2a).
+  it('kills a plain button appended into the run screen, then lets it go', async () => {
+    const user = renderRun(FIRST_RUN);
+    const fired = vi.fn();
+    const probe = document.createElement('button');
+    probe.addEventListener('click', fired);
+    // Before <main>, so the probe is a child of the element carrying the lock.
+    screen.getByRole('main').before(probe);
+    // A probe outside that subtree would be dead to the lock and alive to the
+    // click, passing both halves below while proving nothing.
+    expect(screen.getByRole('main').parentElement).toContainElement(probe);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await user.click(probe);
+
+    expect(fired).not.toHaveBeenCalled();
+
+    settle();
+    await user.click(probe);
+
+    expect(fired).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -1626,79 +1831,70 @@ describe('Run — the mark lands on the press; only the picture lags (FR-005d, F
   });
 });
 
-describe('Run — a card change replaces the one in flight (FR-013)', () => {
-  // A "Start over" landing mid-exit is the interruption FR-013 is about. It does
-  // not preserve the mark and is not meant to: `restart` builds a fresh run, so
-  // the mark is discarded with the rest of the run the same way pressing it at
-  // any other moment discards one. What must not survive is the replaced
-  // transition — a stale boundary timer would drop the new window part-way
-  // through or fire the boundary a second time, and both leave the restarted
-  // card markable before the learner has read it.
-  it('leaves one coherent run and one intact window (FR-013)', async () => {
+// FR-013 — a transition beginning while another is in flight replaces it rather
+// than queueing behind it — was covered here by two cases that drove "Start
+// over" mid-exit. Both are deleted rather than rewritten: FR-001 now refuses
+// that press, and every other action that could start a second transition is
+// likewise a control inside the locked region, so the premise is unreachable by
+// any input. A rewrite would only assert what "leaves the run untouched for a
+// Start over pressed mid-transition" already asserts. The invariant is retained
+// in spec.md FR-013 and the `clearTimeout` that holds it is still the first line
+// of `beginTransition`; nothing is uncovered, because there is nothing left that
+// can reach it.
+
+describe('Run — the lock always lets go (US2)', () => {
+  // The phases are contiguous: an exit's release hands straight to the entry's,
+  // so there is no frame at the boundary in which the screen has begun moving
+  // and is live. `advanceToBoundary` rather than the exit's constant, for the
+  // same one-millisecond floor `settle` documents.
+  it('is still locked at the exact end of the exit (FR-011a)', async () => {
     const user = renderRun(FIRST_RUN);
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    await user.click(screen.getByRole('button', { name: 'Start over' }));
 
-    // One run, freshly built: a whole cycle again, both bars back at zero, and
-    // no remnant of the run the restart replaced.
-    const restarted = storedRun();
-    expect(restarted).toMatchObject({
-      rungId: 'r1',
-      cycleIndex: 0,
-      position: 0,
-      failedThisCycle: [],
-      passedThisRun: [],
-    });
-    expect(members(restarted.queue)).toEqual(members(FIRST_RUNG_CARDS));
-    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
-    expect(progressOf('Cards got right')).toBe('0 of 5 cards');
+    advanceToBoundary();
+    locked();
 
-    // One window, still running: the restart's own, not the mark's.
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(storedRun().passedThisRun).toEqual([]);
-
-    // And it closes once, on time. Exactly one card is marked by the press after
-    // it, on the run the restart built.
     settle();
-    const arrived = shownCard(FIRST_RUNG_CARDS);
-    await press(user, 'Got it');
-    expect(storedRun()).toMatchObject({ position: 1, passedThisRun: [arrived] });
-    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    settled();
   });
-  // The test above says what a Start over mid-exit leaves behind, but it cannot
-  // see a transition left in flight: both changes begin at the same instant, so
-  // the stale boundary and the live one fall on the same frame. Staggering them
-  // by one phase separates the two. The mark's window is due to close one exit
-  // plus one entry after the press; the restart's, one exit later than that. A
-  // transition that queued instead of being replaced would close the window at
-  // the earlier of the two, and the restarted card would be markable while it
-  // was still arriving. Both advances below are whole phases read off the two
-  // constants, never a fraction of either.
-  it('does not let a replaced transition close the new window (FR-013)', async () => {
+
+  // FR-012 at both durations zero. `settle()` rather than a literal advance
+  // because of the fake clock's one-millisecond floor on a timer armed inside
+  // another timer's callback — see its own note; at zero that floor is the whole
+  // of the entry, so advancing by the durations could never reach it.
+  it('marks one card and settles with both durations at zero (FR-012)', async () => {
+    durations.exit = 0;
+    durations.entry = 0;
     const user = renderRun(FIRST_RUN);
+    const marked = shownCard(FIRST_RUNG_CARDS);
+
     await user.click(screen.getByRole('button', { name: 'Got it' }));
-    act(() => {
-      vi.advanceTimersByTime(CARD_EXIT_MS);
-    });
-
-    // Landing here rather than on the press means the mark's window is already
-    // counting down its entry when the restart replaces it.
-    await user.click(screen.getByRole('button', { name: 'Start over' }));
-    act(() => {
-      vi.advanceTimersByTime(CARD_ENTRY_MS);
-    });
-
-    // Exactly the moment the replaced transition would have dropped the guard.
-    // The restart's own window runs an exit longer than that, so this press is
-    // still refused.
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(storedRun().passedThisRun).toEqual([]);
-    expect(progressOf('Cards done in this round')).toBe('0 of 5 cards');
-
-    // And it does close, on its own schedule rather than not at all.
     settle();
-    const arrived = shownCard(FIRST_RUNG_CARDS);
-    await press(user, 'Got it');
-    expect(storedRun().passedThisRun).toEqual([arrived]);
+
+    expect(storedRun().passedThisRun).toEqual([marked]);
+    expect(progressOf('Cards done in this round')).toBe('1 of 5 cards');
+    settled();
+  });
+
+  // React 19 no longer warns when a state update reaches an unmounted
+  // component, so a release that outlived the screen would fire in silence —
+  // which is why the timer count is the assertion and the console spy only
+  // guards against a future React reinstating the warning. The mark is already
+  // stored, so the discarded release costs nothing (FR-010, FR-014).
+  it('leaves no release pending when the screen is torn down mid-transition (FR-010)', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { user, unmount } = renderRunWithRouter(FIRST_RUN);
+    const marked = shownCard(FIRST_RUNG_CARDS);
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+
+    act(() => {
+      vi.advanceTimersByTime(CARD_EXIT_MS + CARD_ENTRY_MS);
+    });
+
+    expect(errors).not.toHaveBeenCalled();
+    expect(storedRun().passedThisRun).toEqual([marked]);
   });
 });
