@@ -242,6 +242,19 @@ async function press(user: ReturnType<typeof userEvent.setup>, name: string): Pr
   settle();
 }
 
+/**
+ * A card is still presented. Bounded, because the loops that clear a run by
+ * asking the screen rather than counting are the ones a stuck lock hangs: fake
+ * timers are installed, so vitest's own timeout never fires and an unreleased
+ * screen would spin the file forever instead of failing it.
+ */
+function cardShown(pressed: number, limit = 200): boolean {
+  if (pressed > limit) {
+    throw new Error(`Still presenting a card after ${limit} presses — the screen never released`);
+  }
+  return screen.queryByRole('button', { name: 'Got it' }) !== null;
+}
+
 /** Marks every card of the current cycle "Got it", which clears the run. */
 async function clearRun(user: ReturnType<typeof userEvent.setup>, cards: number) {
   for (let card = 0; card < cards; card += 1) {
@@ -543,7 +556,7 @@ describe('Run', () => {
     // Clear whatever the screen actually presents rather than a fixed count: this
     // rung is five cards from a standing start, but once resume lands the seeded
     // run is hydrated mid-cycle and only the remaining three are shown.
-    while (screen.queryByRole('button', { name: 'Got it' }) !== null) {
+    for (let pressed = 0; cardShown(pressed); pressed += 1) {
       await press(user, 'Got it');
     }
 
@@ -826,7 +839,7 @@ describe('Run — a device with no room left', () => {
   it('keeps a rung completed on a full device visible on the ladder afterwards', async () => {
     fillStorage();
     const user = renderJourney(FIRST_RUN);
-    while (screen.queryByRole('button', { name: 'Got it' }) !== null) {
+    for (let pressed = 0; cardShown(pressed); pressed += 1) {
       await press(user, 'Got it');
     }
     expect(screen.getByText('Run complete')).toBeInTheDocument();
@@ -977,7 +990,7 @@ describe('Run — an interrupted run resumes into the run it already was (SC-005
     const marked: Marked[] = [];
     const seen = new Set<string>();
 
-    while (screen.queryByRole('button', { name: 'Got it' }) !== null) {
+    for (let pressed = 0; cardShown(pressed); pressed += 1) {
       // Read off the screen: the run is shuffled, so the card being answered is
       // whichever one is being presented and never one a position implies.
       const card = shownCard(SECOND_RUNG_CARDS);
