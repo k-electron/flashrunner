@@ -179,7 +179,7 @@ mid-transition and live when idle.
 - [X] T030 Work through [quickstart.md](./quickstart.md) § 3 checks 1-11 by hand in a real browser. Checks 9 (browser back still works) and 11 (tab switched away and back) are the two that matter most: they are the stuck-screen failure modes, and neither is reachable from jsdom (depends on T029)
 - [X] T031 Verify FR-007 and FR-008 by eye during T030: no control looks greyed, disabled, or switched off at any point; the moving group's dim-and-recover is unchanged from 009; and the card's word, the two progress bars, the deck/rung heading and any storage message stay visible and legible for the whole of the lock (depends on T030)
 - [X] T032 Record in the PR description what was verified where, and that screen-reader verification is **not run** by standing decision, together with the accessibility-tree consequence of `inert` from [research](./research.md) Decision 8 (depends on T030)
-- [ ] T033 Open the PR against `main` with CI green and a Pages preview, and verify a deep link to a run URL on the preview (Principle I: the dev server hides that failure) (depends on T026, T028, T032)
+- [X] T033 Open the PR against `main` with CI green and a Pages preview, and verify a deep link to a run URL on the preview (Principle I: the dev server hides that failure) (depends on T026, T028, T032)
 
 **Depends on**: Phases 3-6.
 
