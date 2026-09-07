@@ -85,3 +85,14 @@ Thumbs.db
 # them only produces churn. Kept here rather than in .specify/.gitignore, which
 # Spec Kit manages and overwrites on upgrade.
 .specify/integrations/.cache/
+.specify/extensions/.cache/
+
+# Compiled Python from the Spec Kit extension scripts. Bytecode, and tagged with the
+# interpreter version that produced it.
+__pycache__/
+*.pyc
+
+# The lifecycle roll-up dashboard. Regenerated with a fresh timestamp on every
+# `/speckit-lifecycle-overview`, and derivable from the per-feature `specs/*/lifecycle.md`
+# files, which are tracked. Committing it would churn on every read.
+.specify/lifecycle-overview.md

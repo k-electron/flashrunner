@@ -1,0 +1,311 @@
+installed:
+- lifecycle
+settings:
+  auto_execute_hooks: true
+hooks:
+  before_specify:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh specify
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh specify?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_specify:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh specify $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh specify $EXIT_CODE?
+    description: Record specify completion in lifecycle artifact
+    condition: null
+  before_clarify:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh clarify
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh clarify?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_clarify:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh clarify $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh clarify $EXIT_CODE?
+    description: Record clarify completion in lifecycle artifact
+    condition: null
+  before_checklist:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh checklist
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh checklist?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_checklist:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh checklist $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh checklist $EXIT_CODE?
+    description: Record checklist completion in lifecycle artifact
+    condition: null
+  before_plan:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh plan
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh plan?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_plan:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh plan $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh plan $EXIT_CODE?
+    description: Record plan completion in lifecycle artifact
+    condition: null
+  before_tasks:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh tasks
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh tasks?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_tasks:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh tasks $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh tasks $EXIT_CODE?
+    description: Record tasks completion in lifecycle artifact
+    condition: null
+  before_taskstoissues:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh taskstoissues
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh taskstoissues?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_taskstoissues:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh taskstoissues $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh taskstoissues $EXIT_CODE?
+    description: Record taskstoissues completion in lifecycle artifact
+    condition: null
+  before_analyze:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh analyze
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh analyze?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_analyze:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh analyze $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh analyze $EXIT_CODE?
+    description: Record analyze completion in lifecycle artifact
+    condition: null
+  before_implement:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh implement
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh implement?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_implement:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh implement $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh implement $EXIT_CODE?
+    description: Record implement completion in lifecycle artifact
+    condition: null
+  before_converge:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh converge
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh converge?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_converge:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh converge $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh converge $EXIT_CODE?
+    description: Record converge completion in lifecycle artifact
+    condition: null
+  before_bug_assess:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh bug_assess
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh bug_assess?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_bug_assess:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh bug_assess $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh bug_assess $EXIT_CODE?
+    description: Record bug assess completion in lifecycle artifact
+    condition: null
+  before_bug_fix:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh bug_fix
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh bug_fix?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_bug_fix:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh bug_fix $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh bug_fix $EXIT_CODE?
+    description: Record bug fix completion in lifecycle artifact
+    condition: null
+  before_bug_test:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh bug_test
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh bug_test?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_bug_test:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh bug_test $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh bug_test $EXIT_CODE?
+    description: Record bug test completion in lifecycle artifact
+    condition: null
+  before_assess_intake:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh assess_intake
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh assess_intake?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_assess_intake:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh assess_intake $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh assess_intake $EXIT_CODE?
+    description: Record assess intake completion in lifecycle artifact
+    condition: null
+  before_assess_research:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh assess_research
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh assess_research?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_assess_research:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh assess_research $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh assess_research $EXIT_CODE?
+    description: Record assess research completion in lifecycle artifact
+    condition: null
+  before_assess_define:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh assess_define
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh assess_define?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_assess_define:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh assess_define $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh assess_define $EXIT_CODE?
+    description: Record assess define completion in lifecycle artifact
+    condition: null
+  before_assess_shape:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh assess_shape
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh assess_shape?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_assess_shape:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh assess_shape $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh assess_shape $EXIT_CODE?
+    description: Record assess shape completion in lifecycle artifact
+    condition: null
+  before_assess_decide:
+  - extension: lifecycle
+    command: ./scripts/hook-pre-command.sh assess_decide
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-pre-command.sh assess_decide?
+    description: Record command start and detect interruptions in lifecycle artifact
+    condition: null
+  after_assess_decide:
+  - extension: lifecycle
+    command: ./scripts/hook-post-command.sh assess_decide $EXIT_CODE
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute ./scripts/hook-post-command.sh assess_decide $EXIT_CODE?
+    description: Record assess decide completion in lifecycle artifact
+    condition: null
